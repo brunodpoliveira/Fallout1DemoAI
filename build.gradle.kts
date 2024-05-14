@@ -1,20 +1,34 @@
+import korlibs.korge.gradle.*
+
 plugins {
-    id("com.utopia-rise.godot-kotlin-jvm") version "0.9.1-4.2.2"
+	alias(libs.plugins.korge)
 }
 
-repositories {
-    mavenLocal()
-    mavenCentral()
-    google()
+korge {
+	id = "com.sample.demo"
+
+// To enable all targets at once
+
+	//targetAll()
+
+// To enable targets based on properties/environment variables
+	//targetDefault()
+
+// To selectively enable targets
+	
+	targetJvm()
+	targetJs()
+    targetWasm()
+	targetDesktop()
+	targetIos()
+	targetAndroid()
+
+	serializationJson()
 }
 
-godot {
-    registrationFileBaseDir.set(projectDir.resolve("scripts"))
-    isRegistrationFileHierarchyEnabled.set(true)
-	
-	// To enable Android Export.
-    //isAndroidExportEnabled.set(true) 
-	
-	// To enable iOS export and Graal Native Image export.
-    //isGraalNativeImageExportEnabled.set(true)
+
+dependencies {
+    add("commonMainApi", project(":deps"))
+    //add("commonMainApi", project(":korge-dragonbones"))
 }
+
