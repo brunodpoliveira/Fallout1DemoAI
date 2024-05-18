@@ -7,7 +7,7 @@ import korlibs.math.geom.*
 import kotlinx.coroutines.*
 
 @OptIn(DelicateCoroutinesApi::class)
-class PlayerControls(private val player: SolidRect, private val grid: Array<Array<SolidRect?>>, private val cellSize: Double) {
+class PlayerControls(private val player: Image, private val grid: Array<Array<SolidRect?>>, private val cellSize: Double) {
     private var currentPos = Point(0, 0)
     private var direction = Vector2D(0.0, 0.0)
 
@@ -41,11 +41,10 @@ class PlayerControls(private val player: SolidRect, private val grid: Array<Arra
             }
         }
 
-        // Move the player at a fixed interval
         GlobalScope.launch {
             while (true) {
                 movePlayer()
-                delay(100) // Adjust as needed for the game speed
+                delay(100)
             }
         }
     }
