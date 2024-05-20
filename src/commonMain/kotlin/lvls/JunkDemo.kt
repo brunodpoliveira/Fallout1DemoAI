@@ -1,28 +1,46 @@
 package lvls
 
-import controls.*
-import grid.*
-import korlibs.image.format.*
-import korlibs.io.file.std.*
+import ai.*
+import korlibs.image.color.*
 import korlibs.korge.view.*
+import manager.*
 
-class JunkDemo {
-    private val gridSizeX = 10
-    private val gridSizeY = 10
+class JunkDemo : Container() {
+
+    private lateinit var player: Player
+    private lateinit var rayze: NPC
+    private lateinit var baka: NPC
     private val cellSize = 32.0
+    private val grid: Array<Array<SolidRect?>> = Array(10) { arrayOfNulls<SolidRect?>(10) }
+    private val npcs = mutableListOf<NPC>()
 
-    suspend fun setupLevel(container: Container) {
-        val gridCreation = GridCreation(gridSizeX, gridSizeY, cellSize)
-        gridCreation.addToContainer(container)
+    init {
+        setupLevel()
+    }
 
-        // Load the korge.png sprite
-        val playerBitmap = resourcesVfs["korge.png"].readBitmap()
-        val playerSprite = Image(playerBitmap).apply {
-            scale = cellSize / playerBitmap.width
-        }.addTo(container)
+    private fun setupLevel() {
+        createGrid()
 
-        playerSprite.xy(0.0, 0.0)
+        rayze = NPC("Rayze", 12.0, 12.0, NPCBio.rayzeBio)
+        addChild(rayze)
+        npcs.add(rayze)
 
-        PlayerControls(playerSprite, gridCreation.grid, cellSize)
+        baka = NPC("Baka", 256.0, 256.0, NPCBio.bakaBio)
+        addChild(baka)
+        npcs.add(baka)
+
+        player = Player(0.0, 0.0, grid, npcs, cellSize)
+        addChild(player)
+    }
+
+    private fun createGrid() {
+        for (x in 0 until 10) {
+            for (y in 0 until 10) {
+                val isObstacle = (x + y) % 3 == 0
+                if (isObstacle) {
+                    grid[x][y] = solidRect(cellSize, cellSize, Colors.LIGHTGRAY).xy(x * cellSize, y * cellSize)
+                }
+            }
+        }
     }
 }

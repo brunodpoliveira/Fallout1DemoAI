@@ -4,6 +4,8 @@ import com.theokanning.openai.completion.*
 import com.theokanning.openai.service.*
 
 object OpenAIService {
+    //TODO add prompt so the NPC can think throughg its dialogue and decide what to do
+    //Ex: "I should GO TO [NPC], I should ATTACK [NPC], etc
     private const val API_KEY = ""
     private val service = OpenAiService(API_KEY)
     private val summarizerService = SummarizerService()

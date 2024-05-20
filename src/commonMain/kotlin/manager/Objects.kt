@@ -1,0 +1,4 @@
+package manager
+
+object Objects {
+}

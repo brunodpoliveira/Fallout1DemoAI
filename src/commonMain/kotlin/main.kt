@@ -1,9 +1,33 @@
 import korlibs.image.color.*
 import korlibs.korge.*
-import korlibs.math.geom.*
+import korlibs.korge.view.*
 import lvls.*
+import manager.*
 
-suspend fun main() = Korge(windowSize = Size(512, 512), backgroundColor = Colors["#2b2b2b"]) {
-    val demo = JunkDemo()
-    demo.setupLevel(this)
+lateinit var collisionManager: CollisionManager
+
+suspend fun main() = Korge {
+    createBaseGrid()
+
+    val junkDemo = JunkDemo()
+    addChild(junkDemo)
+
+    collisionManager = CollisionManager()
+    junkDemo.children.forEach { entity ->
+        if (entity is Entity) {
+            collisionManager.addEntity(entity)
+        }
+    }
+
+    addUpdater {
+        collisionManager.checkCollisions()
+    }
+}
+
+fun Container.createBaseGrid() {
+    for (x in 0 until 10) {
+        for (y in 0 until 10) {
+            solidRect(32.0, 32.0, Colors.DARKGRAY).xy(x * 32.0, y * 32.0)
+        }
+    }
 }
