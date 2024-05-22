@@ -6,6 +6,7 @@ import korlibs.korge.view.*
 import korlibs.math.geom.*
 import kotlinx.coroutines.*
 import manager.*
+import ui.*
 
 @OptIn(DelicateCoroutinesApi::class)
 class PlayerControls(
@@ -17,6 +18,7 @@ class PlayerControls(
 ) {
     private var currentPos = Point(0, 0)
     private var direction = Vector2D(0.0, 0.0)
+    private var interacting = false
 
     private fun movePlayer() {
         val newX = (currentPos.x + direction.x.toInt()).coerceIn(0.0, ((grid.size - 1).toDouble()))
@@ -39,18 +41,34 @@ class PlayerControls(
     }
 
     private fun interactWithNPC() {
-        val collidingNPC = npcs.find { npc ->
+        if (interacting) return  // Ensure only one interaction per key press
+
+        // Finding the closest NPC
+        val collidingNPC = npcs.filter { npc ->
             npc.bounds.intersects(mainPlayer.bounds)
+        }.minByOrNull { npc ->
+            Point.distance(mainPlayer.x, mainPlayer.y, npc.x, npc.y)
         }
 
         collidingNPC?.let {
             println("Interacting with ${it.npcName}")
             startDialog(it)
+            interacting = true
         }
     }
 
     private fun startDialog(npc: NPC) {
         println("Starting dialog with ${npc.npcName}: ${npc.bio}")
+        val dialog = DialogWindow()
+        mainPlayer.parent?.parent?.let { parent ->
+            if (parent is Container) {
+                dialog.show(parent)
+            } else {
+                println("Error: The parent of the stage is not a Container.")
+            }
+        } ?: run {
+            println("Error: The stage or its parent is null.")
+        }
     }
 
     init {
@@ -61,7 +79,6 @@ class PlayerControls(
                     Key.S -> direction = Vector2D(0.0, 1.0)
                     Key.A -> direction = Vector2D(-1.0, 0.0)
                     Key.D -> direction = Vector2D(1.0, 0.0)
-                    //TODO calling function every tick. FIX
                     Key.ENTER -> interactWithNPC()
                     else -> { }
                 }
@@ -69,6 +86,7 @@ class PlayerControls(
             keys.up { keyEvent ->
                 when (keyEvent.key) {
                     Key.W, Key.S, Key.A, Key.D -> direction = Vector2D(0.0, 0.0)
+                    Key.ENTER -> interacting = false  // Reset the interaction flag on key release
                     else -> { }
                 }
             }

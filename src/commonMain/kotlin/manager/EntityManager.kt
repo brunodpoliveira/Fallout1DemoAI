@@ -1,6 +1,7 @@
 package manager
 
 import controls.*
+import korlibs.image.color.*
 import korlibs.image.format.*
 import korlibs.io.async.launch
 import korlibs.io.file.std.*
@@ -9,6 +10,7 @@ import korlibs.math.geom.*
 import kotlinx.coroutines.*
 
 abstract class Entity(initialX: Double, initialY: Double, initialWidth: Double, initialHeight: Double) : Container() {
+
     init {
         this.x = initialX
         this.y = initialY
@@ -30,11 +32,15 @@ class Player(
     private val cellSize: Double
 ) : Entity(initialX, initialY, 32.0, 32.0) {
     private lateinit var sprite: Image
+    private lateinit var boundingBox: SolidRect
     private lateinit var controls: PlayerControls
-    //TODO private lateinit var inventory: Inventory
-    //TODO private lateinit var stats: Stats
+    private var direction = Vector2D(0.0, 0.0)
 
     init {
+        addUpdater {
+            updatePlayerPosition()
+            if (this::boundingBox.isInitialized) updateBoundingBox()
+        }
         GlobalScope.launch {
             val bitmap = resourcesVfs["korge.png"].readBitmap()
             sprite = image(bitmap) {
@@ -43,8 +49,30 @@ class Player(
             }
             addChild(sprite)
             controls = PlayerControls(sprite, grid, npcs, cellSize, this@Player)
+            setupBoundingBox()
             println("Initialized Player with Controls")
         }
+    }
+
+    private fun setupBoundingBox() {
+        boundingBox = solidRect(width, height, Colors.RED.withAd(0.3)).also {
+            it.position(x, y)
+        }
+        addChild(boundingBox)
+    }
+
+    private fun updatePlayerPosition() {
+        x += direction.x
+        y += direction.y
+
+        if (x < 0) x = 0.0
+        if (y < 0) y = 0.0
+        if (x > (grid.size - 1) * cellSize) x = (grid.size - 1) * cellSize
+        if (y > (grid[0].size - 1) * cellSize) y = (grid[0].size - 1) * cellSize
+    }
+
+    private fun updateBoundingBox() {
+        boundingBox.position(x, y)
     }
 
     override fun onCollision(other: Entity) {
@@ -59,6 +87,10 @@ class NPC(
     initialX: Double,
     initialY: Double,
     val bio: String
+    //todo var sprite
+    //TODO private lateinit var inventory: Inventory
+    //TODO private lateinit var stats: Stats
+
 ) : Entity(initialX, initialY, 32.0, 32.0) {
     init {
         GlobalScope.launch {
@@ -69,6 +101,9 @@ class NPC(
             }
             addChild(sprite)
             println("Initialized $npcName with bio: $bio")
+            solidRect(width, height, Colors.RED.withAd(0.3)).also {
+                it.position(initialX, initialY)
+            }
         }
     }
 

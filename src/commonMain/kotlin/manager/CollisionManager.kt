@@ -11,15 +11,14 @@ class CollisionManager {
         entities.remove(entity)
     }
 
-    fun checkCollisions(): List<Pair<Entity, Entity>> {
-        val collisions = mutableListOf<Pair<Entity, Entity>>()
+    fun checkCollisions() {
         for (i in 0 until entities.size) {
             for (j in i + 1 until entities.size) {
                 if (entities[i].bounds.intersects(entities[j].bounds)) {
-                    collisions.add(Pair(entities[i], entities[j]))
+                    entities[i].onCollision(entities[j])
+                    entities[j].onCollision(entities[i])
                 }
             }
         }
-        return collisions
     }
 }

@@ -6,7 +6,6 @@ import korlibs.korge.view.*
 import manager.*
 
 class JunkDemo : Container() {
-
     private lateinit var player: Player
     private lateinit var rayze: NPC
     private lateinit var baka: NPC
@@ -21,22 +20,24 @@ class JunkDemo : Container() {
     private fun setupLevel() {
         createGrid()
 
-        rayze = NPC("Rayze", 12.0, 12.0, NPCBio.rayzeBio)
+        // Initialize NPCs and add them to the grid
+        rayze = NPC("Rayze", 128.0, 64.0, NPCBio.rayzeBio)
         addChild(rayze)
         npcs.add(rayze)
 
-        baka = NPC("Baka", 256.0, 256.0, NPCBio.bakaBio)
+        baka = NPC("Baka", 256.0, 64.0, NPCBio.bakaBio)
         addChild(baka)
         npcs.add(baka)
 
-        player = Player(0.0, 0.0, grid, npcs, cellSize)
+        // Initialize the player
+        player = Player(32.0, 32.0, grid, npcs, cellSize)
         addChild(player)
     }
 
     private fun createGrid() {
         for (x in 0 until 10) {
             for (y in 0 until 10) {
-                val isObstacle = (x + y) % 3 == 0
+                val isObstacle = (x + y) % 11 == 0
                 if (isObstacle) {
                     grid[x][y] = solidRect(cellSize, cellSize, Colors.LIGHTGRAY).xy(x * cellSize, y * cellSize)
                 }
