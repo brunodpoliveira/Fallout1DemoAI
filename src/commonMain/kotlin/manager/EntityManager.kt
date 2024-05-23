@@ -48,8 +48,8 @@ class Player(
                 scale = 0.1
             }
             addChild(sprite)
-            controls = PlayerControls(sprite, grid, npcs, cellSize, this@Player)
             setupBoundingBox()
+            controls = PlayerControls(boundingBox, grid, npcs, cellSize, this@Player)
             println("Initialized Player with Controls")
         }
     }
@@ -72,7 +72,7 @@ class Player(
     }
 
     private fun updateBoundingBox() {
-        boundingBox.position(x, y)
+        sprite.position(boundingBox.x, boundingBox.y)
     }
 
     override fun onCollision(other: Entity) {

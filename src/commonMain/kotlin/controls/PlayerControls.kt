@@ -10,7 +10,7 @@ import ui.*
 
 @OptIn(DelicateCoroutinesApi::class)
 class PlayerControls(
-    private val player: Image,
+    private val boundingBox: SolidRect,
     private val grid: Array<Array<SolidRect?>>,
     private val npcs: List<NPC>,
     private val cellSize: Double,
@@ -34,16 +34,15 @@ class PlayerControls(
 
         if (!collisionGrid && !collisionEntity) {
             currentPos = Point(newX, newY)
-            player.position(newX * cellSize, newY * cellSize)
+            boundingBox.position(newX * cellSize, newY * cellSize)
         } else {
             println("Collision at: $newX, $newY")
         }
     }
 
     private fun interactWithNPC() {
-        if (interacting) return  // Ensure only one interaction per key press
+        if (interacting) return
 
-        // Finding the closest NPC
         val collidingNPC = npcs.filter { npc ->
             npc.bounds.intersects(mainPlayer.bounds)
         }.minByOrNull { npc ->
@@ -72,7 +71,7 @@ class PlayerControls(
     }
 
     init {
-        player.addUpdater {
+        boundingBox.addUpdater {
             keys.down { keyEvent ->
                 when (keyEvent.key) {
                     Key.W -> direction = Vector2D(0.0, -1.0)
@@ -80,14 +79,16 @@ class PlayerControls(
                     Key.A -> direction = Vector2D(-1.0, 0.0)
                     Key.D -> direction = Vector2D(1.0, 0.0)
                     Key.ENTER -> interactWithNPC()
-                    else -> { }
+                    else -> {
+                    }
                 }
             }
             keys.up { keyEvent ->
                 when (keyEvent.key) {
                     Key.W, Key.S, Key.A, Key.D -> direction = Vector2D(0.0, 0.0)
-                    Key.ENTER -> interacting = false  // Reset the interaction flag on key release
-                    else -> { }
+                    Key.ENTER -> interacting = false
+                    else -> {
+                    }
                 }
             }
         }
