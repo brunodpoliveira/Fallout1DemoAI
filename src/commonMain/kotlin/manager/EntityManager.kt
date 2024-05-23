@@ -32,8 +32,7 @@ class Player(
     private val cellSize: Double
 ) : Entity(initialX, initialY, 32.0, 32.0) {
     private lateinit var sprite: Image
-    private lateinit var boundingBox: SolidRect
-    private lateinit var controls: PlayerControls
+    lateinit var boundingBox: SolidRect
     private var direction = Vector2D(0.0, 0.0)
 
     init {
@@ -49,7 +48,7 @@ class Player(
             }
             addChild(sprite)
             setupBoundingBox()
-            controls = PlayerControls(boundingBox, grid, npcs, cellSize, this@Player)
+            PlayerControls(this@Player, grid, npcs, cellSize)
             println("Initialized Player with Controls")
         }
     }
