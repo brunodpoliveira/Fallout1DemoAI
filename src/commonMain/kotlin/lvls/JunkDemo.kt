@@ -20,7 +20,6 @@ class JunkDemo : Container() {
     private fun setupLevel() {
         createGrid()
 
-        // Initialize NPCs and add them to the grid
         rayze = NPC("Rayze", 128.0, 64.0, NPCBio.rayzeBio)
         addChild(rayze)
         npcs.add(rayze)
@@ -29,7 +28,6 @@ class JunkDemo : Container() {
         addChild(baka)
         npcs.add(baka)
 
-        // Initialize the player
         player = Player(32.0, 32.0, grid, npcs, cellSize)
         addChild(player)
     }

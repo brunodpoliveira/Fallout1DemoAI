@@ -26,7 +26,11 @@ class PlayerControls(
 
         val collisionGrid = grid[(newX / cellSize).toInt()][(newY / cellSize).toInt()] != null
         val collisionEntity = npcs.any { npc ->
-            npc.bounds.intersects(Rectangle(newX, newY, player.width/2, player.height/2))
+            npc.bounds.intersects(Rectangle(
+                newX,
+                newY,
+                player.width / 8,
+                player.height / 8))
         }
 
         if (!collisionGrid && !collisionEntity) {
@@ -53,7 +57,7 @@ class PlayerControls(
         println("Starting dialog with ${npc.npcName}: ${npc.bio}")
         val dialog = DialogWindow()
         player.parent?.parent?.let { parent ->
-            dialog.show(parent)
+            dialog.show(parent, npc.bio, npc.npcName)
         } ?: run {
             println("Error: The stage or its parent is null.")
         }
