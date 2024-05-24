@@ -54,7 +54,6 @@ class PlayerControls(
     }
 
     private fun startDialog(npc: NPC) {
-        println("Starting dialog with ${npc.npcName}: ${npc.bio}")
         val dialog = DialogWindow()
         player.parent?.parent?.let { parent ->
             dialog.show(parent, npc.bio, npc.npcName)

@@ -14,13 +14,11 @@ import korlibs.math.geom.*
 class DialogWindow : Container() {
     private var userMessageInput: UITextInput
     private var npcMessageDisplay: UIText
-    private var currentNpcBio by Delegates.notNull<String>()
+    private var currentNpcBio: String by Delegates.notNull()
     private lateinit var npcName: String
 
     init {
-        val dialogBackground = solidRect(1280, 720) {
-            color = Colors.DARKGREY
-        }
+        val dialogBackground = solidRect(1280, 720) { color = Colors.DARKGREY }
 
         npcMessageDisplay = uiText("") {
             position(20, 20)
@@ -52,6 +50,7 @@ class DialogWindow : Container() {
 
         closeButton.onClick {
             summarizeAndUpdateCharacterBio()
+            OpenAIService.resetConversation()
             this.removeFromParent()
         }
 
@@ -63,16 +62,16 @@ class DialogWindow : Container() {
     }
 
     private fun summarizeAndUpdateCharacterBio() {
-        println("summarizeAndUpdateCharacterBio reached")
         val conversation = OpenAIService.msgs.joinToString { it.content }
         val summary = SummarizerService().summarizeConversation(conversation)
         Director.updateContext(summary)
+        currentNpcBio += "\n" + summary
     }
 
     fun show(container: Container, npcBio: String, npcName: String) {
         this.npcName = npcName
-
         currentNpcBio = npcBio
+        println("Initialized $npcName with bio: $currentNpcBio")
         this.addTo(container)
         this.centerOnStage()
 

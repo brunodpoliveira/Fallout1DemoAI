@@ -9,7 +9,7 @@ object OpenAIService {
     private const val API_KEY = ""
     private val service = OpenAiService(API_KEY)
     val msgs: MutableList<ChatMessage> = ArrayList()
-    private var thisSessionMsgCounter = 0
+    private var hasInjectedInitialPrompt = false
     private const val TIMEOUT = 15 * 1000L
 
     private fun handleTimeoutError(elapsedTime: Long, timeout: Long): Boolean {
@@ -32,10 +32,11 @@ object OpenAIService {
 
     fun getCharacterResponse(characterBio: String, playerInput: String): String {
         val message = ChatMessage("user", playerInput)
-        val initialPrompt = "Bio: $characterBio\nContext: ${Director.getContext()}\nPlayer: $playerInput\nNPC: \n"
-        println("initialPrompt: $initialPrompt")
+        println("Player input: $playerInput")
 
-        if (thisSessionMsgCounter == 0) {
+        if (!hasInjectedInitialPrompt) {
+            val initialPrompt = "Bio: $characterBio\nContext: ${Director.getContext()}\nPlayer: $playerInput\nNPC: "
+            println("initialPrompt: $initialPrompt")
             val initialAssistantMessage = ChatMessage("assistant", initialPrompt)
             msgs.add(initialAssistantMessage)
 
@@ -53,8 +54,8 @@ object OpenAIService {
             val initialChoices = initialHttpResponse.choices.mapNotNull { it.message }
 
             if (initialChoices.isNotEmpty()) {
-                thisSessionMsgCounter += 1
-                println(initialChoices[0].content.toString())
+                hasInjectedInitialPrompt = true
+                println("Initial response: ${initialChoices[0].content}")
                 msgs.add(initialChoices[0])
                 return initialChoices[0].content
             }
@@ -82,5 +83,10 @@ object OpenAIService {
         } else {
             return "I don't have a response at the moment."
         }
+    }
+
+    fun resetConversation() {
+        msgs.clear()
+        hasInjectedInitialPrompt = false
     }
 }
