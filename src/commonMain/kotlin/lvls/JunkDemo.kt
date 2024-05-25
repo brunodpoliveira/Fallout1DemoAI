@@ -17,7 +17,7 @@ class JunkDemo : Container() {
     }
 
     private fun setupLevel() {
-        val gridCreation = GridCreation(10, 10)
+        val gridCreation = GridCreation(10, 10, "junkdemo")
         gridCreation.addToContainer(this)
         grid = gridCreation.grid
 

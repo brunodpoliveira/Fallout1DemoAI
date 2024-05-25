@@ -4,7 +4,7 @@ import korlibs.image.color.*
 import korlibs.korge.view.*
 import kotlin.math.*
 
-class GridCreation(sizeX: Int, sizeY: Int) {
+class GridCreation(sizeX: Int, sizeY: Int, private val levelType: String) {
     companion object {
         const val CELL_SIZE = 32.0
     }
@@ -17,10 +17,21 @@ class GridCreation(sizeX: Int, sizeY: Int) {
     }
 
     private fun createGrid(sizeX: Int, sizeY: Int) {
-        for (i in 0 until sizeX) {
-            for (j in 0 until sizeY) {
-                // If required, actual level-specific grid can be loaded here in the future
+        when (levelType) {
+            "junkdemo" -> {
+                for (x in 0 until sizeX) {
+                    for (y in 0 until sizeY) {
+                        val isObstacle = (x + y) % 11 == 0
+                        if (isObstacle) {
+                            grid[x][y] = SolidRect(CELL_SIZE, CELL_SIZE, Colors.LIGHTGRAY).apply {
+                                this.x = (x * CELL_SIZE).roundToInt().toDouble()
+                                this.y = (y * CELL_SIZE).roundToInt().toDouble()
+                            }
+                        }
+                    }
+                }
             }
+            // Add other level types and their grid creation logic here
         }
     }
 
