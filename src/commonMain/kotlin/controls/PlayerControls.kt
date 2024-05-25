@@ -1,5 +1,6 @@
 package controls
 
+import grid.*
 import korlibs.event.*
 import korlibs.korge.input.*
 import korlibs.korge.view.*
@@ -12,8 +13,7 @@ import ui.*
 class PlayerControls(
     private val player: Player,
     private val grid: Array<Array<SolidRect?>>,
-    private val npcs: List<NPC>,
-    private val cellSize: Double
+    private val npcs: List<NPC>
 ) {
     private val boundingBox = player.boundingBox
     private var interacting = false
@@ -21,10 +21,13 @@ class PlayerControls(
     private var direction = Vector2D(0.0, 0.0)
 
     private fun movePlayer() {
-        val newX = (player.x + direction.x).coerceIn(0.0, (grid.size - 1) * cellSize)
-        val newY = (player.y + direction.y).coerceIn(0.0, (grid[0].size - 1) * cellSize)
+        val newX = (player.x + direction.x).coerceIn(0.0, (grid.size - 1)
+            * GridCreation.CELL_SIZE)
+        val newY = (player.y + direction.y).coerceIn(0.0, (grid[0].size - 1)
+            * GridCreation.CELL_SIZE)
 
-        val collisionGrid = grid[(newX / cellSize).toInt()][(newY / cellSize).toInt()] != null
+        val collisionGrid = grid[(newX / GridCreation.CELL_SIZE).toInt()][(newY /
+            GridCreation.CELL_SIZE).toInt()] != null
         val collisionEntity = npcs.any { npc ->
             npc.bounds.intersects(Rectangle(
                 newX,
@@ -67,10 +70,10 @@ class PlayerControls(
             keys {
                 down {
                     when (it.key) {
-                        Key.W -> direction = Vector2D(0.0, -cellSize)
-                        Key.S -> direction = Vector2D(0.0, cellSize)
-                        Key.A -> direction = Vector2D(-cellSize, 0.0)
-                        Key.D -> direction = Vector2D(cellSize, 0.0)
+                        Key.W -> direction = Vector2D(0.0, -GridCreation.CELL_SIZE)
+                        Key.S -> direction = Vector2D(0.0, GridCreation.CELL_SIZE)
+                        Key.A -> direction = Vector2D(-GridCreation.CELL_SIZE, 0.0)
+                        Key.D -> direction = Vector2D(GridCreation.CELL_SIZE, 0.0)
                         Key.ENTER -> interactWithNPC()
                         else -> {}
                     }

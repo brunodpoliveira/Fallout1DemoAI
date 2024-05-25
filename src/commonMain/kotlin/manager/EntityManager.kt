@@ -1,6 +1,7 @@
 package manager
 
 import controls.*
+import grid.*
 import korlibs.image.color.*
 import korlibs.image.format.*
 import korlibs.io.async.launch
@@ -28,9 +29,9 @@ class Player(
     initialX: Double,
     initialY: Double,
     private val grid: Array<Array<SolidRect?>>,
-    private val npcs: List<NPC>,
-    private val cellSize: Double
-) : Entity(initialX, initialY, 32.0, 32.0) {
+    private val npcs: List<NPC>
+) : Entity(initialX, initialY, GridCreation.CELL_SIZE, GridCreation.CELL_SIZE) {
+
     private lateinit var sprite: Image
     lateinit var boundingBox: SolidRect
     private var direction = Vector2D(0.0, 0.0)
@@ -48,7 +49,7 @@ class Player(
             }
             addChild(sprite)
             setupBoundingBox()
-            PlayerControls(this@Player, grid, npcs, cellSize)
+            PlayerControls(this@Player, grid, npcs)
             println("Initialized Player with Controls")
         }
     }
@@ -66,8 +67,10 @@ class Player(
 
         if (x < 0) x = 0.0
         if (y < 0) y = 0.0
-        if (x > (grid.size - 1) * cellSize) x = (grid.size - 1) * cellSize
-        if (y > (grid[0].size - 1) * cellSize) y = (grid[0].size - 1) * cellSize
+        if (x > (grid.size - 1) * GridCreation.CELL_SIZE) x =
+            (grid.size - 1) * GridCreation.CELL_SIZE
+        if (y > (grid[0].size - 1) * GridCreation.CELL_SIZE) y =
+            (grid[0].size - 1) * GridCreation.CELL_SIZE
     }
 
     private fun updateBoundingBox() {
