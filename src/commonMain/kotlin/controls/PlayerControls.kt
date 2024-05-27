@@ -21,19 +21,13 @@ class PlayerControls(
     private var direction = Vector2D(0.0, 0.0)
 
     private fun movePlayer() {
-        val newX = (player.x + direction.x).coerceIn(0.0, (grid.size - 1)
-            * GridCreation.CELL_SIZE)
-        val newY = (player.y + direction.y).coerceIn(0.0, (grid[0].size - 1)
-            * GridCreation.CELL_SIZE)
+        val newX = (player.x + direction.x).coerceIn(0.0, (grid.size - 1) * GridCreation.CELL_SIZE)
+        val newY = (player.y + direction.y).coerceIn(0.0, (grid[0].size - 1) * GridCreation.CELL_SIZE)
 
-        val collisionGrid = grid[(newX / GridCreation.CELL_SIZE).toInt()][(newY /
-            GridCreation.CELL_SIZE).toInt()] != null
+        val cell = grid[(newX / GridCreation.CELL_SIZE).toInt()][(newY / GridCreation.CELL_SIZE).toInt()]
+        val collisionGrid = cell != null && cell.color == GridCreation.WALL_COLOR // Check if the cell is a wall
         val collisionEntity = npcs.any { npc ->
-            npc.bounds.intersects(Rectangle(
-                newX,
-                newY,
-                player.width / 8,
-                player.height / 8))
+            npc.bounds.intersects(Rectangle(newX, newY, player.width / 8, player.height / 8))
         }
 
         if (!collisionGrid && !collisionEntity) {

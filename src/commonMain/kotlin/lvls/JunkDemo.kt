@@ -3,6 +3,7 @@ package lvls
 import ai.*
 import grid.*
 import korlibs.korge.view.*
+import kotlinx.coroutines.*
 import manager.*
 
 class JunkDemo : Container() {
@@ -17,7 +18,7 @@ class JunkDemo : Container() {
     }
 
     private fun setupLevel() {
-        val gridCreation = GridCreation(10, 10, "junkdemo")
+        val gridCreation = GridCreation(256, 256, "junkdemo")
         gridCreation.addToContainer(this)
         grid = gridCreation.grid
 
@@ -31,5 +32,6 @@ class JunkDemo : Container() {
 
         player = Player(32.0, 32.0, grid, npcs)
         addChild(player)
+
     }
 }
