@@ -1,11 +1,7 @@
 package grid
 
-import korlibs.image.bitmap.*
 import korlibs.image.color.*
-import korlibs.image.format.*
-import korlibs.io.file.std.*
 import korlibs.korge.view.*
-import kotlinx.coroutines.*
 import kotlin.math.*
 
 class GridCreation(val sizeX: Int, val sizeY: Int, private val levelType: String) {

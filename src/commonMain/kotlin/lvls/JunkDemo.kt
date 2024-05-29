@@ -3,7 +3,6 @@ package lvls
 import ai.*
 import grid.*
 import korlibs.korge.view.*
-import kotlinx.coroutines.*
 import manager.*
 
 class JunkDemo : Container() {

@@ -47,8 +47,8 @@ this will ensure that the story and the NPCs evolve organically as the player in
 ### Folder Structure
 src/commonMain/kotlin/ai: Holds the AI files, such as the bios, the services (director, summ, openai), and a to-do Action Model.
 src/commonMain/kotlin/controls: Placeholder for control logic.
-src/commonMain/kotlin/grid: Grid creation logic (not used at the moment, but separated to divorce it from the level itself).
-src/commonMain/kotlin/lvls: Junkdemo is here, initializing the NPCs and (for now, it'll change) creating the grid as well.
+src/commonMain/kotlin/grid: Grid creation logic
+src/commonMain/kotlin/lvls: Junkdemo is here, initializing the NPCs and, soon, the objects in the level as well.
 src/commonMain/kotlin/manager: Includes ObjectList (empty so far), ObjectManager (to-do), InventoryManager (to-do), EntityManager (Entity, Player, and NPC classes are built here), and CollisionManager.
 src/commonMain/kotlin/ui: Includes DialogWindow.
 src/commonMain/kotlin: Main entry point main.kt.
@@ -61,12 +61,11 @@ adhere to the project's coding standards.
 
 ## Acknowledgements
 - The Fallout franchise by Bethesda Softworks
-- OpenAI and theokanning for providing the GPT-3.5 turbo API
+- OpenAI and theokanning for providing the GPT-3.5 Turbo API
 - Korge developers for the game engine
 - GNUGRAF for providing critical feedback and support
 
 ## TODO
-- Separate the grid from the level itself
 - create a level using a black-and-white depth map; black for floor white for walls, red for boxes, etc
 - Add voice input for player interactions, allowing speech-to-text functionality.
 - Implement NPCs thinking out loud their next steps to make interactions more engaging.

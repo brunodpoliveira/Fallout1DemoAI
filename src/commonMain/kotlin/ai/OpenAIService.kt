@@ -4,8 +4,6 @@ import com.theokanning.openai.completion.chat.*
 import com.theokanning.openai.service.*
 
 object OpenAIService {
-    //TODO add prompt so the NPC can think through its dialogue and decide what to do
-    //Ex: "I should GO TO [NPC], I should ATTACK [NPC], etc
     private const val API_KEY = ""
     private val service = OpenAiService(API_KEY)
     val msgs: MutableList<ChatMessage> = ArrayList()
@@ -59,30 +57,31 @@ object OpenAIService {
                 msgs.add(initialChoices[0])
                 return initialChoices[0].content
             }
-        }
-
-        msgs.add(message)
-        val chatCompletionRequest = ChatCompletionRequest.builder()
-            .model("gpt-3.5-turbo")
-            .messages(msgs)
-            .temperature(.9)
-            .maxTokens(1024)
-            .topP(1.0)
-            .frequencyPenalty(.8)
-            .presencePenalty(.8)
-            .build()
-
-        val httpResponse = sendMessage(chatCompletionRequest)
-        val choices = httpResponse.choices.mapNotNull { it.message }
-
-        if (choices.isNotEmpty()) {
-            val npcResponse = choices[0].content
-            println("npcResponse: $npcResponse")
-            msgs.add(choices[0])
-            return npcResponse
         } else {
-            return "I don't have a response at the moment."
+            msgs.add(message)
+            val chatCompletionRequest = ChatCompletionRequest.builder()
+                .model("gpt-3.5-turbo")
+                .messages(msgs)
+                .temperature(.9)
+                .maxTokens(1024)
+                .topP(1.0)
+                .frequencyPenalty(.8)
+                .presencePenalty(.8)
+                .build()
+
+            val httpResponse = sendMessage(chatCompletionRequest)
+            val choices = httpResponse.choices.mapNotNull { it.message }
+
+            if (choices.isNotEmpty()) {
+                val npcResponse = choices[0].content
+                println("npcResponse: $npcResponse")
+                msgs.add(choices[0])
+                return npcResponse
+            } else {
+                return "I don't have a response at the moment."
+            }
         }
+        return "I don't have a response at the moment."
     }
 
     fun resetConversation() {
