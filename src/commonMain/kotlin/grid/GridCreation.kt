@@ -53,21 +53,4 @@ class GridCreation(val sizeX: Int, val sizeY: Int, private val levelType: String
             }
         }
     }
-
-    /*
-    private fun createGridFromImage() {
-        for (x in 0 until bitmap.width) {
-            for (y in 0 until bitmap.height) {
-                val color = bitmap.getRgba(x, y)
-                grid[x][y] = when (color) {
-                    Colors.WHITE -> SolidRect(cellSize, cellSize, Colors.WHITE).xy((x * cellSize).roundToInt().toDouble(), (y * cellSize).roundToInt().toDouble())
-                    Colors.BLACK -> SolidRect(cellSize, cellSize, FLOOR_COLOR).xy((x * cellSize).roundToInt().toDouble(), (y * cellSize).roundToInt().toDouble())
-                    else -> SolidRect(cellSize, cellSize, Colors.TRANSPARENT).xy((x * cellSize).roundToInt().toDouble(), (y * cellSize).roundToInt().toDouble())
-                }
-            }
-        }
-        println("Grid created from image with dimensions: ${bitmap.width} x ${bitmap.height}")
-    }
-
-     */
 }
