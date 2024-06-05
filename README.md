@@ -66,16 +66,11 @@ adhere to the project's coding standards.
 - GNUGRAF for providing critical feedback and support
 
 ## TODO
-- create a level using a black-and-white depth map; black for floor white for walls, red for boxes, etc
 - Add voice input for player interactions, allowing speech-to-text functionality.
 - Implement NPCs thinking out loud their next steps to make interactions more engaging.
-- Add a virtual keyboard for better user interaction.
-- Integrate controls from a sample Hello World Ktor demo.
 - Prepare and conduct a presentation for version 1.
 - Move API keys to gradle.properties to enhance security.
 - Add sprites and tiles from the RPG starter pack for better visual fidelity.
-- Implement collision detection with objects.
-- implement said objects in the game-world.
 - Develop a main, options, and pause menu for game navigation.
 - Create an inventory system for the player.
 - Add stats and inventory management to both NPC and player classes.
