@@ -5,7 +5,6 @@ import korlibs.event.*
 import korlibs.image.atlas.*
 import korlibs.image.bitmap.*
 import korlibs.image.color.*
-import korlibs.image.font.*
 import korlibs.image.format.*
 import korlibs.image.tiles.*
 import korlibs.io.async.*
@@ -65,12 +64,9 @@ class MyScene : Scene() {
     override suspend fun SContainer.sceneMain() {
         val atlas = MutableAtlasUnit()
 
-        val font = KR.fonts.publicpixel.__file.readTtfFont().lazyBitmapSDF
-
-        val wizardFemale = KR.gfx.wizardF.__file.readImageDataContainer(ASE.toProps(), atlas)
-
         val clericFemale = KR.gfx.clericF.__file.readImageDataContainer(ASE.toProps(), atlas)
-        val minotaur = KR.gfx.minotaur.__file.readImageDataContainer(ASE.toProps(), atlas)
+        val rayze = KR.gfx.minotaur.__file.readImageDataContainer(ASE.toProps(), atlas)
+        val baka = KR.gfx.wizardF.__file.readImageDataContainer(ASE.toProps(), atlas)
         val ldtk = KR.gfx.dungeonTilesmapCalciumtrice.__file.readLDTKWorld()
         val level = ldtk.levelsByName["Level_0"]!!
 
@@ -83,7 +79,7 @@ class MyScene : Scene() {
         lateinit var levelView: LDTKLevelView
         lateinit var highlight: Graphics
         val camera = camera {
-            levelView = LDTKLevelView(level).addTo(this)//.xy(0, 8)
+            levelView = LDTKLevelView(level).addTo(this)
             highlight = graphics { }
                 .filters(BlurFilter(2.0).also { it.filtering = false })
             setTo(Rectangle(0, 0, 1280, 720) * 0.5)
@@ -99,7 +95,6 @@ class MyScene : Scene() {
             }
         }
 
-        val textInfo = text("", font = font).xy(120, 8)
         println(levelView.layerViewsByName.keys)
         val grid = levelView.layerViewsByName["Kind"]!!.intGrid
         val entities = levelView.layerViewsByName["Entities"]!!.entities
@@ -109,7 +104,7 @@ class MyScene : Scene() {
         }
 
         val player = entities.first {
-            it.fieldsByName["Name"]?.valueString == "Cleric"
+            it.fieldsByName["Name"]?.valueString == "Player"
         }.apply {
             replaceView(ImageDataView2(clericFemale.default).also {
                 it.smoothing = false
@@ -119,20 +114,18 @@ class MyScene : Scene() {
             })
         }
 
-        val mage = entities.first {
-            it.fieldsByName["Name"]?.valueString == "Mage"
-        }.apply {
-            replaceView(ImageDataView2(wizardFemale.default).also {
-                it.smoothing = false
-                it.animation = "idle"
-                it.anchor(Anchor.BOTTOM_CENTER)
-                it.play()
-            })
-        }
+        entities.first {
+            it.fieldsByName["Name"]?.valueString == "Rayze"
+        }.replaceView(ImageDataView2(rayze.default).also {
+            it.smoothing = false
+            it.animation = "idle"
+            it.anchor(Anchor.BOTTOM_CENTER)
+            it.play()
+        })
 
         entities.first {
-            it.fieldsByName["Name"]?.valueString == "Minotaur"
-        }.replaceView(ImageDataView2(minotaur.default).also {
+            it.fieldsByName["Name"]?.valueString == "Baka"
+        }.replaceView(ImageDataView2(baka.default).also {
             it.smoothing = false
             it.animation = "idle"
             it.anchor(Anchor.BOTTOM_CENTER)
@@ -219,7 +212,7 @@ class MyScene : Scene() {
 
                 val entityView = view as? LDTKEntityView
                 val doBlock = entityView?.fieldsByName?.get(property)
-                if (rayResult != null && doBlock?.valueString == "false") {
+                if (doBlock?.valueString == "false") {
                     blockedResults += rayResult
                     continue
                 }
@@ -284,7 +277,6 @@ class MyScene : Scene() {
                 }
             }
 
-            textInfo.text = "Rays: ${results.size}"
             highlight.updateShape {
                 fill(Colors["#FFFFFF55"]) {
                     rect(0, 0, 600, 500)
@@ -354,7 +346,6 @@ class MyScene : Scene() {
             if (interactiveView != null) {
                 interactiveView.colorMul = Colors["#ffbec3"]
                 lastInteractiveView = interactiveView
-            } else {
             }
         }
 
@@ -368,7 +359,7 @@ class MyScene : Scene() {
             fun onAnyButton() {
                 val view = getInteractiveView() ?: return
                 val entityView = view as? LDTKEntityView ?: return
-                val doBlock = entityView.fieldsByName?.get("Items") ?: return
+                val doBlock = entityView.fieldsByName.get("Items") ?: return
                 val items = doBlock.valueDyn.list.map { it.str }
 
                 val tile = OpenedChest!!.tile!!

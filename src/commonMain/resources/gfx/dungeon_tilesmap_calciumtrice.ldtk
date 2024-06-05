@@ -10,7 +10,7 @@
 	},
 	"iid": "8db93ce0-ed50-11ed-926a-4957c7fbc019",
 	"jsonVersion": "1.3.2",
-	"appBuildId": 467536,
+	"appBuildId": 467535,
 	"nextUid": 190,
 	"identifierStyle": "Capitalize",
 	"toc": [],
@@ -3372,9 +3372,9 @@
 									"params": ["192,416,16,32"]
 								}] },
 								{ "__identifier": "Point", "__type": "Array<Point>", "__value": [], "__tile": null, "defUid": 150, "realEditorValues": [] },
-								{ "__identifier": "Name", "__type": "String", "__value": "Cleric", "__tile": null, "defUid": 168, "realEditorValues": [{
+								{ "__identifier": "Name", "__type": "String", "__value": "Player", "__tile": null, "defUid": 168, "realEditorValues": [{
 									"id": "V_String",
-									"params": ["Cleric"]
+									"params": ["Player"]
 								}] },
 								{ "__identifier": "Occludes", "__type": "Bool", "__value": false, "__tile": null, "defUid": 170, "realEditorValues": [{
 									"id": "V_Bool",
@@ -3408,15 +3408,18 @@
 									"id": "V_String",
 									"params": ["Sword"]
 								} ] },
-								{ "__identifier": "Name", "__type": "String", "__value": "Minotaur", "__tile": null, "defUid": 169, "realEditorValues": [{
+								{ "__identifier": "Name", "__type": "String", "__value": "Rayze", "__tile": null, "defUid": 169, "realEditorValues": [{
 									"id": "V_String",
-									"params": ["Minotaur"]
+									"params": ["Rayze"]
 								}] },
 								{ "__identifier": "Occludes", "__type": "Bool", "__value": false, "__tile": null, "defUid": 171, "realEditorValues": [{
 									"id": "V_Bool",
 									"params": [ false ]
 								}] },
-								{ "__identifier": "Collides", "__type": "Bool", "__value": false, "__tile": null, "defUid": 182, "realEditorValues": [] }
+								{ "__identifier": "Collides", "__type": "Bool", "__value": true, "__tile": null, "defUid": 182, "realEditorValues": [{
+									"id": "V_Bool",
+									"params": [ true ]
+								}] }
 							]
 						},
 						{
@@ -3438,32 +3441,6 @@
 								}] },
 								{ "__identifier": "Occludes", "__type": "Bool", "__value": true, "__tile": null, "defUid": 172, "realEditorValues": [] },
 								{ "__identifier": "Collides", "__type": "Bool", "__value": true, "__tile": null, "defUid": 178, "realEditorValues": [] }
-							]
-						},
-						{
-							"__identifier": "Player",
-							"__grid": [9,14],
-							"__pivot": [0,1],
-							"__tags": ["hide_on_fog"],
-							"__tile": { "tilesetUid": 1, "x": 304, "y": 416, "w": 16, "h": 32 },
-							"__smartColor": "#AABCEA",
-							"iid": "4cf670c0-ed50-11ed-8bb3-3993b1314e84",
-							"width": 16,
-							"height": 32,
-							"defUid": 146,
-							"px": [144,240],
-							"fieldInstances": [
-								{ "__identifier": "Tile", "__type": "Tile", "__value": { "tilesetUid": 1, "x": 304, "y": 416, "w": 16, "h": 32 }, "__tile": { "tilesetUid": 1, "x": 304, "y": 416, "w": 16, "h": 32 }, "defUid": 147, "realEditorValues": [] },
-								{ "__identifier": "Point", "__type": "Array<Point>", "__value": [], "__tile": null, "defUid": 150, "realEditorValues": [] },
-								{ "__identifier": "Name", "__type": "String", "__value": "Mage", "__tile": null, "defUid": 168, "realEditorValues": [{
-									"id": "V_String",
-									"params": ["Mage"]
-								}] },
-								{ "__identifier": "Occludes", "__type": "Bool", "__value": false, "__tile": null, "defUid": 170, "realEditorValues": [{
-									"id": "V_Bool",
-									"params": [ false ]
-								}] },
-								{ "__identifier": "Collides", "__type": "Bool", "__value": false, "__tile": null, "defUid": 181, "realEditorValues": [] }
 							]
 						},
 						{
@@ -3599,6 +3576,42 @@
 								{ "__identifier": "Name", "__type": "String", "__value": null, "__tile": null, "defUid": 188, "realEditorValues": [] },
 								{ "__identifier": "Collides", "__type": "Bool", "__value": false, "__tile": null, "defUid": 179, "realEditorValues": [] },
 								{ "__identifier": "Occludes", "__type": "Bool", "__value": false, "__tile": null, "defUid": 189, "realEditorValues": [] }
+							]
+						},
+						{
+							"__identifier": "Enemy",
+							"__grid": [18,13],
+							"__pivot": [0,1],
+							"__tags": ["hide_on_fog"],
+							"__tile": { "tilesetUid": 1, "x": 304, "y": 416, "w": 16, "h": 32 },
+							"__smartColor": "#E4A672",
+							"iid": "aaf12d50-fec0-11ee-912a-ddf6472bd8df",
+							"width": 16,
+							"height": 32,
+							"defUid": 154,
+							"px": [288,224],
+							"fieldInstances": [
+								{ "__identifier": "Tile", "__type": "Tile", "__value": { "tilesetUid": 1, "x": 304, "y": 416, "w": 16, "h": 32 }, "__tile": { "tilesetUid": 1, "x": 304, "y": 416, "w": 16, "h": 32 }, "defUid": 155, "realEditorValues": [{
+									"id": "V_String",
+									"params": ["304,416,16,32"]
+								}] },
+								{ "__identifier": "HP", "__type": "Int", "__value": 100, "__tile": null, "defUid": 156, "realEditorValues": [{ "id": "V_Int", "params": [100] }] },
+								{ "__identifier": "DROP", "__type": "Array<LocalEnum.Items>", "__value": [ "Red_potion", "Sword" ], "__tile": null, "defUid": 157, "realEditorValues": [ {
+									"id": "V_String",
+									"params": ["Red_potion"]
+								}, {
+									"id": "V_String",
+									"params": ["Sword"]
+								} ] },
+								{ "__identifier": "Name", "__type": "String", "__value": "Baka", "__tile": null, "defUid": 169, "realEditorValues": [{
+									"id": "V_String",
+									"params": ["Baka"]
+								}] },
+								{ "__identifier": "Occludes", "__type": "Bool", "__value": false, "__tile": null, "defUid": 171, "realEditorValues": [] },
+								{ "__identifier": "Collides", "__type": "Bool", "__value": true, "__tile": null, "defUid": 182, "realEditorValues": [{
+									"id": "V_Bool",
+									"params": [ true ]
+								}] }
 							]
 						}
 					]
