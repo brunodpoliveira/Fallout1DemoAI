@@ -17,7 +17,6 @@ import korlibs.korge.ldtk.*
 import korlibs.korge.ldtk.view.*
 import korlibs.korge.scene.*
 import korlibs.korge.tween.*
-import korlibs.korge.ui.*
 import korlibs.korge.view.*
 import korlibs.korge.view.animation.*
 import korlibs.korge.view.filter.*
@@ -30,9 +29,9 @@ import korlibs.math.geom.*
 import korlibs.math.geom.ds.*
 import korlibs.math.interpolation.*
 import korlibs.math.raycasting.*
+import korlibs.render.*
 import korlibs.time.*
 import kotlin.math.*
-import korlibs.render.*
 
 suspend fun main() = Korge(windowSize = Size(1280, 720), backgroundColor = Colors["#2b2b2b"], displayMode = KorgeDisplayMode.TOP_LEFT_NO_CLIP) {
     val sceneContainer = sceneContainer()
@@ -82,20 +81,16 @@ class MyScene : Scene() {
         println("tileEntitiesByName=$tileEntitiesByName")
         var showAnnotations = false
         lateinit var levelView: LDTKLevelView
-        lateinit var annotations: Graphics
         lateinit var highlight: Graphics
         val camera = camera {
             levelView = LDTKLevelView(level).addTo(this)//.xy(0, 8)
             highlight = graphics { }
                 .filters(BlurFilter(2.0).also { it.filtering = false })
-            annotations = graphics {  }
             setTo(Rectangle(0, 0, 1280, 720) * 0.5)
         }
 
         levelView.mask(highlight, filtering = false)
         highlight.visible = false
-
-        uiButton("Reload") { onClick { sceneContainer.changeTo { MyScene() } } }
 
         val entitiesBvh = BvhWorld(camera)
         addUpdater {
@@ -220,7 +215,7 @@ class MyScene : Scene() {
                 val intersectionPos = ray.point + ray.direction.normalized * result.intersect
                 val normalX = if (intersectionPos.x <= rect.left + 0.5f) -1f else if (intersectionPos.x >= rect.right - .5f) +1f else 0f
                 val normalY = if (intersectionPos.y <= rect.top + 0.5f) -1f else if (intersectionPos.y >= rect.bottom - .5f) +1f else 0f
-                val rayResult = RayResult(ray, intersectionPos, Vector2D(normalX, normalY))?.also { it.view = view }
+                val rayResult = RayResult(ray, intersectionPos, Vector2D(normalX, normalY)).also { it.view = view }
 
                 val entityView = view as? LDTKEntityView
                 val doBlock = entityView?.fieldsByName?.get(property)
@@ -233,7 +228,7 @@ class MyScene : Scene() {
             }
             return outResults.filterNotNull().minByOrNull { it.point.distanceTo(pos) }?.also { res ->
                 val dist = res.point.distanceTo(pos)
-                res.blockedResults = blockedResults.filter { it!!.point.distanceTo(pos) < dist }
+                res.blockedResults = blockedResults.filter { it.point.distanceTo(pos) < dist }
             }
         }
 
@@ -313,34 +308,7 @@ class MyScene : Scene() {
                     }
                 }
             }
-            annotations.updateShape {
-                if (showAnnotations) {
-                    for (result in results) {
-                        fill(Colors.RED) {
-                            circle(result.point, 2.0)
-                        }
-                    }
-                    for (result in results) {
-                        stroke(Colors.GREEN) {
-                            line(result.point, result.point + result.normal * 4f)
-                        }
-
-                        val newVec = (result.point - pos).reflected(result.normal).normalized
-                        stroke(Colors.YELLOW) {
-                            line(result.point, result.point + newVec * 4f)
-                        }
-                    }
-                }
-
-                if (showAnnotations) {
-                    for (entity in entitiesBvh.getAll()) {
-                        stroke(Colors.PURPLE.withAd(0.1)) {
-                            rect(entity.d.toRectangle())
-                        }
-                    }
-                }
-            }
-            return results.map { it.point.distanceTo(pos) }.minOrNull() ?: 0.0
+            return results.minOfOrNull { it.point.distanceTo(pos) } ?: 0.0
         }
 
         addUpdater(60.hz) {
@@ -400,17 +368,16 @@ class MyScene : Scene() {
             fun onAnyButton() {
                 val view = getInteractiveView() ?: return
                 val entityView = view as? LDTKEntityView ?: return
-                val doBlock = entityView?.fieldsByName?.get("Items") ?: return
+                val doBlock = entityView.fieldsByName?.get("Items") ?: return
                 val items = doBlock.valueDyn.list.map { it.str }
 
                 val tile = OpenedChest!!.tile!!
                 entityView.replaceView(
-                    Image(entityView!!.tileset!!.unextrudedTileSet!!.base.sliceWithSize(tile.x, tile.y, tile.w, tile.h)).also {
+                    Image(entityView.tileset!!.unextrudedTileSet!!.base.sliceWithSize(tile.x, tile.y, tile.w, tile.h)).also {
                         it.smoothing = false
                         it.anchor(entityView.anchor)
                     }
                 )
-
                 launchImmediately {
                     gameWindow.alert("Found $items")
                 }
@@ -423,13 +390,13 @@ class MyScene : Scene() {
             }
             down(GameButton.BUTTON_SOUTH) {
                 val playerView = (player.view as ImageDataView2)
-                //playerView.animation = "attack"
+                playerView.animation = "attack"
                 playerState = "attack"
                 onAnyButton()
             }
             down(GameButton.BUTTON_NORTH) {
                 val playerView = (player.view as ImageDataView2)
-                //playerView.animation = "attack"
+                playerView.animation = "attack"
                 playerState = "gesture"
                 onAnyButton()
             }
@@ -465,10 +432,6 @@ open class ImageDataView2(
     override var anchorPixel: Point by animationView::anchorPixel
     override var anchor: Anchor by animationView::anchor
 
-    fun getLayer(name: String): View? {
-        return animationView.getLayer(name)
-    }
-
     var smoothing: Boolean = true
         set(value) {
             if (field != value) {
@@ -493,8 +456,6 @@ open class ImageDataView2(
             }
         }
 
-    val animationNames: Set<String> get() = data?.animationsByName?.keys ?: emptySet()
-
     init {
         updatedDataAnimation()
         if (playing) play() else stop()
@@ -507,10 +468,6 @@ open class ImageDataView2(
 
     fun stop() {
         animationView.stop()
-    }
-
-    fun rewind() {
-        animationView.rewind()
     }
 
     private fun updatedDataAnimation() {
@@ -577,8 +534,6 @@ open class ImageAnimationView2<T : SmoothedBmpSlice>(
         set(value) {
             anchorPixel = Point(value.sx * width, value.sy * height)
         }
-
-    fun getLayer(name: String): View? = layersByName[name]
 
     var smoothing: Boolean = true
         set(value) {
@@ -654,7 +609,7 @@ open class ImageAnimationView2<T : SmoothedBmpSlice>(
         }
         layers.clear()
         anchorContainer.removeChildren()
-        dir = +1
+        dir = 1
         val animation = this.animation
         if (animation != null) {
             for (layer in animation.layers) {
@@ -668,7 +623,7 @@ open class ImageAnimationView2<T : SmoothedBmpSlice>(
                 }
                 layers.add(image)
                 layersByName[layer.name ?: "default"] = image
-                anchorContainer.addChild(image as View)
+                anchorContainer.addChild(image)
             }
         }
         setFirstFrame()
