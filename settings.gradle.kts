@@ -21,5 +21,3 @@ buildscript {
 }
 
 apply(plugin = "com.soywiz.korge.settings")
-
-rootProject.name = "fallout-1-demo-ai"

@@ -1,4 +1,0 @@
-package manager
-
-class InventoryManager {
-}

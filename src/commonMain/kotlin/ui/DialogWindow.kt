@@ -1,7 +1,6 @@
 package ui
 
 import ai.*
-import controls.*
 import korlibs.image.color.*
 import korlibs.image.text.*
 import korlibs.korge.annotations.*
@@ -9,7 +8,6 @@ import korlibs.korge.input.*
 import korlibs.korge.ui.*
 import korlibs.korge.view.*
 import korlibs.math.geom.*
-
 
 @OptIn(KorgeExperimental::class)
 class DialogWindow : Container() {
@@ -21,7 +19,7 @@ class DialogWindow : Container() {
     var closeButton: UIButton
 
     init {
-        PlayerControls.isDialogActive = true
+        //PlayerControls.isDialogActive = true
 
         val npcDialogContainer = container().apply {
             position(0, 240)
@@ -72,7 +70,7 @@ class DialogWindow : Container() {
     }
 
     fun show(container: Container, npcBio: String, npcName: String) {
-        PlayerControls.isDialogActive = true
+       // PlayerControls.isDialogActive = true
         this.npcName = npcName
         this.currentNpcBio = npcBio
         println("Showing dialog for $npcName with bio: $currentNpcBio")
@@ -82,7 +80,7 @@ class DialogWindow : Container() {
     }
 
     fun closeDialog() {
-        PlayerControls.isDialogActive = false
+        //PlayerControls.isDialogActive = false
         this.removeFromParent()
     }
 
