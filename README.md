@@ -45,11 +45,8 @@ this will ensure that the story and the NPCs evolve organically as the player in
 3. Run the game using: ./gradlew runJvmAutoreload
 
 ### Folder Structure
+TODO redo this section
 src/commonMain/kotlin/ai: Holds the AI files, such as the bios, the services (director, summ, openai), and a to-do Action Model.
-src/commonMain/kotlin/controls: Placeholder for control logic.
-src/commonMain/kotlin/grid: Grid creation logic
-src/commonMain/kotlin/lvls: Junkdemo is here, initializing the NPCs and, soon, the objects in the level as well.
-src/commonMain/kotlin/manager: Includes ObjectList (empty so far), ObjectManager (to-do), InventoryManager (to-do), EntityManager (Entity, Player, and NPC classes are built here), and CollisionManager.
 src/commonMain/kotlin/ui: Includes DialogWindow.
 src/commonMain/kotlin: Main entry point main.kt.
 src/commonMain/assets/: Placeholder assets for UI and sprites.
@@ -62,15 +59,19 @@ adhere to the project's coding standards.
 ## Acknowledgements
 - The Fallout franchise by Bethesda Softworks
 - OpenAI and theokanning for providing the GPT-3.5 Turbo API
-- Korge developers for the game engine
+- Korge developers for the game engine, and the Dungeon Starter Kit
 - GNUGRAF for providing critical feedback and support
 
 ## TODO
 - Add voice input for player interactions, allowing speech-to-text functionality.
+- Refine the Dialog Window input by including a virtual keyboard, and allowing the user
+to utilize the virtualcontroller to send the messages and close the dialog
 - Implement NPCs thinking out loud their next steps to make interactions more engaging.
-- Prepare and conduct a presentation for version 1.
+- Expose the director, summary, and next steps (exposed only in easy difficulty mode)
+texts to the end-user.
+- Prepare version 1 of the GNUGRAF presentation.
+- Upload a demo a website such as itch.io
 - Move API keys to gradle.properties to enhance security.
-- Add sprites and tiles from the RPG starter pack for better visual fidelity.
 - Develop a main, options, and pause menu for game navigation.
 - Create an inventory system for the player.
 - Add stats and inventory management to both NPC and player classes.
