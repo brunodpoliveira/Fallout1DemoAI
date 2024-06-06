@@ -1,3 +1,4 @@
+import ai.*
 import korlibs.datastructure.*
 import korlibs.datastructure.ds.*
 import korlibs.datastructure.iterators.*
@@ -30,6 +31,7 @@ import korlibs.math.interpolation.*
 import korlibs.math.raycasting.*
 import korlibs.render.*
 import korlibs.time.*
+import ui.*
 import kotlin.math.*
 
 suspend fun main() = Korge(windowSize = Size(1280, 720), backgroundColor = Colors["#2b2b2b"], displayMode = KorgeDisplayMode.TOP_LEFT_NO_CLIP) {
@@ -75,7 +77,6 @@ class MyScene : Scene() {
         val ClosedChest = tileEntitiesByName["ClosedChest"]
         val OpenedChest = tileEntitiesByName["OpenedChest"]
         println("tileEntitiesByName=$tileEntitiesByName")
-        var showAnnotations = false
         lateinit var levelView: LDTKLevelView
         lateinit var highlight: Graphics
         val camera = camera {
@@ -338,7 +339,7 @@ class MyScene : Scene() {
                 player.zIndex = player.y
                 updateRay(oldPos)
             } else {
-                println("TODO!!. Check why is this happening. Operation could have lead to stuck: oldPos=$oldPos -> newPos=$newPos, finalDir=$finalDir, moveRay=$moveRay")
+                //println("TODO!!. Check why is this happening. Operation could have lead to stuck: oldPos=$oldPos -> newPos=$newPos, finalDir=$finalDir, moveRay=$moveRay")
             }
 
             lastInteractiveView?.colorMul = Colors.WHITE
@@ -359,9 +360,8 @@ class MyScene : Scene() {
             fun onAnyButton() {
                 val view = getInteractiveView() ?: return
                 val entityView = view as? LDTKEntityView ?: return
-                val doBlock = entityView.fieldsByName.get("Items") ?: return
+                val doBlock = entityView.fieldsByName["Items"] ?: return
                 val items = doBlock.valueDyn.list.map { it.str }
-
                 val tile = OpenedChest!!.tile!!
                 entityView.replaceView(
                     Image(entityView.tileset!!.unextrudedTileSet!!.base.sliceWithSize(tile.x, tile.y, tile.w, tile.h)).also {
@@ -372,12 +372,25 @@ class MyScene : Scene() {
                 launchImmediately {
                     gameWindow.alert("Found $items")
                 }
-
                 println("INTERACTED WITH: " + view + " :: ${doBlock.value!!::class}, ${doBlock.value}")
             }
 
             down(GameButton.BUTTON_WEST) {
-                showAnnotations = !showAnnotations
+                val view = getInteractiveView()
+                if (view is LDTKEntityView && view.fieldsByName["Name"] != null) {
+                    val npcName = view.fieldsByName["Name"]!!.valueString
+                    val npcBio = when (npcName) {
+                        "Rayze" -> NPCBio.rayzeBio
+                        "Baka" -> NPCBio.bakaBio
+                        else -> ""
+                    }
+                    if (npcName != null) {
+                        DialogWindow().show(this@sceneMain, npcBio, npcName)
+                        println("INTERACTED WITH: $view :: $npcName")
+                    } else{
+                        println("npcName = null")
+                    }
+                }
             }
             down(GameButton.BUTTON_SOUTH) {
                 val playerView = (player.view as ImageDataView2)
