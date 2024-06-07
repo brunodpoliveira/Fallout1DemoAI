@@ -70,7 +70,7 @@ class DialogWindow : Container() {
     }
 
     fun show(container: Container, npcBio: String, npcName: String) {
-       // PlayerControls.isDialogActive = true
+        // PlayerControls.isDialogActive = true
         this.npcName = npcName
         this.currentNpcBio = npcBio
         println("Showing dialog for $npcName with bio: $currentNpcBio")
