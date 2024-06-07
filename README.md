@@ -15,7 +15,8 @@ The game can be completed in multiple ways:
 4. **Destruction**: Use wire cutters to destroy the generator, dooming everyone in the town.
 
 ### Controls
-- Player movement and interaction are placeholders: WASD for directions and ENTER for entering dialog with a NPC
+#TODO virtualcontroller explanations
+- Player movement and interaction are placeholders: Arrow keys for directions and ENTER/Button West for entering dialog with a NPC
 - Interact with NPCs by typing messages on the Dialog Window, and click the buttons with your mouse to interact with them.
 - Future versions will include voice input and additional controls.
 
@@ -63,14 +64,16 @@ adhere to the project's coding standards.
 - GNUGRAF for providing critical feedback and support
 
 ## TODO
-- Add voice input for player interactions, allowing speech-to-text functionality.
 - Refine the Dialog Window input by including a virtual keyboard, and allowing the user
-to utilize the virtualcontroller to send the messages and close the dialog
+  to utilize the virtualcontroller to send the messages and close the dialog
 - Implement NPCs thinking out loud their next steps to make interactions more engaging.
 - Expose the director, summary, and next steps (exposed only in easy difficulty mode)
-texts to the end-user.
-- Prepare version 1 of the GNUGRAF presentation.
+  texts to the end-user.
+- Refine the director to only give information to the correct NPC. For ex, If the player had a secret meeting with someone, and they were both sworn to secrecy,
+  the director will not send the information to the other NPCs.
+  If the meeting is in public, the information will be broadcast to everyone. If the character plans an ambush, only the conspirators will know about it
 - Upload a demo a website such as itch.io
+- Add voice input for player interactions, allowing speech-to-text functionality.
 - Move API keys to gradle.properties to enhance security.
 - Develop a main, options, and pause menu for game navigation.
 - Create an inventory system for the player.
