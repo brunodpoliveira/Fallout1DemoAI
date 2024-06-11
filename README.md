@@ -1,6 +1,6 @@
 # Fallout1DemoAI
 This project is a proof-of-concept demonstration of the Fallout 1 demo town, Scrapheap, 
-built using Korge and Kotlin. The main highlight of the project is the use of GPT-3.5 turbo to 
+built using Korge and Kotlin. The main highlight of the project is the use of GPT-3.5 Turbo to 
 power the NPC interactions, making them dynamic and conversational.
 
 ## Game Overview
@@ -64,22 +64,25 @@ adhere to the project's coding standards.
 - GNUGRAF for providing critical feedback and support
 
 ## TODO
+- Expose the director, summary, and next steps texts to the end-user in easy difficulty mode
+- Refine the director to only give information to the correct NPC. For ex, If the player had a secret
+meeting with someone, and they were both sworn to secrecy, the director will not send the information 
+to the other NPCs. If the meeting is in public, the information will be broadcast to everyone. If the 
+character plans an ambush, only the conspirators will know about it
 - Refine the Dialog Window input by including a virtual keyboard, and allowing the user
-  to utilize the virtualcontroller to send the messages and close the dialog
-- Implement NPCs thinking out loud their next steps to make interactions more engaging.
-- Expose the director, summary, and next steps (exposed only in easy difficulty mode)
-  texts to the end-user.
-- Refine the director to only give information to the correct NPC. For ex, If the player had a secret meeting with someone, and they were both sworn to secrecy,
-  the director will not send the information to the other NPCs.
-  If the meeting is in public, the information will be broadcast to everyone. If the character plans an ambush, only the conspirators will know about it
+to utilize the virtualcontroller to send the messages and close the dialog
 - Upload a demo a website such as itch.io
-- Add voice input for player interactions, allowing speech-to-text functionality.
-- Move API keys to gradle.properties to enhance security.
-- Develop a main, options, and pause menu for game navigation.
-- Create an inventory system for the player.
-- Add stats and inventory management to both NPC and player classes.
 - add an Action Model: if the NPC says "we'll meet at noon at the town square" 
 the Action Model will scan for that and program the NPC to move to the town square, 
 if they say "I'll give you my pistol" the game will add a gun to the player's inventory
+- Develop a main, options, and pause menu for game navigation.
+- Create an inventory system for the player.
+- Add stats and inventory management to both NPC and player classes.
 - Implement a simple combat system: if an NPC and player are in range and no walls are in between, 
 enable hit detection.
+- Add voice input for player interactions, allowing speech-to-text functionality.
+- Move API keys to gradle.properties to enhance security.
+- Use custom Fallout-themed Sprites
+- Create a custom level for this demo
+- Add sound effects to the demo
+- Add music to the demo

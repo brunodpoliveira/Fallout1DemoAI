@@ -19,8 +19,6 @@ class DialogWindow : Container() {
     var closeButton: UIButton
 
     init {
-        //PlayerControls.isDialogActive = true
-
         val npcDialogContainer = container().apply {
             position(0, 240)
             solidRect(1280, 240) { color = Colors.DARKGRAY }
@@ -63,14 +61,13 @@ class DialogWindow : Container() {
         }
 
         closeButton.onClick {
-            summarizeAndUpdateCharacterBio()
+            handleCloseConversation()
             OpenAIService.resetConversation()
             closeDialog()
         }
     }
 
     fun show(container: Container, npcBio: String, npcName: String) {
-        // PlayerControls.isDialogActive = true
         this.npcName = npcName
         this.currentNpcBio = npcBio
         println("Showing dialog for $npcName with bio: $currentNpcBio")
@@ -80,7 +77,6 @@ class DialogWindow : Container() {
     }
 
     fun closeDialog() {
-        //PlayerControls.isDialogActive = false
         this.removeFromParent()
     }
 
@@ -89,16 +85,18 @@ class DialogWindow : Container() {
         if (playerInput.isNotBlank()) {
             val npcResponse = OpenAIService.getCharacterResponse(currentNpcBio, playerInput)
             val existingText = npcMessageDisplay.plainText
-            println(existingText)
             npcMessageDisplay.text = RichTextData("$existingText\nPlayer: $playerInput\n$npcName: $npcResponse")
             userMessageInput.text = ""
         }
     }
 
-    private fun summarizeAndUpdateCharacterBio() {
-        val conversation = OpenAIService.msgs.joinToString { it.content }
-        val summary = SummarizerService().summarizeConversation(conversation)
-        Director.updateContext(summary)
-        currentNpcBio += "\n" + summary
+    private fun handleCloseConversation() {
+        val conversation = getCurrentConversation()
+        val updatedBio = ConversationPostProcessingServices().conversationPostProcessingLoop(conversation, currentNpcBio)
+        currentNpcBio += "\n" + updatedBio
+    }
+
+    private fun getCurrentConversation(): String {
+        return OpenAIService.msgs.joinToString { it.content }
     }
 }
