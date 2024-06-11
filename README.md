@@ -64,25 +64,29 @@ adhere to the project's coding standards.
 - GNUGRAF for providing critical feedback and support
 
 ## TODO
-- Expose the director, summary, and next steps texts to the end-user in easy difficulty mode
 - Refine the director to only give information to the correct NPC. For ex, If the player had a secret
 meeting with someone, and they were both sworn to secrecy, the director will not send the information 
 to the other NPCs. If the meeting is in public, the information will be broadcast to everyone. If the 
 character plans an ambush, only the conspirators will know about it
 - Refine the Dialog Window input by including a virtual keyboard, and allowing the user
-to utilize the virtualcontroller to send the messages and close the dialog
-- Upload a demo a website such as itch.io
+to utilize the virtualcontroller to send the messages and close the dialog.
+- Refine the Dialog Window by making its upper portion focus on the characters, or add mugshots 
+like the Fallout's talking heads. Make it block movement and interaction while it is open
+- Refine the Dialog Window to add a scrolling bar
+- Develop a main, options, and pause menu for game navigation.
 - add an Action Model: if the NPC says "we'll meet at noon at the town square" 
 the Action Model will scan for that and program the NPC to move to the town square, 
 if they say "I'll give you my pistol" the game will add a gun to the player's inventory
-- Develop a main, options, and pause menu for game navigation.
 - Create an inventory system for the player.
 - Add stats and inventory management to both NPC and player classes.
 - Implement a simple combat system: if an NPC and player are in range and no walls are in between, 
 enable hit detection.
 - Add voice input for player interactions, allowing speech-to-text functionality.
 - Move API keys to gradle.properties to enhance security.
+- Prompt engineering to refine the NPCs: Give them OCEAN personality to make them more
+realistic and avoid making too much of a stonewall or a pushover
 - Use custom Fallout-themed Sprites
 - Create a custom level for this demo
 - Add sound effects to the demo
 - Add music to the demo
+- Upload a demo a website such as itch.io with about one month to go to GNUGRAF

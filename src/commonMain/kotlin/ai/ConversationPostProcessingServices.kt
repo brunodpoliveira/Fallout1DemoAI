@@ -212,12 +212,18 @@ class ConversationPostProcessingServices {
         val nextSteps = thinkOfNextSteps(selfReflection, npcBio)
         val actionModels = translateNextStepsToActionModel(nextSteps)
         Director.updateContext(summary)
-        //TODO expose for the user on EASY mode
-        println("Self-Reflection: $selfReflection")
-        println("Next Steps: $nextSteps")
-        actionModels.forEach { action ->
-            println("Action Model: $action")
+
+        if (Director.getDifficulty() == "easy") {
+            println("Summary: $summary")
+            println("Self-Reflection: $selfReflection")
+            println("Next Steps: $nextSteps")
+
+            TextDisplayManager.directorText?.text = "Director:\n${Director.getContext()}"
+            TextDisplayManager.selfReflectionText?.text = "Self-Reflection:\n$selfReflection"
+            TextDisplayManager.nextStepsText?.text = "Next Steps:\n$nextSteps"
         }
+
+        actionModels.forEach { action -> println("Action Model: $action") }
         return summary
     }
 }

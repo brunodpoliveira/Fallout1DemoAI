@@ -8,7 +8,9 @@ object Director {
         While the Crypts have the upper hand in numbers, the Fools are more determined. 
         The non-gang residents fear for their safety and hope for a savior to liberate them.
     """.trimIndent()
+
     private var storyContext = initialStoryContext
+    private var gameDifficulty: String = "normal"
 
     fun updateContext(newContext: String) {
         println("Updating context with new information: $newContext")
@@ -22,5 +24,14 @@ object Director {
 
     fun resetContext() {
         storyContext = initialStoryContext
+    }
+
+    fun setDifficulty(difficulty: String) {
+        println("Setting game difficulty to: $difficulty")
+        gameDifficulty = difficulty
+    }
+
+    fun getDifficulty(): String {
+        return gameDifficulty
     }
 }

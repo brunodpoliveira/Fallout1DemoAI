@@ -11,6 +11,7 @@ import korlibs.event.*
 import korlibs.image.atlas.*
 import korlibs.image.bitmap.*
 import korlibs.image.color.*
+import korlibs.image.font.*
 import korlibs.image.format.*
 import korlibs.io.async.*
 import korlibs.korge.animate.*
@@ -47,6 +48,21 @@ class JunkDemoScene : Scene() {
 
     @OptIn(KorgeExperimental::class)
     override suspend fun SContainer.sceneMain() {
+
+        val font = KR.fonts.publicpixel.__file.readTtfFont().lazyBitmapSDF
+        val directorText = text("", font = font).xy(10, 10)
+        val selfReflectionText = text("", font = font).xy(10, 60)
+        val nextStepsText = text("", font = font).xy(10, 110)
+
+        TextDisplayManager.directorText = directorText
+        TextDisplayManager.selfReflectionText = selfReflectionText
+        TextDisplayManager.nextStepsText = nextStepsText
+
+        if (Director.getDifficulty() == "easy") {
+            directorText.text = "Director:\n${Director.getContext()}"
+            selfReflectionText.text = "Self-Reflection:\n"
+            nextStepsText.text = "Next Steps:\n"
+        }
 
         val atlas = MutableAtlasUnit()
         val clericFemale = KR.gfx.clericF.__file.readImageDataContainer(ASE.toProps(), atlas).apply {
