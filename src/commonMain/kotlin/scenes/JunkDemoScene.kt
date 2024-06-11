@@ -76,9 +76,9 @@ class JunkDemoScene : Scene() {
         val level = ldtk.levelsByName["Level_0"]!!
         val tileEntities = ldtk.levelsByName["TILES"]!!.layersByName["Entities"]
         val tileEntitiesByName = tileEntities?.layer?.entityInstances?.associateBy { it.fieldInstancesByName["Name"].valueDyn.str } ?: emptyMap()
-        val ClosedChest = tileEntitiesByName["ClosedChest"]
-        val OpenedChest = tileEntitiesByName["OpenedChest"]
-        openChestTile = OpenedChest!!.tile!!
+        val closedChest = tileEntitiesByName["ClosedChest"]
+        val openedChest = tileEntitiesByName["OpenedChest"]
+        openChestTile = openedChest!!.tile!!
 
         lateinit var levelView: LDTKLevelView
 
@@ -316,8 +316,8 @@ class JunkDemoScene : Scene() {
     }
 
     private fun updateRay(pos: Point): Double {
-        val ANGLES_COUNT = 64
-        val angles = (0 until ANGLES_COUNT).map { Angle.FULL * (it.toDouble() / ANGLES_COUNT.toDouble()) }
+        val anglesCount = 64
+        val angles = (0 until anglesCount).map { Angle.FULL * (it.toDouble() / anglesCount.toDouble()) }
         val results: ArrayList<RayResult> = arrayListOf()
         val results2: ArrayList<RayResult> = arrayListOf()
         val anglesDeque = Deque(angles)

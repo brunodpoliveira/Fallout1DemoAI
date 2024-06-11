@@ -6,7 +6,7 @@ import korlibs.korge.virtualcontroller.*
 import korlibs.math.geom.*
 
 class VirtualControllerManager {
-    lateinit var virtualController: VirtualController
+    private lateinit var virtualController: VirtualController
 
     fun Container.setupVirtualController() {
         virtualController = virtualController(

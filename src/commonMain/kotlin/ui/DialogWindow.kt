@@ -15,22 +15,22 @@ class DialogWindow : Container() {
     private var npcMessageDisplay: TextBlock
     private lateinit var currentNpcBio: String
     private lateinit var npcName: String
-    var sendMessageButton: UIButton
-    var closeButton: UIButton
+    private var sendMessageButton: UIButton
+    private var closeButton: UIButton
 
     init {
-        val npcDialogContainer = container().apply {
-            position(0, 240)
-            solidRect(1280, 240) { color = Colors.DARKGRAY }
-        }
-        val playerDialogContainer = container().apply {
+        val playerDialogInputContainer = container().apply {
             position(0, 480)
             solidRect(1280, 460) { color = Colors.LIGHTGREY }
         }
 
+        val dialogScrollableContainer = uiScrollable(size = Size(1280, 240)) {
+            position(0, 240)
+        }
+
         npcMessageDisplay = textBlock(RichTextData.fromHTML("")) {
-            position(20, 20)
-            size(Size(1240, 200))
+            size = Size(1240, 10000)
+            fill = Colors.WHITE
         }
 
         userMessageInput = uiTextInput("Type your message here...") {
@@ -38,7 +38,7 @@ class DialogWindow : Container() {
             size = Size(1040, 60)
         }
 
-        sendMessageButton = uiButton("SEND") {
+        sendMessageButton = uiButton("Send") {
             position(1080, 40)
             height = 60.0
         }
@@ -48,12 +48,12 @@ class DialogWindow : Container() {
             height = 40.0
         }
 
-        npcDialogContainer.addChild(npcMessageDisplay)
-        playerDialogContainer.addChild(userMessageInput)
-        playerDialogContainer.addChild(sendMessageButton)
+        playerDialogInputContainer.addChild(userMessageInput)
+        playerDialogInputContainer.addChild(sendMessageButton)
 
-        addChild(npcDialogContainer)
-        addChild(playerDialogContainer)
+        addChild(dialogScrollableContainer)
+        dialogScrollableContainer.container.addChild(npcMessageDisplay)
+        addChild(playerDialogInputContainer)
         addChild(closeButton)
 
         sendMessageButton.onClick {
@@ -76,11 +76,11 @@ class DialogWindow : Container() {
         npcMessageDisplay.text = RichTextData("${npcName}: $initialResponse")
     }
 
-    fun closeDialog() {
+    private fun closeDialog() {
         this.removeFromParent()
     }
 
-    fun sendMessage() {
+    private fun sendMessage() {
         val playerInput = userMessageInput.text
         if (playerInput.isNotBlank()) {
             val npcResponse = OpenAIService.getCharacterResponse(currentNpcBio, playerInput)

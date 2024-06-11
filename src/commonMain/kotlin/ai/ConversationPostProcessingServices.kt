@@ -40,7 +40,6 @@ class ConversationPostProcessingServices {
         val choices = httpResponse.choices.mapNotNull { it.message }
 
         if (choices.isNotEmpty()) {
-            println(choices[0].content)
             msgs.add(choices[0])
             return choices[0].content
         } else {
@@ -76,7 +75,6 @@ class ConversationPostProcessingServices {
         val choices = httpResponse.choices.mapNotNull { it.message }
 
         if (choices.isNotEmpty()) {
-            println(choices[0].content)
             msgs.add(choices[0])
             return choices[0].content
         } else {
@@ -162,7 +160,6 @@ class ConversationPostProcessingServices {
         val choices = httpResponse.choices.mapNotNull { it.message }
 
         if (choices.isNotEmpty()) {
-            println(choices[0].content)
             msgs.add(choices[0])
             return choices[0].content
         } else {
@@ -198,7 +195,6 @@ class ConversationPostProcessingServices {
         val choices = httpResponse.choices.mapNotNull { it.message }
 
         if (choices.isNotEmpty()) {
-            println(choices[0].content)
             msgs.add(choices[0])
             return choices[0].content
         } else {
@@ -212,12 +208,11 @@ class ConversationPostProcessingServices {
         val nextSteps = thinkOfNextSteps(selfReflection, npcBio)
         val actionModels = translateNextStepsToActionModel(nextSteps)
         Director.updateContext(summary)
+        println("Summary: $summary")
+        println("Self-Reflection: $selfReflection")
+        println("Next Steps: $nextSteps")
 
         if (Director.getDifficulty() == "easy") {
-            println("Summary: $summary")
-            println("Self-Reflection: $selfReflection")
-            println("Next Steps: $nextSteps")
-
             TextDisplayManager.directorText?.text = "Director:\n${Director.getContext()}"
             TextDisplayManager.selfReflectionText?.text = "Self-Reflection:\n$selfReflection"
             TextDisplayManager.nextStepsText?.text = "Next Steps:\n$nextSteps"
