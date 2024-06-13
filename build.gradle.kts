@@ -5,8 +5,10 @@ plugins {
 }
 
 korge {
-	id = "com.fallout1.demo"
-	targetDefault()
+    jvmMainClassName = "MainKt"
+    id = "com.fallout1.demo"
+	//targetDefault()
+    targetJvm()
 	serializationJson()
 }
 
