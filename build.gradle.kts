@@ -5,10 +5,18 @@ plugins {
 }
 
 korge {
+    entryPoint = "main"
     jvmMainClassName = "MainKt"
     id = "com.fallout1.demo"
-	//targetDefault()
+    //targetAll()
+    //targetDefault()
     targetJvm()
+    //targetJs()
+    targetWasm()
+    targetDesktop()
+    //targetIos()
+    //targetAndroid()
+
 	serializationJson()
 }
 

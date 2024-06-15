@@ -45,8 +45,8 @@ This will compile and run the game with hot-reloading enabled, allowing you to s
 1. Clone the repository.
 2. Ensure the API key for GPT-3.5 turbo is set in gradle.properties.
 3. Run the game using: ./gradlew runJvmAutoreload
-4. Deploy using ./gradlew packageJvmFatJarProguard. Run it using build/libs/java -jar Fallout1DemoAI-all.jar
-   
+4. Deploy using ./gradlew packageJvmFatJar. Run it using java -jar build/libs/Fallout1DemoAI-all.jar
+
 ### Folder Structure
 TODO redo this section
 src/commonMain/kotlin/ai: Holds the AI files, such as the bios, the services (director, summ, openai), and a to-do Action Model.
@@ -65,27 +65,103 @@ adhere to the project's coding standards.
 - Korge developers for the game engine, and the Dungeon Starter Kit
 - GNUGRAF for providing critical feedback and support
 
+## Troubleshooting: Run a .jar file
+The game is packaged as a .jar. Below is how to run it:
+
+Linux:
+
+If you have Java installed, you should be able to run it. Check if Java is installed with:
+
+java --version
+If you see an error instead of the version number, 
+install Java runtime environment using the following command:
+
+sudo apt install default-jre
+
+The first step is to open the file manager from the system menu and navigate to the jar 
+file which you want to run.
+
+Then, right-click on the jar app and select Properties. 
+From there, select Permissions and enable Allow executing file as program. 
+That made the file executable.But you have yet to select which app it should use to run the jar files.
+
+To select an Application to start the jar files, again, 
+click on the jar file and choose the second option Open with Other Application and 
+choose the OpenJDK Java Runtime option That's it. Now, you can start the jar 
+application like you do with any other files by pressing the Enter key.
+
+Windows:
+
+To run a JAR file on Windows 10 or Windows 11, right-click it, 
+then select Open With > Java Platform SE Binary.
+
+Step 1: Check if Java Is Already Installed on Your PC
+
+It's worth checking if you have Java installed on your PC already, and if so, you can skip 
+the Step 2 below.
+
+To do that, first, launch the Run box by pressing Windows+R. 
+Then, Type "cmd" in the Run box and press Enter.
+
+In the Command Prompt window that opens, type the following command and press Enter:
+
+java -version
+
+If you have Java installed on your PC, you'll see your Java version. 
+In this case, skip Step 2 below and head straight to Step 3.
+
+If Command Prompt displays the following message:
+"'java' is not recognized as an internal or external command", 
+then you don't have Java installed. In this case, install the utility using Step 2 below.
+
+Step 2: Download and Install Java on Windows
+
+You can download and install Java for free on your Windows PC. To do that, first, launch a web 
+browser on your computer and open the Java download web page. 
+There, in the "Windows" section, download the appropriate file for your machine.
+
+When Java is downloaded, double-click the installer file to install the utility on your PC. 
+Then, restart your Windows 10 or Windows 11 PC.
+
+Step 3: Run JAR Files on Windows 10 or Windows 11
+
+Now that you have Java installed, you're ready to launch your JAR files. To do that, 
+first, open a File Explorer window and locate your JAR file. Find the JAR file. Right-click 
+your JAR file and choose Open With > Java(TM) Platform SE Binary. If you don't see that 
+option in the "Open With" menu, then click "Choose Another App" and you'll see the option. 
+Select Open With > Java(TM) Platform SE Binary from the menu. Your JAR file will launch 
+and you'll be able to interact with it. And that's all there is to it.
+
+Mac:
+
+1: Install Java if you don't already have it on your computer. 
+You cannot open JAR files without Java installed. To install it, go to https://www.java.com/br/download/
+and click Download below the most current version of Java, then open it when the download is complete.
+To install a non-Apple file on your Mac, first click OK on the prompt, then on the Apple menu, 
+click System Preferences, click Security & Privacy, unlock the menu, click Open Anyway next to the file 
+name. file and then select Open when prompted. 
+
+2: Try double-clicking the JAR file to open it. 
+Try double-clicking the JAR file to open it. If it is an executable and Java is installed, 
+the file should open. If it still doesn't open...
+
+3: Update Java. 
+If the JAR file displays an error when double-clicking it, you may need to update Java. 
+To do it: Open the Apple Mac Apple menu. Click System Preferences. Click Java. Click on the Update 
+tab. Click Update now.
+
 ## TODO
-- Refine the director to only give information to the correct NPC. For ex, If the player had a secret
-  meeting with someone, and they were both sworn to secrecy, the director will not send the information
-  to the other NPCs. If the character plans an ambush, only the conspirators will know about it.
-  Otherwise, the information will be broadcast to everyone
-- Prompt engineering to refine the NPCs: Give them OCEAN personality to make them more
-  realistic and avoid making too much of a stonewall or a pushover and to avoid talking about
-  characters, items, and locations that do not exist.
-- Edit NPCBio to ensure it reflects current personality of the char in story, including relation with
-  the main character
-- Refine the Dialog Window input by including a virtual keyboard, and allowing the user
-  to utilize the virtualcontroller buttons to send the messages and close the dialog.
+- Refine the Dialog Window by allowing the user to utilize the virtualcontroller buttons to send the messages and close the dialog.
 - Refine the Dialog Window to make it block movement and interaction while it is open
+- Refine the Dialog Window input by including a virtual keyboard on Android if necessary,
 - Refine the Dialog Window by making its upper portion focus on the characters and add the NPC mugshot
   like the Fallout's talking heads.
 - Refine the game by adding UIProgressBar loading screen when it comes in and out of the DialogWindow
-- Add movement and pathfinding logic to the NPCs so they can move from point to point
 - Add stats and inventory management to both NPC and player classes.
 - Create an inventory system and menu for the player.
 - Develop a main, options, and pause menu for game navigation.
 - Add the easy mode texts to the pause menu to make it more readable
+- Add movement and pathfinding logic to the NPCs so they can move from point to point
 - Add an Action Model: if the NPC says "we'll meet at the town square"
   the Action Model will set the NPC to move to the town square,
   if they say "I'll give you my pistol" the game will add a gun to the player's inventory

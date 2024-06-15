@@ -215,7 +215,8 @@ class JunkDemoScene : Scene() {
         val doBlock = entityView.fieldsByName["Items"] ?: return
         val items = doBlock.valueDyn.list.map { it.str }
         entityView.replaceView(
-            Image(entityView.tileset!!.unextrudedTileSet!!.base.sliceWithSize(openChestTile.x, openChestTile.y, openChestTile.w, openChestTile.h)).also {
+            Image(entityView.tileset!!.unextrudedTileSet!!.base.sliceWithSize(openChestTile.x,
+                openChestTile.y, openChestTile.w, openChestTile.h)).also {
                 it.smoothing = false
                 it.anchor(entityView.anchor)
             }
@@ -231,13 +232,20 @@ class JunkDemoScene : Scene() {
         val view = getInteractiveView() ?: return
         if (view is LDTKEntityView && view.fieldsByName["Name"] != null) {
             val npcName = view.fieldsByName["Name"]!!.valueString
+            //TODO Put faction info in ldtk entity
+            val npcFactions = mapOf(
+                "Rayze" to "Crypts",
+                "Baka" to "Fools",
+                "Lex" to "Non-Gang"
+            )
+            val factionName = npcFactions[npcName] ?: "Unknown"
             val npcBio = when (npcName) {
                 "Rayze" -> NPCBio.rayzeBio
                 "Baka" -> NPCBio.bakaBio
                 else -> ""
             }
             if (npcName != null) {
-                DialogWindow().show(container, npcBio, npcName)
+                DialogWindow().show(container, npcBio, npcName,factionName)
             }
             println("INTERACTED WITH: $view :: $npcName")
         }

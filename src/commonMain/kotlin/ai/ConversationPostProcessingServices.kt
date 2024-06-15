@@ -55,7 +55,11 @@ class ConversationPostProcessingServices {
             Self-Reflection: $selfReflection
             NPCBio: $npcBio
             
-            Next Steps:
+            Next Steps and Metadata:
+            Actions:
+            <List of Actions>
+            Metadata:
+            <SECRET or CONSPIRACY - [LIST OF CONSPIRATORS] if applicable>
         """.trimIndent()
 
         val assistantMessage = ChatMessage("assistant", prompt)
@@ -96,10 +100,6 @@ class ConversationPostProcessingServices {
             
             If there are multiple subjects (For example, CONSPIRE (secret planning) and PLAN (open planning) will 
             usually involve multiple subjects) make one action for each that needs to be informed. 
-            Example: CONSPIRE CHAR1 CURRENT_LOCATION, CONSPIRE CHAR2 CURRENT_LOCATION, etc
-            Same deal with GIVE: If the character wants to give multiple objects, put each object 
-            to be given in its own action model command.
-            Example: GIVE PLAYER CURRENT_LOCATION WEAPON, GIVE PLAYER CURRENT_LOCATION AMMUNITION, etc
 
             Use ONLY the following verbs: ${ActionVerbs.verbs.joinToString(", ")}
             Use ONLY these possible locations: ${ActionVerbs.locations.joinToString(", ")}
@@ -141,6 +141,8 @@ class ConversationPostProcessingServices {
             Conversation: $conversation
             
             Summary:
+            Actions:
+            <List of Actions>
         """.trimIndent()
 
         val assistantMessage = ChatMessage("assistant", prompt)
@@ -167,15 +169,26 @@ class ConversationPostProcessingServices {
         }
     }
 
-    fun editNPCBio(summary: String, npcBio: String): String {
+    private fun checkForSecretsOrConspiracy(metadata: String): Pair<Boolean, List<String>> {
+        return if (metadata.contains("SECRET")) {
+            Pair(true, emptyList())
+        } else if (metadata.contains("CONSPIRACY")) {
+            val conspirators = """CONSPIRACY - \[(.*?)\]""".toRegex().find(metadata)?.groups?.get(1)?.value?.split(", ") ?: emptyList()
+            Pair(false, conspirators)
+        } else {
+            Pair(false, emptyList())
+        }
+    }
+
+    private fun editNPCBio(summary: String, npcBio: String): String {
         val prompt = """
-            Edit the following NPC Bio to reflect the summary of this conversation:
+            Edit the following NPC Bio to reflect the summary of this conversation and the NPC's personality:
             
             Summary: $summary
             
             NPCBio: $npcBio
             
-            Self-Reflection:
+            Edited Bio:
         """.trimIndent()
 
         val assistantMessage = ChatMessage("assistant", prompt)
@@ -202,23 +215,31 @@ class ConversationPostProcessingServices {
         }
     }
 
-    fun conversationPostProcessingLoop(conversation: String, npcBio: String): String {
+    fun conversationPostProcessingLoop(conversation: String, npcBio: String): Pair<String, Pair<Boolean, List<String>>> {
         val summary = summarizeConversation(conversation)
-        val selfReflection = npcSelfReflect(conversation)
+        val selfReflection = npcSelfReflect(summary)
         val nextSteps = thinkOfNextSteps(selfReflection, npcBio)
-        val actionModels = translateNextStepsToActionModel(nextSteps)
+
+        val parts = nextSteps.split("Metadata:")
+        val actions = parts[0].trim()
+        val metadata = parts.getOrNull(1)?.trim() ?: ""
+
+        val (isSecretPlan, conspirators) = checkForSecretsOrConspiracy(metadata)
+        val actionModels = translateNextStepsToActionModel(actions)
+
         Director.updateContext(summary)
         println("Summary: $summary")
         println("Self-Reflection: $selfReflection")
-        println("Next Steps: $nextSteps")
+        println("Next Steps: $actions")
 
         if (Director.getDifficulty() == "easy") {
             TextDisplayManager.directorText?.text = "Director:\n${Director.getContext()}"
             TextDisplayManager.selfReflectionText?.text = "Self-Reflection:\n$selfReflection"
-            TextDisplayManager.nextStepsText?.text = "Next Steps:\n$nextSteps"
+            TextDisplayManager.nextStepsText?.text = "Next Steps:\n$actions"
         }
 
         actionModels.forEach { action -> println("Action Model: $action") }
-        return summary
+        val updatedBio = editNPCBio(summary, npcBio)
+        return Pair(updatedBio, Pair(isSecretPlan, conspirators))
     }
 }

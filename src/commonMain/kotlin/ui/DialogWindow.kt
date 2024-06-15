@@ -15,6 +15,7 @@ class DialogWindow : Container() {
     private var npcMessageDisplay: TextBlock
     private lateinit var currentNpcBio: String
     private lateinit var npcName: String
+    private lateinit var factionName: String
     private var sendMessageButton: UIButton
     private var closeButton: UIButton
 
@@ -67,12 +68,14 @@ class DialogWindow : Container() {
         }
     }
 
-    fun show(container: Container, npcBio: String, npcName: String) {
+    fun show(container: Container, npcBio: String, npcName: String, factionName: String) {
         this.npcName = npcName
         this.currentNpcBio = npcBio
+        this.factionName = factionName
         println("Showing dialog for $npcName with bio: $currentNpcBio")
         container.addChild(this)
-        val initialResponse = OpenAIService.getCharacterResponse(currentNpcBio, "Hi")
+        val initialResponse = OpenAIService.getCharacterResponse(npcName,
+            factionName, currentNpcBio, "Hi")
         npcMessageDisplay.text = RichTextData("${npcName}: $initialResponse")
     }
 
@@ -83,17 +86,25 @@ class DialogWindow : Container() {
     private fun sendMessage() {
         val playerInput = userMessageInput.text
         if (playerInput.isNotBlank()) {
-            val npcResponse = OpenAIService.getCharacterResponse(currentNpcBio, playerInput)
+            val npcResponse = OpenAIService.getCharacterResponse(npcName, factionName, currentNpcBio,
+                playerInput)
             val existingText = npcMessageDisplay.plainText
-            npcMessageDisplay.text = RichTextData("$existingText\nPlayer: $playerInput\n$npcName: $npcResponse")
+            npcMessageDisplay.text =
+                RichTextData("$existingText\nPlayer: $playerInput\n$npcName: $npcResponse")
             userMessageInput.text = ""
         }
     }
 
     private fun handleCloseConversation() {
         val conversation = getCurrentConversation()
-        val updatedBio = ConversationPostProcessingServices().conversationPostProcessingLoop(conversation, currentNpcBio)
-        currentNpcBio += "\n" + updatedBio
+        val (updatedBio, secretConspiracyPair) =
+            ConversationPostProcessingServices().conversationPostProcessingLoop(
+                conversation, currentNpcBio
+            )
+
+        val (isSecretPlan, conspirators) = secretConspiracyPair
+
+        Director.updateNPCContext(npcName, updatedBio, isSecretPlan, conspirators)
     }
 
     private fun getCurrentConversation(): String {
