@@ -35,6 +35,10 @@ import ui.*
 import kotlin.math.*
 
 class JunkDemoScene : Scene() {
+    companion object {
+        var dialogIsOpen = false
+    }
+
     private val controllerManager = VirtualControllerManager()
     private lateinit var player: LDTKEntityView
     private lateinit var playerDirection: Vector2D
@@ -157,47 +161,49 @@ class JunkDemoScene : Scene() {
         playerState = ""
 
         addUpdater(60.hz) {
-            val (dx, dy) = controllerManager.getControllerInput()
-            val playerView = (player.view as ImageDataView2)
+            if (!dialogIsOpen) {
+                val (dx, dy) = controllerManager.getControllerInput()
+                val playerView = (player.view as ImageDataView2)
 
-            if (!dx.isAlmostZero() || !dy.isAlmostZero()) {
-                playerDirection = Vector2D(dx.sign, dy.sign)
-            }
-
-            if (dx == 0.0 && dy == 0.0) {
-                playerView.animation = if (playerState != "") playerState else "idle"
-            } else {
-                playerState = ""
-                playerView.animation = "walk"
-                playerView.scaleX = if (playerDirection.x < 0) -1.0 else +1.0
-            }
-
-            val speed = 1.5
-            val newDir = Vector2D(dx * speed, dy * speed)
-            val oldPos = player.pos
-            val moveRay = doRay(oldPos, newDir, "Collides")
-            val finalDir = if (moveRay != null && moveRay.point.distanceTo(oldPos) < 6f) {
-                val res = newDir.reflected(moveRay.normal)
-                if (moveRay.normal.y != 0.0) {
-                    Vector2D(res.x, 0f)
-                } else {
-                    Vector2D(0f, res.y)
+                if (!dx.isAlmostZero() || !dy.isAlmostZero()) {
+                    playerDirection = Vector2D(dx.sign, dy.sign)
                 }
-            } else {
-                newDir
-            }
-            val newPos = oldPos + finalDir
-            if (!hitTest2(newPos) || !hitTest2(oldPos)) {
-                player.pos = newPos
-                player.zIndex = player.y
-                updateRay(oldPos)
-            }
 
-            lastInteractiveView?.colorMul = Colors.WHITE
-            val interactiveView = getInteractiveView()
-            if (interactiveView != null) {
-                interactiveView.colorMul = Colors["#ffbec3"]
-                lastInteractiveView = interactiveView
+                if (dx == 0.0 && dy == 0.0) {
+                    playerView.animation = if (playerState != "") playerState else "idle"
+                } else {
+                    playerState = ""
+                    playerView.animation = "walk"
+                    playerView.scaleX = if (playerDirection.x < 0) -1.0 else +1.0
+                }
+
+                val speed = 1.5
+                val newDir = Vector2D(dx * speed, dy * speed)
+                val oldPos = player.pos
+                val moveRay = doRay(oldPos, newDir, "Collides")
+                val finalDir = if (moveRay != null && moveRay.point.distanceTo(oldPos) < 6f) {
+                    val res = newDir.reflected(moveRay.normal)
+                    if (moveRay.normal.y != 0.0) {
+                        Vector2D(res.x, 0f)
+                    } else {
+                        Vector2D(0f, res.y)
+                    }
+                } else {
+                    newDir
+                }
+                val newPos = oldPos + finalDir
+                if (!hitTest2(newPos) || !hitTest2(oldPos)) {
+                    player.pos = newPos
+                    player.zIndex = player.y
+                    updateRay(oldPos)
+                }
+
+                lastInteractiveView?.colorMul = Colors.WHITE
+                val interactiveView = getInteractiveView()
+                if (interactiveView != null) {
+                    interactiveView.colorMul = Colors["#ffbec3"]
+                    lastInteractiveView = interactiveView
+                }
             }
         }
 

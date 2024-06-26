@@ -3,11 +3,14 @@ package ui
 import ai.*
 import korlibs.image.color.*
 import korlibs.image.text.*
+import korlibs.io.async.launch
 import korlibs.korge.annotations.*
 import korlibs.korge.input.*
 import korlibs.korge.ui.*
 import korlibs.korge.view.*
 import korlibs.math.geom.*
+import kotlinx.coroutines.*
+import scenes.*
 
 @OptIn(KorgeExperimental::class)
 class DialogWindow : Container() {
@@ -18,8 +21,16 @@ class DialogWindow : Container() {
     private lateinit var factionName: String
     private var sendMessageButton: UIButton
     private var closeButton: UIButton
+    private var loadingProgressBar: UIProgressBar = uiProgressBar(size = Size(256, 8), current = 0f, maximum = 100f) {
+        position(128.0, 240.0)
+        visible = false
+    }
+
+    private var loadingJob: Job? = null
 
     init {
+        addChild(loadingProgressBar)
+
         val playerDialogInputContainer = container().apply {
             position(0, 480)
             solidRect(1280, 460) { color = Colors.LIGHTGREY }
@@ -64,7 +75,7 @@ class DialogWindow : Container() {
         closeButton.onClick {
             handleCloseConversation()
             OpenAIService.resetConversation()
-            closeDialog()
+            showLoadingScreen(reversing = true)
         }
     }
 
@@ -74,37 +85,54 @@ class DialogWindow : Container() {
         this.factionName = factionName
         println("Showing dialog for $npcName with bio: $currentNpcBio")
         container.addChild(this)
-        val initialResponse = OpenAIService.getCharacterResponse(npcName,
-            factionName, currentNpcBio, "Hi")
+        showLoadingScreen(reversing = false)
+    }
+
+    @OptIn(DelicateCoroutinesApi::class)
+    private fun showLoadingScreen(reversing: Boolean) {
+        loadingProgressBar.visible = true
+        loadingProgressBar.current = 0.0
+        JunkDemoScene.dialogIsOpen = true
+        loadingJob = GlobalScope.launch {
+            while (loadingProgressBar.current < loadingProgressBar.maximum) {
+                loadingProgressBar.current += 1
+                delay(30)
+            }
+            loadingProgressBar.visible = false
+            if (reversing) {
+                finishCloseDialog()
+            } else {
+                startDialog()
+            }
+        }
+    }
+
+    private fun startDialog() {
+        val initialResponse = OpenAIService.getCharacterResponse(npcName, factionName, currentNpcBio, "Hi")
         npcMessageDisplay.text = RichTextData("${npcName}: $initialResponse")
     }
 
-    private fun closeDialog() {
+    private fun handleCloseConversation() {
+        val conversation = getCurrentConversation()
+        val (updatedBio, secretConspiracyPair) = ConversationPostProcessingServices().conversationPostProcessingLoop(conversation, currentNpcBio)
+        val (isSecretPlan, conspirators) = secretConspiracyPair
+        Director.updateNPCContext(npcName, updatedBio, isSecretPlan, conspirators)
+    }
+
+    private fun finishCloseDialog() {
         this.removeFromParent()
+        loadingJob?.cancel()
+        JunkDemoScene.dialogIsOpen = false
     }
 
     private fun sendMessage() {
         val playerInput = userMessageInput.text
         if (playerInput.isNotBlank()) {
-            val npcResponse = OpenAIService.getCharacterResponse(npcName, factionName, currentNpcBio,
-                playerInput)
+            val npcResponse = OpenAIService.getCharacterResponse(npcName, factionName, currentNpcBio, playerInput)
             val existingText = npcMessageDisplay.plainText
-            npcMessageDisplay.text =
-                RichTextData("$existingText\nPlayer: $playerInput\n$npcName: $npcResponse")
+            npcMessageDisplay.text = RichTextData("$existingText\nPlayer: $playerInput\n$npcName: $npcResponse")
             userMessageInput.text = ""
         }
-    }
-
-    private fun handleCloseConversation() {
-        val conversation = getCurrentConversation()
-        val (updatedBio, secretConspiracyPair) =
-            ConversationPostProcessingServices().conversationPostProcessingLoop(
-                conversation, currentNpcBio
-            )
-
-        val (isSecretPlan, conspirators) = secretConspiracyPair
-
-        Director.updateNPCContext(npcName, updatedBio, isSecretPlan, conspirators)
     }
 
     private fun getCurrentConversation(): String {
