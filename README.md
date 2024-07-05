@@ -16,7 +16,8 @@ The game can be completed in multiple ways:
 
 ### Controls
 #TODO virtualcontroller explanations
-- Player movement and interaction are placeholders: Arrow keys for directions and Z/Button West for entering dialog with a NPC
+- Player movement and interaction are placeholders: Arrow keys for directions and Z/West Button (the bottom button) for entering dialog with a NPC
+- Press the Return/ North Button (The middle button) to pause the game. You can acess the Notes from this menu
 - Interact with NPCs by typing messages on the Dialog Window, and click the buttons with your mouse to interact with them.
 - Hold and drag the right mouse button in the Dialog message window to scroll through it 
 - Future versions will include voice input and additional controls.
@@ -151,9 +152,7 @@ To do it: Open the Apple Mac Apple menu. Click System Preferences. Click Java. C
 tab. Click Update now.
 
 ## TODO
-- Develop a main, options, and pause menu for game navigation.
 - Add stats and inventory management to both NPC and player classes.
-- Add the easy mode texts to the pause menu to make it more readable
 - Create an inventory system and menu for the player.
 - Add movement and pathfinding logic to the NPCs so they can move from point to point
 - Add an Action Model: if the NPC says "we'll meet at the town square"
@@ -168,3 +167,4 @@ tab. Click Update now.
 - Create a custom level for this demo
 - Add sound effects to the demo
 - Add music to the demo
+- Add the Save/Load game logic

@@ -7,16 +7,13 @@ import controls.*
 import img.*
 import korlibs.datastructure.*
 import korlibs.datastructure.iterators.*
-import korlibs.event.*
 import korlibs.image.atlas.*
 import korlibs.image.bitmap.*
 import korlibs.image.color.*
-import korlibs.image.font.*
 import korlibs.image.format.*
 import korlibs.io.async.*
 import korlibs.korge.animate.*
 import korlibs.korge.annotations.*
-import korlibs.korge.input.*
 import korlibs.korge.ldtk.*
 import korlibs.korge.ldtk.view.*
 import korlibs.korge.scene.*
@@ -37,6 +34,7 @@ import kotlin.math.*
 class JunkDemoScene : Scene() {
     companion object {
         var dialogIsOpen = false
+        var isPaused = false
     }
 
     private val controllerManager = VirtualControllerManager()
@@ -49,24 +47,10 @@ class JunkDemoScene : Scene() {
     private lateinit var entities: List<LDTKEntityView>
     private lateinit var highlight: Graphics
     private lateinit var openChestTile: TilesetRectangle
+    private lateinit var pauseMenu: PauseMenu
 
     @OptIn(KorgeExperimental::class)
     override suspend fun SContainer.sceneMain() {
-
-        val font = KR.fonts.publicpixel.__file.readTtfFont().lazyBitmapSDF
-        val directorText = text("", font = font).xy(10, 10)
-        val selfReflectionText = text("", font = font).xy(10, 60)
-        val nextStepsText = text("", font = font).xy(10, 110)
-
-        TextDisplayManager.directorText = directorText
-        TextDisplayManager.selfReflectionText = selfReflectionText
-        TextDisplayManager.nextStepsText = nextStepsText
-
-        if (Director.getDifficulty() == "easy") {
-            directorText.text = "Director:\n${Director.getContext()}"
-            selfReflectionText.text = "Self-Reflection:\n"
-            nextStepsText.text = "Next Steps:\n"
-        }
 
         val atlas = MutableAtlasUnit()
         val clericFemale = KR.gfx.clericF.__file.readImageDataContainer(ASE.toProps(), atlas).apply {
@@ -145,13 +129,14 @@ class JunkDemoScene : Scene() {
             }
         )
 
+        pauseMenu = PauseMenu()
         controllerManager.apply {
             setupVirtualController()
             setupButtonActions(
                 onAnyButton = { handleAnyButton() },
                 onWestButton = { handleWestButton(this@sceneMain) },
                 onSouthButton = { handleSouthButton() },
-                onNorthButton = { handleNorthButton() }
+                onNorthButton = { handleNorthButton(this@sceneMain) }
             )
         }
 
@@ -206,12 +191,6 @@ class JunkDemoScene : Scene() {
                 }
             }
         }
-
-        keys {
-            down(Key.R) {
-                println(player.pos)
-            }
-        }
     }
 
     private fun handleAnyButton() {
@@ -239,6 +218,7 @@ class JunkDemoScene : Scene() {
         if (view is LDTKEntityView && view.fieldsByName["Name"] != null) {
             val npcName = view.fieldsByName["Name"]!!.valueString
             //TODO Put faction info in ldtk entity
+            //TODO transfer all this logic to NPC init or some other class
             val npcFactions = mapOf(
                 "Rayze" to "Crypts",
                 "Baka" to "Fools",
@@ -248,6 +228,7 @@ class JunkDemoScene : Scene() {
             val npcBio = when (npcName) {
                 "Rayze" -> NPCBio.rayzeBio
                 "Baka" -> NPCBio.bakaBio
+                "Lex" -> NPCBio.lexBio
                 else -> ""
             }
             if (npcName != null) {
@@ -265,12 +246,12 @@ class JunkDemoScene : Scene() {
         println("Handle south button pressed")
     }
 
-    private fun handleNorthButton() {
-        val playerView = (player.view as ImageDataView2)
-        playerView.animation = "attack"
-        playerState = "gesture"
-        handleAnyButton()  // Placeholder, assuming gesture action shares logic with 'use' for now
-        println("Handle north button pressed")
+    private fun handleNorthButton(container: Container) {
+        if (isPaused) {
+            pauseMenu.resumeGame()
+        } else {
+            pauseMenu.show(container)
+        }
     }
 
     private fun IntIArray2.check(it: PointInt): Boolean {

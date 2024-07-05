@@ -9,5 +9,5 @@ suspend fun main() = Korge(windowSize = Size(1280, 720), backgroundColor = Color
     Director.setDifficulty("easy")
 
     val sceneContainer = sceneContainer()
-    sceneContainer.changeTo { JunkDemoScene() }
+    sceneContainer.changeTo { MainMenuScene() }
 }
