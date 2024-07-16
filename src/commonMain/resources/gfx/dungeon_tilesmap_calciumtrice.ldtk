@@ -11,7 +11,7 @@
 	"iid": "8db93ce0-ed50-11ed-926a-4957c7fbc019",
 	"jsonVersion": "1.3.2",
 	"appBuildId": 467535,
-	"nextUid": 190,
+	"nextUid": 192,
 	"identifierStyle": "Capitalize",
 	"toc": [],
 	"worldLayout": "Free",
@@ -1845,7 +1845,7 @@
 			"tileRenderMode": "FitInside",
 			"tileRect": { "tilesetUid": 1, "x": 144, "y": 416, "w": 16, "h": 32 },
 			"nineSliceBorders": [],
-			"maxCount": 0,
+			"maxCount": 1,
 			"limitScope": "PerLevel",
 			"limitBehavior": "MoveLastOne",
 			"pivotX": 0,
@@ -2021,6 +2021,40 @@
 						"id": "V_Bool",
 						"params": [ false ]
 					},
+					"textLanguageMode": null,
+					"symmetricalRef": false,
+					"autoChainRef": true,
+					"allowOutOfLevelRef": true,
+					"allowedRefs": "OnlySame",
+					"allowedRefsEntityUid": null,
+					"allowedRefTags": [],
+					"tilesetUid": null
+				},
+				{
+					"identifier": "HP",
+					"doc": "Health Points",
+					"__type": "Int",
+					"uid": 190,
+					"type": "F_Int",
+					"isArray": false,
+					"canBeNull": false,
+					"arrayMinLength": null,
+					"arrayMaxLength": null,
+					"editorDisplayMode": "NameAndValue",
+					"editorDisplayScale": 1,
+					"editorDisplayPos": "Beneath",
+					"editorLinkStyle": "StraightArrow",
+					"editorAlwaysShow": true,
+					"editorShowInWorld": true,
+					"editorCutLongValues": true,
+					"editorTextSuffix": null,
+					"editorTextPrefix": null,
+					"useForSmartColor": false,
+					"min": 1,
+					"max": 250,
+					"regex": null,
+					"acceptFileTypes": null,
+					"defaultOverride": { "id": "V_Int", "params": [100] },
 					"textLanguageMode": null,
 					"symmetricalRef": false,
 					"autoChainRef": true,
@@ -2259,10 +2293,10 @@
 					"editorTextPrefix": null,
 					"useForSmartColor": false,
 					"min": 1,
-					"max": 5000,
+					"max": 250,
 					"regex": null,
 					"acceptFileTypes": null,
-					"defaultOverride": { "id": "V_Int", "params": [50] },
+					"defaultOverride": { "id": "V_Int", "params": [100] },
 					"textLanguageMode": null,
 					"symmetricalRef": false,
 					"autoChainRef": true,
@@ -3380,7 +3414,8 @@
 									"id": "V_Bool",
 									"params": [ false ]
 								}] },
-								{ "__identifier": "Collides", "__type": "Bool", "__value": false, "__tile": null, "defUid": 181, "realEditorValues": [] }
+								{ "__identifier": "Collides", "__type": "Bool", "__value": false, "__tile": null, "defUid": 181, "realEditorValues": [] },
+								{ "__identifier": "HP", "__type": "Int", "__value": 100, "__tile": null, "defUid": 190, "realEditorValues": [] }
 							]
 						},
 						{
@@ -3607,7 +3642,10 @@
 									"id": "V_String",
 									"params": ["Baka"]
 								}] },
-								{ "__identifier": "Occludes", "__type": "Bool", "__value": false, "__tile": null, "defUid": 171, "realEditorValues": [] },
+								{ "__identifier": "Occludes", "__type": "Bool", "__value": false, "__tile": null, "defUid": 171, "realEditorValues": [{
+									"id": "V_Bool",
+									"params": [ false ]
+								}] },
 								{ "__identifier": "Collides", "__type": "Bool", "__value": true, "__tile": null, "defUid": 182, "realEditorValues": [{
 									"id": "V_Bool",
 									"params": [ true ]
@@ -4367,7 +4405,8 @@
 								{ "__identifier": "Point", "__type": "Array<Point>", "__value": [], "__tile": null, "defUid": 150, "realEditorValues": [] },
 								{ "__identifier": "Name", "__type": "String", "__value": null, "__tile": null, "defUid": 168, "realEditorValues": [] },
 								{ "__identifier": "Occludes", "__type": "Bool", "__value": true, "__tile": null, "defUid": 170, "realEditorValues": [] },
-								{ "__identifier": "Collides", "__type": "Bool", "__value": false, "__tile": null, "defUid": 181, "realEditorValues": [] }
+								{ "__identifier": "Collides", "__type": "Bool", "__value": false, "__tile": null, "defUid": 181, "realEditorValues": [] },
+								{ "__identifier": "HP", "__type": "Int", "__value": 100, "__tile": null, "defUid": 190, "realEditorValues": [] }
 							]
 						},
 						{

@@ -17,12 +17,12 @@ import scenes.JunkDemoScene.Companion.isPaused
 class PauseMenu : Container() {
 
     init {
-        setupMainMenu()
+        setupPauseMenu()
     }
 
-    private fun setupMainMenu(){
+    private fun setupPauseMenu(){
         removeChildren()
-        solidRect(1280, 720, Colors["#00000088"]) // Semi-transparent background
+        solidRect(1280, 720, Colors["#00000088"])
 
         uiVerticalStack(padding = 4.0, width = 400.0) {
             position(440, 150)
@@ -33,7 +33,11 @@ class PauseMenu : Container() {
                 }
             }
             uiButton("Save/Load"){}
-            uiButton("Inventory"){}
+            uiButton("Inventory") {
+                onClick {
+                    showInventory(this@uiVerticalStack)
+                }
+            }
             uiButton("Options") {}
             uiButton("Notes") {
                 onClick {
@@ -42,8 +46,27 @@ class PauseMenu : Container() {
             }
             uiButton("Return to Main Menu") {
                 onClick {
-                    //TODO FIX main menu misalignment bug
-                    sceneContainer().changeTo { MainMenuScene() }
+                    //TODO fix misaligned menu and not destroying gameplay scene
+                    sceneContainer().run { changeTo<MainMenuScene>() }
+                }
+            }
+        }
+    }
+
+    //TODO split this into new scenes
+    private fun showInventory(container: Container) {
+        container.removeChildren()
+        solidRect(1280, 720, Colors["#00000088"]) // Semi-transparent background
+
+        uiVerticalStack(padding = 4.0, width = 400.0) {
+            position(440, 150)
+            uiText("Inventory:")
+
+            JunkDemoScene.instance?.updateInventoryUI(this@uiVerticalStack)
+
+            uiButton("Back to Menu") {
+                onClick {
+                    setupPauseMenu()
                 }
             }
         }
@@ -79,7 +102,7 @@ class PauseMenu : Container() {
         uiButton("Back to Pause Menu") {
             centerXOnStage()
             onClick {
-                setupMainMenu()
+                setupPauseMenu()
             }
         }.xy(640, 530)
     }

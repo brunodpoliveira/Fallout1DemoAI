@@ -152,14 +152,14 @@ To do it: Open the Apple Mac Apple menu. Click System Preferences. Click Java. C
 tab. Click Update now.
 
 ## TODO
-- Add stats and inventory management to both NPC and player classes.
-- Create an inventory system and menu for the player.
 - Add movement and pathfinding logic to the NPCs so they can move from point to point
 - Add an Action Model: if the NPC says "we'll meet at the town square"
   the Action Model will set the NPC to move to the town square,
   if they say "I'll give you my pistol" the game will add a gun to the player's inventory
 - Implement a simple combat system: if an NPC and player are in range and no walls are in between,
   enable hit detection.
+- Add the Save/Load game logic
+- Add interrogation to the game, using the NPCs in the saved game
 - Add voice input for player interactions, allowing speech-to-text functionality.
 - Move API keys to gradle.properties to enhance security.
 - Remove the controller logic in JunkDemo and put it in the VCM
@@ -167,4 +167,3 @@ tab. Click Update now.
 - Create a custom level for this demo
 - Add sound effects to the demo
 - Add music to the demo
-- Add the Save/Load game logic

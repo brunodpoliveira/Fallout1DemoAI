@@ -173,7 +173,7 @@ class ConversationPostProcessingServices {
         return if (metadata.contains("SECRET")) {
             Pair(true, emptyList())
         } else if (metadata.contains("CONSPIRACY")) {
-            val conspirators = """CONSPIRACY - \[(.*?)\]""".toRegex().find(metadata)?.groups?.get(1)?.value?.split(", ") ?: emptyList()
+            val conspirators = """CONSPIRACY - \[(.*?)]""".toRegex().find(metadata)?.groups?.get(1)?.value?.split(", ") ?: emptyList()
             Pair(false, conspirators)
         } else {
             Pair(false, emptyList())

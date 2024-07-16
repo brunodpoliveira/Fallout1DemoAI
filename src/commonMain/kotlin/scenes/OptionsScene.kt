@@ -29,7 +29,7 @@ class OptionsScene : Scene() {
             uiButton("Back to Main Menu") {
                 centerXOnStage()
                 onClick {
-                    sceneContainer.changeTo { MainMenuScene() }
+                    sceneContainer.run { changeTo<MainMenuScene>() }
                 }
             }
         }

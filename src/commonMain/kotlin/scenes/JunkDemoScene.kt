@@ -1,5 +1,7 @@
 package scenes
 
+import EntityStats
+import Inventory
 import KR
 import ai.*
 import bvh.*
@@ -10,14 +12,17 @@ import korlibs.datastructure.iterators.*
 import korlibs.image.atlas.*
 import korlibs.image.bitmap.*
 import korlibs.image.color.*
+import korlibs.image.font.*
 import korlibs.image.format.*
 import korlibs.io.async.*
 import korlibs.korge.animate.*
 import korlibs.korge.annotations.*
+import korlibs.korge.input.*
 import korlibs.korge.ldtk.*
 import korlibs.korge.ldtk.view.*
 import korlibs.korge.scene.*
 import korlibs.korge.tween.*
+import korlibs.korge.ui.*
 import korlibs.korge.view.*
 import korlibs.korge.view.filter.*
 import korlibs.korge.view.mask.*
@@ -28,6 +33,7 @@ import korlibs.math.interpolation.*
 import korlibs.math.raycasting.*
 import korlibs.render.*
 import korlibs.time.*
+import readEntityStats
 import ui.*
 import kotlin.math.*
 
@@ -35,6 +41,11 @@ class JunkDemoScene : Scene() {
     companion object {
         var dialogIsOpen = false
         var isPaused = false
+        var instance: JunkDemoScene? = null
+    }
+
+    init {
+        instance = this
     }
 
     private val controllerManager = VirtualControllerManager()
@@ -48,9 +59,16 @@ class JunkDemoScene : Scene() {
     private lateinit var highlight: Graphics
     private lateinit var openChestTile: TilesetRectangle
     private lateinit var pauseMenu: PauseMenu
+    private val playerInventory: Inventory = Inventory()
+    private lateinit var playerStats: EntityStats
+    private var playerStatsUI: PlayerStatsUI? = null
+
+    override suspend fun SContainer.sceneMain() {
+        setupScene()
+    }
 
     @OptIn(KorgeExperimental::class)
-    override suspend fun SContainer.sceneMain() {
+    private suspend fun SContainer.setupScene() {
 
         val atlas = MutableAtlasUnit()
         val clericFemale = KR.gfx.clericF.__file.readImageDataContainer(ASE.toProps(), atlas).apply {
@@ -91,10 +109,14 @@ class JunkDemoScene : Scene() {
             }
         }
 
-        println("Level layers: ${levelView.layerViewsByName.keys}")
-
         grid = levelView.layerViewsByName["Kind"]!!.intGrid
         entities = levelView.layerViewsByName["Entities"]!!.entities
+
+        val entityHpMap = mutableMapOf<LDTKEntityView, Int>()
+        for (entity in entities) {
+            val stats = readEntityStats(entity)
+            entityHpMap[entity] = stats.hp
+        }
 
         for (entity in entities) {
             entitiesBvh += entity
@@ -111,32 +133,48 @@ class JunkDemoScene : Scene() {
             )
         }
 
-        entities.first { it.fieldsByName["Name"]?.valueString == "Rayze" }.replaceView(
-            ImageDataView2(rayze.default).also {
-                it.smoothing = false
-                it.animation = "idle"
-                it.anchor(Anchor.BOTTOM_CENTER)
-                it.play()
-            }
-        )
+        playerStats = readEntityStats(player)
+        println("Player HP: ${playerStats.hp}")
+        playerStatsUI = stage?.let { PlayerStatsUI(it, KR.fonts.publicpixel.__file.readTtfFont().lazyBitmapSDF) }
+        playerStatsUI?.let { addChild(it) }
+        playerStatsUI?.update(playerHp = playerStats.hp, playerAmmo = 0)
 
-        entities.first { it.fieldsByName["Name"]?.valueString == "Baka" }.replaceView(
-            ImageDataView2(baka.default).also {
-                it.smoothing = false
-                it.animation = "idle"
-                it.anchor(Anchor.BOTTOM_CENTER)
-                it.play()
-            }
-        )
+        addDebugReduceHealthButton(this)
+
+        entities.firstOrNull { it.fieldsByName["Name"]?.valueString == "Rayze" }?.let { entity ->
+            val rayzeStats = readEntityStats(entity)
+            println("Rayze HP: ${rayzeStats.hp}")
+            entity.replaceView(
+                ImageDataView2(rayze.default).also {
+                    it.smoothing = false
+                    it.animation = "idle"
+                    it.anchor(Anchor.BOTTOM_CENTER)
+                    it.play()
+                }
+            )
+        }
+
+        entities.firstOrNull { it.fieldsByName["Name"]?.valueString == "Baka" }?.let { entity ->
+            val bakaStats = readEntityStats(entity)
+            println("Baka HP: ${bakaStats.hp}")
+            entity.replaceView(
+                ImageDataView2(baka.default).also {
+                    it.smoothing = false
+                    it.animation = "idle"
+                    it.anchor(Anchor.BOTTOM_CENTER)
+                    it.play()
+                }
+            )
+        }
 
         pauseMenu = PauseMenu()
         controllerManager.apply {
             setupVirtualController()
             setupButtonActions(
                 onAnyButton = { handleAnyButton() },
-                onWestButton = { handleWestButton(this@sceneMain) },
+                onWestButton = { handleWestButton(this@setupScene) },
                 onSouthButton = { handleSouthButton() },
-                onNorthButton = { handleNorthButton(this@sceneMain) }
+                onNorthButton = { handleNorthButton(this@setupScene) }
             )
         }
 
@@ -194,11 +232,13 @@ class JunkDemoScene : Scene() {
     }
 
     private fun handleAnyButton() {
-        println("Handle any button pressed")
         val view = getInteractiveView() ?: return
         val entityView = view as? LDTKEntityView ?: return
         val doBlock = entityView.fieldsByName["Items"] ?: return
         val items = doBlock.valueDyn.list.map { it.str }
+
+        items.forEach { playerInventory.addItem(it) }
+
         entityView.replaceView(
             Image(entityView.tileset!!.unextrudedTileSet!!.base.sliceWithSize(openChestTile.x,
                 openChestTile.y, openChestTile.w, openChestTile.h)).also {
@@ -210,6 +250,62 @@ class JunkDemoScene : Scene() {
             gameWindow.alert("Found $items")
         }
         println("Found items: $items")
+    }
+
+    private fun addDebugReduceHealthButton(container: Container) {
+        container.fixedSizeContainer(Size(200, 500), false) {
+            position(700, 20)
+            uiButton("Debug Reduce Health") {
+                onClick {
+                    debugReduceHealth(20)
+                }
+            }
+        }
+    }
+
+    private fun consumePotion(potion: String) {
+        playerInventory.consumePotion(potion, playerStats) { newHp ->
+            updatePlayerHealthUI(newHp)
+        }
+    }
+
+    private fun debugReduceHealth(damage: Int) {
+        playerStats.hp -= damage
+        if (playerStats.hp <= 0) {
+            triggerGameOver()
+        } else {
+            updatePlayerHealthUI(playerStats.hp)
+        }
+    }
+
+    private fun updatePlayerHealthUI(newHp: Int) {
+        playerStatsUI?.update(playerHp = newHp, playerAmmo = 0)
+    }
+
+    private fun triggerGameOver() {
+        launchImmediately {
+            sceneContainer.changeTo<GameOverScene>("GameOver", this@JunkDemoScene)
+        }
+    }
+
+    fun updateInventoryUI(container: Container) {
+        container.removeChildren()
+
+        container.fixedSizeContainer(Size(200, 500),false) {
+            position(440, 150)
+
+            for (item in playerInventory.getItems()) {
+                uiButton(item) {
+                    onClick {
+                        if (item == "red_potion" && playerStats.hp < 100) {
+                            consumePotion(item)
+                            playerInventory.removeItem(item)
+                            updateInventoryUI(container)
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private fun handleWestButton(container: Container) {
