@@ -1,5 +1,7 @@
 package scenes
 
+import EntityStats
+import Inventory
 import KR
 import ai.*
 import bvh.*
@@ -7,10 +9,10 @@ import controls.*
 import img.*
 import korlibs.datastructure.*
 import korlibs.datastructure.iterators.*
-import korlibs.event.*
 import korlibs.image.atlas.*
 import korlibs.image.bitmap.*
 import korlibs.image.color.*
+import korlibs.image.font.*
 import korlibs.image.format.*
 import korlibs.io.async.*
 import korlibs.korge.animate.*
@@ -20,6 +22,7 @@ import korlibs.korge.ldtk.*
 import korlibs.korge.ldtk.view.*
 import korlibs.korge.scene.*
 import korlibs.korge.tween.*
+import korlibs.korge.ui.*
 import korlibs.korge.view.*
 import korlibs.korge.view.filter.*
 import korlibs.korge.view.mask.*
@@ -30,10 +33,21 @@ import korlibs.math.interpolation.*
 import korlibs.math.raycasting.*
 import korlibs.render.*
 import korlibs.time.*
+import readEntityStats
 import ui.*
 import kotlin.math.*
 
 class JunkDemoScene : Scene() {
+    companion object {
+        var dialogIsOpen = false
+        var isPaused = false
+        var instance: JunkDemoScene? = null
+    }
+
+    init {
+        instance = this
+    }
+
     private val controllerManager = VirtualControllerManager()
     private lateinit var player: LDTKEntityView
     private lateinit var playerDirection: Vector2D
@@ -44,9 +58,17 @@ class JunkDemoScene : Scene() {
     private lateinit var entities: List<LDTKEntityView>
     private lateinit var highlight: Graphics
     private lateinit var openChestTile: TilesetRectangle
+    private lateinit var pauseMenu: PauseMenu
+    private val playerInventory: Inventory = Inventory()
+    private lateinit var playerStats: EntityStats
+    private var playerStatsUI: PlayerStatsUI? = null
+
+    override suspend fun SContainer.sceneMain() {
+        setupScene()
+    }
 
     @OptIn(KorgeExperimental::class)
-    override suspend fun SContainer.sceneMain() {
+    private suspend fun SContainer.setupScene() {
 
         val atlas = MutableAtlasUnit()
         val clericFemale = KR.gfx.clericF.__file.readImageDataContainer(ASE.toProps(), atlas).apply {
@@ -60,9 +82,9 @@ class JunkDemoScene : Scene() {
         val level = ldtk.levelsByName["Level_0"]!!
         val tileEntities = ldtk.levelsByName["TILES"]!!.layersByName["Entities"]
         val tileEntitiesByName = tileEntities?.layer?.entityInstances?.associateBy { it.fieldInstancesByName["Name"].valueDyn.str } ?: emptyMap()
-        val ClosedChest = tileEntitiesByName["ClosedChest"]
-        val OpenedChest = tileEntitiesByName["OpenedChest"]
-        openChestTile = OpenedChest!!.tile!!
+        val closedChest = tileEntitiesByName["ClosedChest"]
+        val openedChest = tileEntitiesByName["OpenedChest"]
+        openChestTile = openedChest!!.tile!!
 
         lateinit var levelView: LDTKLevelView
 
@@ -87,10 +109,14 @@ class JunkDemoScene : Scene() {
             }
         }
 
-        println("Level layers: ${levelView.layerViewsByName.keys}")
-
         grid = levelView.layerViewsByName["Kind"]!!.intGrid
         entities = levelView.layerViewsByName["Entities"]!!.entities
+
+        val entityHpMap = mutableMapOf<LDTKEntityView, Int>()
+        for (entity in entities) {
+            val stats = readEntityStats(entity)
+            entityHpMap[entity] = stats.hp
+        }
 
         for (entity in entities) {
             entitiesBvh += entity
@@ -107,31 +133,48 @@ class JunkDemoScene : Scene() {
             )
         }
 
-        entities.first { it.fieldsByName["Name"]?.valueString == "Rayze" }.replaceView(
-            ImageDataView2(rayze.default).also {
-                it.smoothing = false
-                it.animation = "idle"
-                it.anchor(Anchor.BOTTOM_CENTER)
-                it.play()
-            }
-        )
+        playerStats = readEntityStats(player)
+        println("Player HP: ${playerStats.hp}")
+        playerStatsUI = stage?.let { PlayerStatsUI(it, KR.fonts.publicpixel.__file.readTtfFont().lazyBitmapSDF) }
+        playerStatsUI?.let { addChild(it) }
+        playerStatsUI?.update(playerHp = playerStats.hp, playerAmmo = 0)
 
-        entities.first { it.fieldsByName["Name"]?.valueString == "Baka" }.replaceView(
-            ImageDataView2(baka.default).also {
-                it.smoothing = false
-                it.animation = "idle"
-                it.anchor(Anchor.BOTTOM_CENTER)
-                it.play()
-            }
-        )
+        addDebugReduceHealthButton(this)
 
+        entities.firstOrNull { it.fieldsByName["Name"]?.valueString == "Rayze" }?.let { entity ->
+            val rayzeStats = readEntityStats(entity)
+            println("Rayze HP: ${rayzeStats.hp}")
+            entity.replaceView(
+                ImageDataView2(rayze.default).also {
+                    it.smoothing = false
+                    it.animation = "idle"
+                    it.anchor(Anchor.BOTTOM_CENTER)
+                    it.play()
+                }
+            )
+        }
+
+        entities.firstOrNull { it.fieldsByName["Name"]?.valueString == "Baka" }?.let { entity ->
+            val bakaStats = readEntityStats(entity)
+            println("Baka HP: ${bakaStats.hp}")
+            entity.replaceView(
+                ImageDataView2(baka.default).also {
+                    it.smoothing = false
+                    it.animation = "idle"
+                    it.anchor(Anchor.BOTTOM_CENTER)
+                    it.play()
+                }
+            )
+        }
+
+        pauseMenu = PauseMenu()
         controllerManager.apply {
             setupVirtualController()
             setupButtonActions(
                 onAnyButton = { handleAnyButton() },
-                onWestButton = { handleWestButton(this@sceneMain) },
+                onWestButton = { handleWestButton(this@setupScene) },
                 onSouthButton = { handleSouthButton() },
-                onNorthButton = { handleNorthButton() }
+                onNorthButton = { handleNorthButton(this@setupScene) }
             )
         }
 
@@ -141,65 +184,64 @@ class JunkDemoScene : Scene() {
         playerState = ""
 
         addUpdater(60.hz) {
-            val (dx, dy) = controllerManager.getControllerInput()
-            val playerView = (player.view as ImageDataView2)
+            if (!dialogIsOpen) {
+                val (dx, dy) = controllerManager.getControllerInput()
+                val playerView = (player.view as ImageDataView2)
 
-            if (!dx.isAlmostZero() || !dy.isAlmostZero()) {
-                playerDirection = Vector2D(dx.sign, dy.sign)
-            }
-
-            if (dx == 0.0 && dy == 0.0) {
-                playerView.animation = if (playerState != "") playerState else "idle"
-            } else {
-                playerState = ""
-                playerView.animation = "walk"
-                playerView.scaleX = if (playerDirection.x < 0) -1.0 else +1.0
-            }
-
-            val speed = 1.5
-            val newDir = Vector2D(dx * speed, dy * speed)
-            val oldPos = player.pos
-            val moveRay = doRay(oldPos, newDir, "Collides")
-            val finalDir = if (moveRay != null && moveRay.point.distanceTo(oldPos) < 6f) {
-                val res = newDir.reflected(moveRay.normal)
-                if (moveRay.normal.y != 0.0) {
-                    Vector2D(res.x, 0f)
-                } else {
-                    Vector2D(0f, res.y)
+                if (!dx.isAlmostZero() || !dy.isAlmostZero()) {
+                    playerDirection = Vector2D(dx.sign, dy.sign)
                 }
-            } else {
-                newDir
-            }
-            val newPos = oldPos + finalDir
-            if (!hitTest2(newPos) || !hitTest2(oldPos)) {
-                player.pos = newPos
-                player.zIndex = player.y
-                updateRay(oldPos)
-            }
 
-            lastInteractiveView?.colorMul = Colors.WHITE
-            val interactiveView = getInteractiveView()
-            if (interactiveView != null) {
-                interactiveView.colorMul = Colors["#ffbec3"]
-                lastInteractiveView = interactiveView
-            }
-        }
+                if (dx == 0.0 && dy == 0.0) {
+                    playerView.animation = if (playerState != "") playerState else "idle"
+                } else {
+                    playerState = ""
+                    playerView.animation = "walk"
+                    playerView.scaleX = if (playerDirection.x < 0) -1.0 else +1.0
+                }
 
-        keys {
-            down(Key.R) {
-                println(player.pos)
+                val speed = 1.5
+                val newDir = Vector2D(dx * speed, dy * speed)
+                val oldPos = player.pos
+                val moveRay = doRay(oldPos, newDir, "Collides")
+                val finalDir = if (moveRay != null && moveRay.point.distanceTo(oldPos) < 6f) {
+                    val res = newDir.reflected(moveRay.normal)
+                    if (moveRay.normal.y != 0.0) {
+                        Vector2D(res.x, 0f)
+                    } else {
+                        Vector2D(0f, res.y)
+                    }
+                } else {
+                    newDir
+                }
+                val newPos = oldPos + finalDir
+                if (!hitTest2(newPos) || !hitTest2(oldPos)) {
+                    player.pos = newPos
+                    player.zIndex = player.y
+                    updateRay(oldPos)
+                }
+
+                lastInteractiveView?.colorMul = Colors.WHITE
+                val interactiveView = getInteractiveView()
+                if (interactiveView != null) {
+                    interactiveView.colorMul = Colors["#ffbec3"]
+                    lastInteractiveView = interactiveView
+                }
             }
         }
     }
 
     private fun handleAnyButton() {
-        println("Handle any button pressed")
         val view = getInteractiveView() ?: return
         val entityView = view as? LDTKEntityView ?: return
         val doBlock = entityView.fieldsByName["Items"] ?: return
         val items = doBlock.valueDyn.list.map { it.str }
+
+        items.forEach { playerInventory.addItem(it) }
+
         entityView.replaceView(
-            Image(entityView.tileset!!.unextrudedTileSet!!.base.sliceWithSize(openChestTile.x, openChestTile.y, openChestTile.w, openChestTile.h)).also {
+            Image(entityView.tileset!!.unextrudedTileSet!!.base.sliceWithSize(openChestTile.x,
+                openChestTile.y, openChestTile.w, openChestTile.h)).also {
                 it.smoothing = false
                 it.anchor(entityView.anchor)
             }
@@ -210,18 +252,83 @@ class JunkDemoScene : Scene() {
         println("Found items: $items")
     }
 
+    private fun addDebugReduceHealthButton(container: Container) {
+        container.fixedSizeContainer(Size(200, 500), false) {
+            position(700, 20)
+            uiButton("Debug Reduce Health") {
+                onClick {
+                    debugReduceHealth(20)
+                }
+            }
+        }
+    }
+
+    private fun consumePotion(potion: String) {
+        playerInventory.consumePotion(potion, playerStats) { newHp ->
+            updatePlayerHealthUI(newHp)
+        }
+    }
+
+    private fun debugReduceHealth(damage: Int) {
+        playerStats.hp -= damage
+        if (playerStats.hp <= 0) {
+            triggerGameOver()
+        } else {
+            updatePlayerHealthUI(playerStats.hp)
+        }
+    }
+
+    private fun updatePlayerHealthUI(newHp: Int) {
+        playerStatsUI?.update(playerHp = newHp, playerAmmo = 0)
+    }
+
+    private fun triggerGameOver() {
+        launchImmediately {
+            sceneContainer.changeTo<GameOverScene>("GameOver", this@JunkDemoScene)
+        }
+    }
+
+    fun updateInventoryUI(container: Container) {
+        container.removeChildren()
+
+        container.fixedSizeContainer(Size(200, 500),false) {
+            position(440, 150)
+
+            for (item in playerInventory.getItems()) {
+                uiButton(item) {
+                    onClick {
+                        if (item == "red_potion" && playerStats.hp < 100) {
+                            consumePotion(item)
+                            playerInventory.removeItem(item)
+                            updateInventoryUI(container)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     private fun handleWestButton(container: Container) {
         println("Handle west button pressed")
         val view = getInteractiveView() ?: return
         if (view is LDTKEntityView && view.fieldsByName["Name"] != null) {
             val npcName = view.fieldsByName["Name"]!!.valueString
+            //TODO Put faction info in ldtk entity
+            //TODO transfer all this logic to NPC init or some other class
+            val npcFactions = mapOf(
+                "Rayze" to "Crypts",
+                "Baka" to "Fools",
+                "Lex" to "Non-Gang"
+            )
+            val factionName = npcFactions[npcName] ?: "Unknown"
             val npcBio = when (npcName) {
                 "Rayze" -> NPCBio.rayzeBio
                 "Baka" -> NPCBio.bakaBio
+                "Lex" -> NPCBio.lexBio
                 else -> ""
             }
             if (npcName != null) {
-                DialogWindow().show(container, npcBio, npcName)
+                DialogWindow().show(container, npcBio, npcName,factionName)
             }
             println("INTERACTED WITH: $view :: $npcName")
         }
@@ -235,12 +342,12 @@ class JunkDemoScene : Scene() {
         println("Handle south button pressed")
     }
 
-    private fun handleNorthButton() {
-        val playerView = (player.view as ImageDataView2)
-        playerView.animation = "attack"
-        playerState = "gesture"
-        handleAnyButton()  // Placeholder, assuming gesture action shares logic with 'use' for now
-        println("Handle north button pressed")
+    private fun handleNorthButton(container: Container) {
+        if (isPaused) {
+            pauseMenu.resumeGame()
+        } else {
+            pauseMenu.show(container)
+        }
     }
 
     private fun IntIArray2.check(it: PointInt): Boolean {
@@ -300,8 +407,8 @@ class JunkDemoScene : Scene() {
     }
 
     private fun updateRay(pos: Point): Double {
-        val ANGLES_COUNT = 64
-        val angles = (0 until ANGLES_COUNT).map { Angle.FULL * (it.toDouble() / ANGLES_COUNT.toDouble()) }
+        val anglesCount = 64
+        val angles = (0 until anglesCount).map { Angle.FULL * (it.toDouble() / anglesCount.toDouble()) }
         val results: ArrayList<RayResult> = arrayListOf()
         val results2: ArrayList<RayResult> = arrayListOf()
         val anglesDeque = Deque(angles)

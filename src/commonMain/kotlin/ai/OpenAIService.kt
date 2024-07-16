@@ -4,7 +4,7 @@ import com.theokanning.openai.completion.chat.*
 import com.theokanning.openai.service.*
 
 object OpenAIService {
-    private const val API_KEY = ""
+    private const val API_KEY = "YOUR_OPENAI_API_KEY"
     private val service = OpenAiService(API_KEY)
     val msgs: MutableList<ChatMessage> = ArrayList()
     private var hasInjectedInitialPrompt = false
@@ -23,19 +23,34 @@ object OpenAIService {
         val response = service.createChatCompletion(chatRequest)
         val elapsedTime = System.currentTimeMillis() - startTime
         if (handleTimeoutError(elapsedTime, TIMEOUT)) {
-            println("OpenAiHttpException: Server timeout")
+            println("Server took too long to respond.")
         }
         return response
     }
 
-    fun getCharacterResponse(characterBio: String, playerInput: String): String {
+    fun getCharacterResponse(npcName: String, factionName: String?, characterBio: String, playerInput: String): String {
         val message = ChatMessage("user", playerInput)
         println("Player input: $playerInput")
 
+        val factionContext = factionName?.let { Director.getFactionContext(it) } ?: ""
+        val completeContext = """
+            Bio: $characterBio
+            General Context: ${Director.getContext()}
+            Faction Context: $factionContext
+            NPC Context: ${Director.getNPCContext(npcName)}
+            Personality: [OCEAN] 
+            Openness: LOW|MEDIUM|HIGH (adjust as necessary).
+            Conscientiousness: LOW|MEDIUM|HIGH (adjust as necessary), 
+            Extroversion: LOW|MEDIUM|HIGH (adjust as necessary), 
+            Agreeableness: LOW|MEDIUM|HIGH (adjust as necessary), 
+            Neuroticism: LOW|MEDIUM|HIGH (adjust as necessary), 
+            Player: $playerInput
+            DO NOT talk about non-existent characters, items, and locations
+            NPC: 
+        """.trimIndent()
+
         if (!hasInjectedInitialPrompt) {
-            val initialPrompt = "Bio: $characterBio\nContext: ${Director.getContext()}\nPlayer: $playerInput\nNPC: "
-            println("initialPrompt: $initialPrompt")
-            val initialAssistantMessage = ChatMessage("assistant", initialPrompt)
+            val initialAssistantMessage = ChatMessage("assistant", completeContext)
             msgs.add(initialAssistantMessage)
 
             val initialChatCompletionRequest = ChatCompletionRequest.builder()

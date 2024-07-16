@@ -1,5 +1,5 @@
 pluginManagement {
-    repositories { mavenLocal(); mavenCentral(); google(); gradlePluginPortal() }
+    repositories { mavenLocal(); mavenCentral(); google(); gradlePluginPortal()}
 }
 
 buildscript {
@@ -13,7 +13,7 @@ buildscript {
     }
     if (version.isEmpty()) error("Can't find korge version in $libsTomlFile")
 
-    repositories { mavenLocal(); mavenCentral(); google(); gradlePluginPortal() }
+    repositories { mavenLocal(); mavenCentral(); google(); gradlePluginPortal()}
 
     dependencies {
         classpath("com.soywiz.korge.settings:com.soywiz.korge.settings.gradle.plugin:$version")
