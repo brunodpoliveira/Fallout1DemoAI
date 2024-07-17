@@ -28,11 +28,14 @@ import korlibs.korge.view.filter.*
 import korlibs.korge.view.mask.*
 import korlibs.math.*
 import korlibs.math.geom.*
+import korlibs.math.geom.PointInt
 import korlibs.math.geom.ds.*
 import korlibs.math.interpolation.*
 import korlibs.math.raycasting.*
 import korlibs.render.*
 import korlibs.time.*
+import kotlinx.coroutines.*
+import npc.*
 import readEntityStats
 import ui.*
 import kotlin.math.*
@@ -50,6 +53,8 @@ class JunkDemoScene : Scene() {
 
     private val controllerManager = VirtualControllerManager()
     private lateinit var player: LDTKEntityView
+    private lateinit var rayze: LDTKEntityView
+    private lateinit var baka: LDTKEntityView
     private lateinit var playerDirection: Vector2D
     private lateinit var playerState: String
     private lateinit var entitiesBvh: BvhWorld
@@ -65,6 +70,7 @@ class JunkDemoScene : Scene() {
 
     override suspend fun SContainer.sceneMain() {
         setupScene()
+        initNPCMovement()
     }
 
     @OptIn(KorgeExperimental::class)
@@ -73,9 +79,9 @@ class JunkDemoScene : Scene() {
         val atlas = MutableAtlasUnit()
         val clericFemale = KR.gfx.clericF.__file.readImageDataContainer(ASE.toProps(), atlas).apply {
         }
-        val rayze = KR.gfx.minotaur.__file.readImageDataContainer(ASE.toProps(), atlas).apply {
+        val rayzeSprite = KR.gfx.minotaur.__file.readImageDataContainer(ASE.toProps(), atlas).apply {
         }
-        val baka = KR.gfx.wizardF.__file.readImageDataContainer(ASE.toProps(), atlas).apply {
+        val bakaSprite = KR.gfx.wizardF.__file.readImageDataContainer(ASE.toProps(), atlas).apply {
         }
         val ldtk = KR.gfx.dungeonTilesmapCalciumtrice.__file.readLDTKWorld().apply {
         }
@@ -144,27 +150,35 @@ class JunkDemoScene : Scene() {
         entities.firstOrNull { it.fieldsByName["Name"]?.valueString == "Rayze" }?.let { entity ->
             val rayzeStats = readEntityStats(entity)
             println("Rayze HP: ${rayzeStats.hp}")
-            entity.replaceView(
-                ImageDataView2(rayze.default).also {
-                    it.smoothing = false
-                    it.animation = "idle"
-                    it.anchor(Anchor.BOTTOM_CENTER)
-                    it.play()
-                }
-            )
+
+            rayze = entity.apply {
+                replaceView(
+                    ImageDataView2(rayzeSprite.default).also {
+                        it.smoothing = false
+                        it.animation = "idle"
+                        it.anchor(Anchor.BOTTOM_CENTER)
+                        it.play()
+                    }
+                )
+            }
+            println("Rayze initial position: ${entity.pos}")
         }
 
         entities.firstOrNull { it.fieldsByName["Name"]?.valueString == "Baka" }?.let { entity ->
             val bakaStats = readEntityStats(entity)
             println("Baka HP: ${bakaStats.hp}")
-            entity.replaceView(
-                ImageDataView2(baka.default).also {
-                    it.smoothing = false
-                    it.animation = "idle"
-                    it.anchor(Anchor.BOTTOM_CENTER)
-                    it.play()
-                }
-            )
+
+            baka = entity.apply {
+                replaceView(
+                    ImageDataView2(bakaSprite.default).also {
+                        it.smoothing = false
+                        it.animation = "idle"
+                        it.anchor(Anchor.BOTTOM_CENTER)
+                        it.play()
+                    }
+                )
+            }
+            println("Baka initial position: ${entity.pos}")
         }
 
         pauseMenu = PauseMenu()
@@ -229,6 +243,38 @@ class JunkDemoScene : Scene() {
                 }
             }
         }
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class, DelicateCoroutinesApi::class)
+    private fun initNPCMovement() {
+        val movementCoroutineContext = newSingleThreadContext("MovementCoroutine")
+        val pathfinding = Pathfinding(generateMap())
+
+        //TODO set up more sophisticated movement logic here
+        GlobalScope.launch(movementCoroutineContext) {
+            Movement(rayze, pathfinding).moveInSquare()
+        }
+
+        GlobalScope.launch(movementCoroutineContext) {
+            Movement(baka, pathfinding).moveInSquare()
+        }
+    }
+
+    private fun generateMap(): BooleanArray2 {
+        // TODO Define the map dimensions based on actual map size
+        //TODO read the LDTK map to set width, height, and available and blocked cells
+        val width = 500
+        val height = 500
+
+        // Initialize the BooleanArray2 with all cells set to false (available)
+        val booleanArray = BooleanArray(width * height) { false }
+        val array = BooleanArray2(width, height, booleanArray)
+
+        // TODO Populate `array` based on LDTK map if available
+        // Example: Set some cells as blocked
+        // for (int j = 20 until 30) { array[x, j] = true }
+
+        return array
     }
 
     private fun handleAnyButton() {
@@ -309,7 +355,6 @@ class JunkDemoScene : Scene() {
     }
 
     private fun handleWestButton(container: Container) {
-        println("Handle west button pressed")
         val view = getInteractiveView() ?: return
         if (view is LDTKEntityView && view.fieldsByName["Name"] != null) {
             val npcName = view.fieldsByName["Name"]!!.valueString
@@ -339,7 +384,6 @@ class JunkDemoScene : Scene() {
         playerView.animation = "attack"
         playerState = "attack"
         handleAnyButton()  // Placeholder, assuming attack shares logic with 'use' for now
-        println("Handle south button pressed")
     }
 
     private fun handleNorthButton(container: Container) {

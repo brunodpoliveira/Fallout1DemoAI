@@ -3,6 +3,13 @@ This project is a proof-of-concept demonstration of the Fallout 1 demo town, Scr
 built using Korge and Kotlin. The main highlight of the project is the use of GPT-3.5 Turbo to
 power the NPC interactions, making them dynamic and conversational.
 
+## Collaborating
+You're welcome to add any of the TODO features listed at the bottom of this Readme.
+Please ensure that your code is functioning correctly, and is properly documented. 
+It is heavily recommended that any of your collaborations be pushed to a new branch.
+Pay attention that you're developing on top of the latest commit, available in the dev branch.
+GitHub link: [Link](https://github.com/brunodpoliveira/Fallout1DemoAI)
+
 ## Game Overview
 
 ### Objective
@@ -17,8 +24,9 @@ The game can be completed in multiple ways:
 ### Controls
 #TODO virtualcontroller explanations
 - Player movement and interaction are placeholders: Arrow keys for directions and Z/West Button (the bottom button) for entering dialog with a NPC
-- Press the Return/ North Button (The middle button) to pause the game. You can acess the Notes from this menu
-- Interact with NPCs by typing messages on the Dialog Window, and click the buttons with your mouse to interact with them.
+- Press the Return/North Button (the middle button) to pause the game. You can acess the Notes from this menu
+- Press Space/South Button (the top button) to attack and interact with objects, such as chests
+- In the Dialog Window, interact with NPCs by typing messages on the Dialog Window, and click the buttons with your mouse to interact with them.
 - Hold and drag the right mouse button in the Dialog message window to scroll through it 
 - Future versions will include voice input and additional controls.
 
@@ -152,10 +160,10 @@ To do it: Open the Apple Mac Apple menu. Click System Preferences. Click Java. C
 tab. Click Update now.
 
 ## TODO
-- Add movement and pathfinding logic to the NPCs so they can move from point to point
-- Add an Action Model: if the NPC says "we'll meet at the town square"
-  the Action Model will set the NPC to move to the town square,
-  if they say "I'll give you my pistol" the game will add a gun to the player's inventory
+- Split the map into sectors and send them to these sectors test the pathfinding
+- Add an Action Model: if the NPC says "we'll meet at the town square" the Action Model will set the 
+  NPC to move to the town square, and engage the pathfinding to make them move. If they say 
+  "I'll give you my pistol" the game will add a gun to the player's inventory
 - Implement a simple combat system: if an NPC and player are in range and no walls are in between,
   enable hit detection.
 - Add the Save/Load game logic
