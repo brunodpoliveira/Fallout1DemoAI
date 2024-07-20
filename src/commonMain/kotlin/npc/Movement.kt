@@ -22,6 +22,14 @@ class Movement(private val character: View, private val pathfinding: Pathfinding
         }
     }
 
+    suspend fun moveToPoint(targetX: Double, targetY: Double) {
+        while (true) {
+            delay(1000)
+            val target = Point(targetX, targetY)
+            moveToSmooth(target)
+        }
+    }
+
     private suspend fun moveToSmooth(target: Point) {
         println("Moving ${character.name} to $target")
 
@@ -38,7 +46,7 @@ class Movement(private val character: View, private val pathfinding: Pathfinding
                 val nextX = (startPosition.x + stepX * i).roundToInt().toDouble()
                 val nextY = (startPosition.y + stepY * i).roundToInt().toDouble()
                 character.pos = Point(nextX, nextY)
-                println("Position of ${character.name} at ${character.pos}")
+                //println("Position of ${character.name} at ${character.pos}")
                 delay(1)
             }
         }

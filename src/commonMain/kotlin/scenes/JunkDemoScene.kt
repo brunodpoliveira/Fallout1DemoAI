@@ -70,7 +70,6 @@ class JunkDemoScene : Scene() {
 
     override suspend fun SContainer.sceneMain() {
         setupScene()
-        initNPCMovement()
     }
 
     @OptIn(KorgeExperimental::class)
@@ -138,6 +137,8 @@ class JunkDemoScene : Scene() {
                 }
             )
         }
+        // Get NPC positions for display
+        val npcPositions = mutableListOf<PointInt>()
 
         playerStats = readEntityStats(player)
         println("Player HP: ${playerStats.hp}")
@@ -150,6 +151,10 @@ class JunkDemoScene : Scene() {
         entities.firstOrNull { it.fieldsByName["Name"]?.valueString == "Rayze" }?.let { entity ->
             val rayzeStats = readEntityStats(entity)
             println("Rayze HP: ${rayzeStats.hp}")
+
+            val x = entity.x
+            val y = entity.y
+            npcPositions.add(PointInt(x.toInt(), y.toInt()))
 
             rayze = entity.apply {
                 replaceView(
@@ -167,6 +172,10 @@ class JunkDemoScene : Scene() {
         entities.firstOrNull { it.fieldsByName["Name"]?.valueString == "Baka" }?.let { entity ->
             val bakaStats = readEntityStats(entity)
             println("Baka HP: ${bakaStats.hp}")
+
+            val x = entity.x
+            val y = entity.y
+            npcPositions.add(PointInt(x.toInt(), y.toInt()))
 
             baka = entity.apply {
                 replaceView(
@@ -196,7 +205,7 @@ class JunkDemoScene : Scene() {
         playerDirection = Vector2D(1.0, 0.0)
         gridSize = Size(16, 16)
         playerState = ""
-
+        initNPCMovement(this, ldtk)
         addUpdater(60.hz) {
             if (!dialogIsOpen) {
                 val (dx, dy) = controllerManager.getControllerInput()
@@ -246,38 +255,126 @@ class JunkDemoScene : Scene() {
     }
 
     @OptIn(ExperimentalCoroutinesApi::class, DelicateCoroutinesApi::class)
-    private fun initNPCMovement() {
+    private fun initNPCMovement(container: Container, ldtk: LDTKWorld) {
         val movementCoroutineContext = newSingleThreadContext("MovementCoroutine")
-        val pathfinding = Pathfinding(generateMap())
+        val pathfinding = Pathfinding(generateMap(ldtk))
+
+        val obstacleMap = generateMap(ldtk)
+
+        displayObstacleMap(container, obstacleMap)
 
         //TODO set up more sophisticated movement logic here
         GlobalScope.launch(movementCoroutineContext) {
-            Movement(rayze, pathfinding).moveInSquare()
+            //Movement(rayze, pathfinding).stayStill()
+            //Movement(rayze, pathfinding).moveInSquare()
+            Movement(rayze, pathfinding).moveToPoint(200.0, 150.0)
+
         }
 
         GlobalScope.launch(movementCoroutineContext) {
-            Movement(baka, pathfinding).moveInSquare()
+            //Movement(baka, pathfinding).stayStill()
+            //Movement(baka, pathfinding).moveInSquare()
+            Movement(baka, pathfinding).moveToPoint(250.0, 200.0)
         }
     }
 
-    private fun generateMap(): BooleanArray2 {
-        // TODO Define the map dimensions based on actual map size
-        //TODO read the LDTK map to set width, height, and available and blocked cells
-        val width = 500
-        val height = 500
+    private fun generateMap(ldtk: LDTKWorld, levelName: String = "Level_0"): BooleanArray2 {
+        val level = ldtk.levelsByName[levelName]
+            ?: throw IllegalArgumentException("Level $levelName not found in LDtk world")
 
-        // Initialize the BooleanArray2 with all cells set to false (available)
-        val booleanArray = BooleanArray(width * height) { false }
-        val array = BooleanArray2(width, height, booleanArray)
+        val lWidth = level.level.pxWid
+        val lHeight = level.level.pxHei
+        //val grid = level.layersByName["Kind"]!!.layer.intGridCSV
+        val gWidth = grid.width
+        val gHeight = grid.height
 
-        // TODO Populate `array` based on LDTK map if available
-        // Example: Set some cells as blocked
-        // for (int j = 20 until 30) { array[x, j] = true }
+        println("level width: $lWidth")
+        println("level height: $lHeight")
+        println("grid width: $gWidth")
+        println("grid height: $gHeight")
 
-        return array
+        if (gWidth <= 0 || gHeight <= 0) {
+            throw IllegalArgumentException("Map dimensions must be positive")
+        }
+
+        // Initialize the BooleanArray2 with all cells set to false (walkable)
+        val gridArray = BooleanArray(gWidth * gHeight) { false }
+        val array = BooleanArray2(gWidth, gHeight, gridArray)
+
+        // Mark cells in the "Kind" layer as walkable (false) or obstacles (true)
+        level.layersByName.values.forEach { layer ->
+            if (layer.layer.identifier == "Kind") {
+                layer.layer.intGridCSV.forEachIndexed { index, value ->
+                    val x = index % gWidth
+                    val y = index / gWidth
+                    array[x, y] = when (value) {
+                        1 -> false // Assuming 1 value mean walkable
+                        else -> true  // Any other value means blocked
+                    }
+                    //println("Cell ($x, $y) - Value: $value -> ${array[x, y]}")
+                }
+            }
+        }
+
+        // Rescale the grid array to match the level dimensions
+        val levelArray = BooleanArray(lWidth * lHeight) { true }
+        val scaledArray = BooleanArray2(lWidth, lHeight, levelArray)
+
+        for (y in 0 until lHeight) {
+            for (x in 0 until lWidth) {
+                val scaledX = (x * gWidth) / lWidth
+                val scaledY = (y * gHeight) / lHeight
+                scaledArray[x, y] = array[scaledX, scaledY]
+            }
+        }
+
+        return scaledArray
     }
 
-    private fun handleAnyButton() {
+    private fun displayObstacleMap(view: Container, obstacleMap: BooleanArray2, scaleFactor: Double = 1.0) {
+        //npcPositions: List<PointInt>
+        //TODO add player's current location as a blinking black square
+        //TODO put this in pause menu as an auto-map function
+        val displayWidth = 300.0 // Fixed display width
+        val displayHeight = 300.0 // Fixed display height
+
+        val rectWidth = (displayWidth / obstacleMap.width) * scaleFactor
+        val rectHeight = (displayHeight / obstacleMap.height) * scaleFactor
+
+        val offsetX = 0.0 // Start position for the obstacle map
+        val offsetY = 0.0
+
+        // Create a graphics context
+        val graphics = view.graphics {
+            Rectangle(0, 0, displayWidth, displayHeight)
+            fill(Colors.BLACK) { Rectangle(0, 0, displayWidth, displayHeight) } // Background
+        }
+
+        // Draw the obstacle and free cells
+        graphics.updateShape {
+            for (y in 0 until obstacleMap.height) {
+                for (x in 0 until obstacleMap.width) {
+                    val color = if (obstacleMap[x, y]) Colors.RED else Colors.GREEN
+                    fill(color) {
+                        rect(offsetX + x * rectWidth, offsetY + y * rectHeight, rectWidth, rectHeight)
+                    }
+                }
+            }
+
+            //TODO highlight NPCs as yellow and chests/interacbles as orange
+            //TODO add subtitles to each color
+            /*
+            // Highlight NPC spawn points with yellow squares
+            npcPositions.forEach { pos ->
+                fill(Colors.YELLOW) {
+                    rect(offsetX + pos.x * rectWidth, offsetY + pos.y * rectHeight, rectWidth, rectHeight)
+                }
+            }
+
+             */
+        }
+    }
+        private fun handleAnyButton() {
         val view = getInteractiveView() ?: return
         val entityView = view as? LDTKEntityView ?: return
         val doBlock = entityView.fieldsByName["Items"] ?: return
