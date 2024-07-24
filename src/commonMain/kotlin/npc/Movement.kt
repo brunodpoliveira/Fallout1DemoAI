@@ -8,6 +8,9 @@ import kotlin.math.*
 class Movement(private val character: View, private val pathfinding: Pathfinding) {
 
     //TODO fix; chars still zig-zagging a bit;
+    //TODO it keeps running even after NPC gets to destination; make it stop once it reaches their destination
+    //TODO add patrol movem which will make char move in a perimeter until said otherwise
+    //TODO pause movement if game is paused
     suspend fun moveInSquare() {
         val startPoint = character.pos
         val points = listOf(
@@ -31,10 +34,10 @@ class Movement(private val character: View, private val pathfinding: Pathfinding
     }
 
     private suspend fun moveToSmooth(target: Point) {
-        println("Moving ${character.name} to $target")
+        //println("Moving ${character.name} to $target")
 
         val path = pathfinding.findPath(character.pos, target)
-        println("Path found for ${character.name}: $path")
+        //println("Path found for ${character.name}: $path")
 
         val stepCount = 20
         for (point in path) {

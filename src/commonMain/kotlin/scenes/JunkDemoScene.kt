@@ -52,7 +52,7 @@ class JunkDemoScene : Scene() {
     }
 
     private val controllerManager = VirtualControllerManager()
-    private lateinit var player: LDTKEntityView
+    lateinit var player: LDTKEntityView
     private lateinit var rayze: LDTKEntityView
     private lateinit var baka: LDTKEntityView
     private lateinit var playerDirection: Vector2D
@@ -259,59 +259,62 @@ class JunkDemoScene : Scene() {
         val movementCoroutineContext = newSingleThreadContext("MovementCoroutine")
         val pathfinding = Pathfinding(generateMap(ldtk))
 
-        val obstacleMap = generateMap(ldtk)
-
-        displayObstacleMap(container, obstacleMap)
+        //OPTIONAL: decomment to create a graphic representation of the obstacle map for debugging
+        //val obstacleMap = generateMap(ldtk)
+        //displayObstacleMap(container, obstacleMap)
 
         //TODO set up more sophisticated movement logic here
         GlobalScope.launch(movementCoroutineContext) {
-            //Movement(rayze, pathfinding).stayStill()
-            //Movement(rayze, pathfinding).moveInSquare()
-            Movement(rayze, pathfinding).moveToPoint(200.0, 150.0)
+            Movement(rayze, pathfinding).moveToPoint(253.0, 69.0)
 
         }
 
         GlobalScope.launch(movementCoroutineContext) {
-            //Movement(baka, pathfinding).stayStill()
-            //Movement(baka, pathfinding).moveInSquare()
-            Movement(baka, pathfinding).moveToPoint(250.0, 200.0)
+            Movement(baka, pathfinding).moveToPoint(175.0, 200.0)
         }
     }
 
-    private fun generateMap(ldtk: LDTKWorld, levelName: String = "Level_0"): BooleanArray2 {
-        val level = ldtk.levelsByName[levelName]
-            ?: throw IllegalArgumentException("Level $levelName not found in LDtk world")
+    fun generateMap(ldtk: LDTKWorld, levelName: String = "Level_0"): BooleanArray2 {
+        val level = ldtk.levelsByName[levelName] ?: throw IllegalArgumentException("Level $levelName not found in LDtk world")
 
         val lWidth = level.level.pxWid
         val lHeight = level.level.pxHei
-        //val grid = level.layersByName["Kind"]!!.layer.intGridCSV
         val gWidth = grid.width
         val gHeight = grid.height
-
-        println("level width: $lWidth")
-        println("level height: $lHeight")
-        println("grid width: $gWidth")
-        println("grid height: $gHeight")
-
-        if (gWidth <= 0 || gHeight <= 0) {
-            throw IllegalArgumentException("Map dimensions must be positive")
-        }
 
         // Initialize the BooleanArray2 with all cells set to false (walkable)
         val gridArray = BooleanArray(gWidth * gHeight) { false }
         val array = BooleanArray2(gWidth, gHeight, gridArray)
 
-        // Mark cells in the "Kind" layer as walkable (false) or obstacles (true)
+        // First Pass: Mark cells in the "Kind" layer as walkable (false) or obstacles (true)
         level.layersByName.values.forEach { layer ->
-            if (layer.layer.identifier == "Kind") {
-                layer.layer.intGridCSV.forEachIndexed { index, value ->
-                    val x = index % gWidth
-                    val y = index / gWidth
-                    array[x, y] = when (value) {
-                        1 -> false // Assuming 1 value mean walkable
-                        else -> true  // Any other value means blocked
+            when (layer.layer.identifier) {
+                "Kind" -> {
+                    layer.layer.intGridCSV.forEachIndexed { index, value ->
+                        val x = index % gWidth
+                        val y = index / gWidth
+                        array[x, y] = when (value) {
+                            1, 3 -> false
+                            else -> true  // Any other value means blocked
+                        }
                     }
-                    //println("Cell ($x, $y) - Value: $value -> ${array[x, y]}")
+                }
+            }
+        }
+
+        // Second Pass: Mark cells in the "Entities" layer as obstacles (true)
+        level.layersByName.values.forEach { layer ->
+            when (layer.layer.identifier) {
+                "Entities" -> {
+                    layer.layer.entityInstances.forEach { entity ->
+                        val cx = entity.grid[0]
+                        val cy = entity.grid[1]
+                        when (entity.identifier) {
+                            "Object", "Chest" -> {
+                                array[cx, cy] = true
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -327,24 +330,20 @@ class JunkDemoScene : Scene() {
                 scaledArray[x, y] = array[scaledX, scaledY]
             }
         }
-
         return scaledArray
     }
 
     private fun displayObstacleMap(view: Container, obstacleMap: BooleanArray2, scaleFactor: Double = 1.0) {
-        //npcPositions: List<PointInt>
-        //TODO add player's current location as a blinking black square
-        //TODO put this in pause menu as an auto-map function
-        val displayWidth = 300.0 // Fixed display width
-        val displayHeight = 300.0 // Fixed display height
+        val displayWidth = 300.0
+        val displayHeight = 300.0
 
         val rectWidth = (displayWidth / obstacleMap.width) * scaleFactor
         val rectHeight = (displayHeight / obstacleMap.height) * scaleFactor
 
-        val offsetX = 0.0 // Start position for the obstacle map
+        // Start position for the obstacle map
+        val offsetX = 0.0
         val offsetY = 0.0
 
-        // Create a graphics context
         val graphics = view.graphics {
             Rectangle(0, 0, displayWidth, displayHeight)
             fill(Colors.BLACK) { Rectangle(0, 0, displayWidth, displayHeight) } // Background
@@ -354,27 +353,16 @@ class JunkDemoScene : Scene() {
         graphics.updateShape {
             for (y in 0 until obstacleMap.height) {
                 for (x in 0 until obstacleMap.width) {
-                    val color = if (obstacleMap[x, y]) Colors.RED else Colors.GREEN
+                    val color = if (obstacleMap[x, y]) Colors.DARKGREEN else Colors.GREEN
                     fill(color) {
                         rect(offsetX + x * rectWidth, offsetY + y * rectHeight, rectWidth, rectHeight)
                     }
                 }
             }
-
-            //TODO highlight NPCs as yellow and chests/interacbles as orange
-            //TODO add subtitles to each color
-            /*
-            // Highlight NPC spawn points with yellow squares
-            npcPositions.forEach { pos ->
-                fill(Colors.YELLOW) {
-                    rect(offsetX + pos.x * rectWidth, offsetY + pos.y * rectHeight, rectWidth, rectHeight)
-                }
-            }
-
-             */
         }
     }
-        private fun handleAnyButton() {
+
+    private fun handleAnyButton() {
         val view = getInteractiveView() ?: return
         val entityView = view as? LDTKEntityView ?: return
         val doBlock = entityView.fieldsByName["Items"] ?: return

@@ -5,10 +5,11 @@ import korlibs.math.geom.*
 import korlibs.math.algo.*
 
 class Pathfinding(private val map: BooleanArray2) {
+    //TODO calculate path only once/ make it more efficient
     private val astar: AStar = AStar(map)
 
     fun findPath(start: Point, end: Point): List<Point> {
-        println("Attempting to find path from $start to $end")
+        //println("Attempting to find path from $start to $end")
         val startInt = clampPoint(start.toInt())
         val endInt = clampPoint(end.toInt())
         val pointsInt = astar.find(startInt.x, startInt.y, endInt.x, endInt.y, findClosest = true, diagonals = true)
@@ -32,7 +33,7 @@ class Pathfinding(private val map: BooleanArray2) {
         val maxY = if (map.height > 0) map.height - 1 else 0
         val clampedX = point.x.coerceIn(0, maxX)
         val clampedY = point.y.coerceIn(0, maxY)
-        println("Clamping point $point to ($clampedX, $clampedY)")
+        //println("Clamping point $point to ($clampedX, $clampedY)")
         return PointInt(clampedX, clampedY)
     }
 }

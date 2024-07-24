@@ -3334,7 +3334,7 @@
 					"entityInstances": [
 						{
 							"__identifier": "Entity",
-							"__grid": [14,12],
+							"__grid": [15,11],
 							"__pivot": [0,1],
 							"__tags": [],
 							"__tile": { "tilesetUid": 1, "x": 384, "y": 352, "w": 16, "h": 16 },
@@ -3343,7 +3343,7 @@
 							"width": 16,
 							"height": 16,
 							"defUid": 140,
-							"px": [232,196],
+							"px": [248,180],
 							"fieldInstances": [
 								{ "__identifier": "Tile", "__type": "Tile", "__value": { "tilesetUid": 1, "x": 384, "y": 352, "w": 16, "h": 16 }, "__tile": { "tilesetUid": 1, "x": 384, "y": 352, "w": 16, "h": 16 }, "defUid": 141, "realEditorValues": [{
 									"id": "V_String",

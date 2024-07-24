@@ -160,12 +160,13 @@ To do it: Open the Apple Mac Apple menu. Click System Preferences. Click Java. C
 tab. Click Update now.
 
 ## TODO
-- Split the map into sectors and send them to these sectors test the pathfinding
+- Fix the pause/movement logic so that NPCs will stop moving while paused
+- Split the map into sectors (locations) and send them to these locations to test the pathfinding
 - Add an Action Model: if the NPC says "we'll meet at the town square" the Action Model will set the 
   NPC to move to the town square, and engage the pathfinding to make them move. If they say 
   "I'll give you my pistol" the game will add a gun to the player's inventory
-- Implement a simple combat system: if an NPC and player are in range and no walls are in between,
-  enable hit detection.
+- Implement a simple combat system: if an NPC and player are in range and no walls or obstacles
+are in between, enable hit detection.
 - Add the Save/Load game logic
 - Add interrogation to the game, using the NPCs in the saved game
 - Add voice input for player interactions, allowing speech-to-text functionality.
