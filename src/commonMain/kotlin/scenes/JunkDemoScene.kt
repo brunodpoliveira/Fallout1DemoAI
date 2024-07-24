@@ -28,11 +28,14 @@ import korlibs.korge.view.filter.*
 import korlibs.korge.view.mask.*
 import korlibs.math.*
 import korlibs.math.geom.*
+import korlibs.math.geom.PointInt
 import korlibs.math.geom.ds.*
 import korlibs.math.interpolation.*
 import korlibs.math.raycasting.*
 import korlibs.render.*
 import korlibs.time.*
+import kotlinx.coroutines.*
+import npc.*
 import readEntityStats
 import ui.*
 import kotlin.math.*
@@ -49,7 +52,9 @@ class JunkDemoScene : Scene() {
     }
 
     private val controllerManager = VirtualControllerManager()
-    private lateinit var player: LDTKEntityView
+    lateinit var player: LDTKEntityView
+    private lateinit var rayze: LDTKEntityView
+    private lateinit var baka: LDTKEntityView
     private lateinit var playerDirection: Vector2D
     private lateinit var playerState: String
     private lateinit var entitiesBvh: BvhWorld
@@ -73,9 +78,9 @@ class JunkDemoScene : Scene() {
         val atlas = MutableAtlasUnit()
         val clericFemale = KR.gfx.clericF.__file.readImageDataContainer(ASE.toProps(), atlas).apply {
         }
-        val rayze = KR.gfx.minotaur.__file.readImageDataContainer(ASE.toProps(), atlas).apply {
+        val rayzeSprite = KR.gfx.minotaur.__file.readImageDataContainer(ASE.toProps(), atlas).apply {
         }
-        val baka = KR.gfx.wizardF.__file.readImageDataContainer(ASE.toProps(), atlas).apply {
+        val bakaSprite = KR.gfx.wizardF.__file.readImageDataContainer(ASE.toProps(), atlas).apply {
         }
         val ldtk = KR.gfx.dungeonTilesmapCalciumtrice.__file.readLDTKWorld().apply {
         }
@@ -132,6 +137,8 @@ class JunkDemoScene : Scene() {
                 }
             )
         }
+        // Get NPC positions for display
+        val npcPositions = mutableListOf<PointInt>()
 
         playerStats = readEntityStats(player)
         println("Player HP: ${playerStats.hp}")
@@ -144,27 +151,43 @@ class JunkDemoScene : Scene() {
         entities.firstOrNull { it.fieldsByName["Name"]?.valueString == "Rayze" }?.let { entity ->
             val rayzeStats = readEntityStats(entity)
             println("Rayze HP: ${rayzeStats.hp}")
-            entity.replaceView(
-                ImageDataView2(rayze.default).also {
-                    it.smoothing = false
-                    it.animation = "idle"
-                    it.anchor(Anchor.BOTTOM_CENTER)
-                    it.play()
-                }
-            )
+
+            val x = entity.x
+            val y = entity.y
+            npcPositions.add(PointInt(x.toInt(), y.toInt()))
+
+            rayze = entity.apply {
+                replaceView(
+                    ImageDataView2(rayzeSprite.default).also {
+                        it.smoothing = false
+                        it.animation = "idle"
+                        it.anchor(Anchor.BOTTOM_CENTER)
+                        it.play()
+                    }
+                )
+            }
+            println("Rayze initial position: ${entity.pos}")
         }
 
         entities.firstOrNull { it.fieldsByName["Name"]?.valueString == "Baka" }?.let { entity ->
             val bakaStats = readEntityStats(entity)
             println("Baka HP: ${bakaStats.hp}")
-            entity.replaceView(
-                ImageDataView2(baka.default).also {
-                    it.smoothing = false
-                    it.animation = "idle"
-                    it.anchor(Anchor.BOTTOM_CENTER)
-                    it.play()
-                }
-            )
+
+            val x = entity.x
+            val y = entity.y
+            npcPositions.add(PointInt(x.toInt(), y.toInt()))
+
+            baka = entity.apply {
+                replaceView(
+                    ImageDataView2(bakaSprite.default).also {
+                        it.smoothing = false
+                        it.animation = "idle"
+                        it.anchor(Anchor.BOTTOM_CENTER)
+                        it.play()
+                    }
+                )
+            }
+            println("Baka initial position: ${entity.pos}")
         }
 
         pauseMenu = PauseMenu()
@@ -182,7 +205,7 @@ class JunkDemoScene : Scene() {
         playerDirection = Vector2D(1.0, 0.0)
         gridSize = Size(16, 16)
         playerState = ""
-
+        initNPCMovement(this, ldtk)
         addUpdater(60.hz) {
             if (!dialogIsOpen) {
                 val (dx, dy) = controllerManager.getControllerInput()
@@ -226,6 +249,114 @@ class JunkDemoScene : Scene() {
                 if (interactiveView != null) {
                     interactiveView.colorMul = Colors["#ffbec3"]
                     lastInteractiveView = interactiveView
+                }
+            }
+        }
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class, DelicateCoroutinesApi::class)
+    private fun initNPCMovement(container: Container, ldtk: LDTKWorld) {
+        val movementCoroutineContext = newSingleThreadContext("MovementCoroutine")
+        val pathfinding = Pathfinding(generateMap(ldtk))
+
+        //OPTIONAL: decomment to create a graphic representation of the obstacle map for debugging
+        //val obstacleMap = generateMap(ldtk)
+        //displayObstacleMap(container, obstacleMap)
+
+        //TODO set up more sophisticated movement logic here
+        GlobalScope.launch(movementCoroutineContext) {
+            Movement(rayze, pathfinding).moveToPoint(253.0, 69.0)
+
+        }
+
+        GlobalScope.launch(movementCoroutineContext) {
+            Movement(baka, pathfinding).moveToPoint(175.0, 200.0)
+        }
+    }
+
+    fun generateMap(ldtk: LDTKWorld, levelName: String = "Level_0"): BooleanArray2 {
+        val level = ldtk.levelsByName[levelName] ?: throw IllegalArgumentException("Level $levelName not found in LDtk world")
+
+        val lWidth = level.level.pxWid
+        val lHeight = level.level.pxHei
+        val gWidth = grid.width
+        val gHeight = grid.height
+
+        // Initialize the BooleanArray2 with all cells set to false (walkable)
+        val gridArray = BooleanArray(gWidth * gHeight) { false }
+        val array = BooleanArray2(gWidth, gHeight, gridArray)
+
+        // First Pass: Mark cells in the "Kind" layer as walkable (false) or obstacles (true)
+        level.layersByName.values.forEach { layer ->
+            when (layer.layer.identifier) {
+                "Kind" -> {
+                    layer.layer.intGridCSV.forEachIndexed { index, value ->
+                        val x = index % gWidth
+                        val y = index / gWidth
+                        array[x, y] = when (value) {
+                            1, 3 -> false
+                            else -> true  // Any other value means blocked
+                        }
+                    }
+                }
+            }
+        }
+
+        // Second Pass: Mark cells in the "Entities" layer as obstacles (true)
+        level.layersByName.values.forEach { layer ->
+            when (layer.layer.identifier) {
+                "Entities" -> {
+                    layer.layer.entityInstances.forEach { entity ->
+                        val cx = entity.grid[0]
+                        val cy = entity.grid[1]
+                        when (entity.identifier) {
+                            "Object", "Chest" -> {
+                                array[cx, cy] = true
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Rescale the grid array to match the level dimensions
+        val levelArray = BooleanArray(lWidth * lHeight) { true }
+        val scaledArray = BooleanArray2(lWidth, lHeight, levelArray)
+
+        for (y in 0 until lHeight) {
+            for (x in 0 until lWidth) {
+                val scaledX = (x * gWidth) / lWidth
+                val scaledY = (y * gHeight) / lHeight
+                scaledArray[x, y] = array[scaledX, scaledY]
+            }
+        }
+        return scaledArray
+    }
+
+    private fun displayObstacleMap(view: Container, obstacleMap: BooleanArray2, scaleFactor: Double = 1.0) {
+        val displayWidth = 300.0
+        val displayHeight = 300.0
+
+        val rectWidth = (displayWidth / obstacleMap.width) * scaleFactor
+        val rectHeight = (displayHeight / obstacleMap.height) * scaleFactor
+
+        // Start position for the obstacle map
+        val offsetX = 0.0
+        val offsetY = 0.0
+
+        val graphics = view.graphics {
+            Rectangle(0, 0, displayWidth, displayHeight)
+            fill(Colors.BLACK) { Rectangle(0, 0, displayWidth, displayHeight) } // Background
+        }
+
+        // Draw the obstacle and free cells
+        graphics.updateShape {
+            for (y in 0 until obstacleMap.height) {
+                for (x in 0 until obstacleMap.width) {
+                    val color = if (obstacleMap[x, y]) Colors.DARKGREEN else Colors.GREEN
+                    fill(color) {
+                        rect(offsetX + x * rectWidth, offsetY + y * rectHeight, rectWidth, rectHeight)
+                    }
                 }
             }
         }
@@ -309,7 +440,6 @@ class JunkDemoScene : Scene() {
     }
 
     private fun handleWestButton(container: Container) {
-        println("Handle west button pressed")
         val view = getInteractiveView() ?: return
         if (view is LDTKEntityView && view.fieldsByName["Name"] != null) {
             val npcName = view.fieldsByName["Name"]!!.valueString
@@ -339,7 +469,6 @@ class JunkDemoScene : Scene() {
         playerView.animation = "attack"
         playerState = "attack"
         handleAnyButton()  // Placeholder, assuming attack shares logic with 'use' for now
-        println("Handle south button pressed")
     }
 
     private fun handleNorthButton(container: Container) {
