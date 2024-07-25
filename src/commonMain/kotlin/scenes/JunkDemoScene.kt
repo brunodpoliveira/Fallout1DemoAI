@@ -259,6 +259,13 @@ class JunkDemoScene : Scene() {
         val movementCoroutineContext = newSingleThreadContext("MovementCoroutine")
         val pathfinding = Pathfinding(generateMap(ldtk))
 
+        val patrolPoints = listOf(
+            Point(100.0, 100.0),
+            Point(200.0, 100.0),
+            Point(200.0, 200.0),
+            Point(100.0, 200.0)
+        )
+
         //OPTIONAL: decomment to create a graphic representation of the obstacle map for debugging
         //val obstacleMap = generateMap(ldtk)
         //displayObstacleMap(container, obstacleMap)
@@ -270,7 +277,7 @@ class JunkDemoScene : Scene() {
         }
 
         GlobalScope.launch(movementCoroutineContext) {
-            Movement(baka, pathfinding).moveToPoint(175.0, 200.0)
+            Movement(baka, pathfinding).patrol(patrolPoints)
         }
     }
 

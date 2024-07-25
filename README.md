@@ -160,7 +160,6 @@ To do it: Open the Apple Mac Apple menu. Click System Preferences. Click Java. C
 tab. Click Update now.
 
 ## TODO
-- Fix the pause/movement logic so that NPCs will stop moving while paused
 - Split the map into sectors (locations) and send them to these locations to test the pathfinding
 - Add an Action Model: if the NPC says "we'll meet at the town square" the Action Model will set the 
   NPC to move to the town square, and engage the pathfinding to make them move. If they say 
@@ -176,3 +175,26 @@ are in between, enable hit detection.
 - Create a custom level for this demo
 - Add sound effects to the demo
 - Add music to the demo
+
+TODO: Optimize our AI for RPG:
+The defensible business comes from optimizing the LLM for on-device performance. 
+To do that, you need to know (1) the specs of the device’s RAM and 
+(2) what other processes the device will be running. 
+This would determine the hyperparameters for model dimensions. 
+Like do you use a few 1024x1024 matrices or a bunch of 64x64 matrices.
+
+Then you would (3) filter a large dataset for data that’s relevant to the NPC dialogue. 
+Train Fallout NPC dialogue on WWII documentaries. 
+Train Elden Ring dialogue on high fantasy novels and mythology. Etc. 
+You can use Llama 3.1 to filter a dataset like this, but you would have to call 
+Llama 3.1 for every single piece of data in your dataset. 
+Which means it would require a lot of GPU, but it wouldn’t be that expensive to run. 
+Train a GPT-2 sized LLM on this data.
+
+Optional (4): hire authors to write extra dialogue and decision paths for your characters. 
+Do what George RR Martin did for Elden Ring and write a whole bunch of lore to flesh out the universe.
+
+(5) Then you would take the dialogue written and give it to Llama 3.1 405B. You would say to Llama:
+“you are this NPC. I want you to generate more conversations for this NPC.”
+
+(6) Then you take all of that synthetic NPC dialogue and use it fine-tune your small, GPT-2 sized LLM.
