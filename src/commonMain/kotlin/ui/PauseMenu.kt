@@ -16,11 +16,14 @@ import korlibs.korge.view.align.*
 import korlibs.math.geom.*
 import scenes.*
 import scenes.JunkDemoScene.Companion.isPaused
+import ui.DialogWindow.Companion.isInDialog
 
 class PauseMenu : Container() {
 
     init {
-        setupPauseMenu()
+        if (!isInDialog) {
+            setupPauseMenu()
+        }
     }
 
     private fun setupPauseMenu(){

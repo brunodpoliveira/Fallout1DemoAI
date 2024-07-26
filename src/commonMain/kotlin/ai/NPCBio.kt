@@ -25,4 +25,10 @@ object NPCBio {
         You've been waiting for someone to help liberate the town from the gangs.
         You've never met the player character before.
     """.trimIndent()
+    val robotBio = """
+        You are a Robot. You were built to obey the player character without question.
+        You are aware that you are a character in a game,
+        and you exist to test its functionalities.
+    """.trimIndent()
+
 }

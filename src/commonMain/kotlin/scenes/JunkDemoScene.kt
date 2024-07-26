@@ -38,6 +38,7 @@ import kotlinx.coroutines.*
 import npc.*
 import readEntityStats
 import ui.*
+import ui.DialogWindow.Companion.isInDialog
 import kotlin.math.*
 
 class JunkDemoScene : Scene() {
@@ -55,6 +56,7 @@ class JunkDemoScene : Scene() {
     lateinit var player: LDTKEntityView
     private lateinit var rayze: LDTKEntityView
     private lateinit var baka: LDTKEntityView
+    private lateinit var robot: LDTKEntityView
     private lateinit var playerDirection: Vector2D
     private lateinit var playerState: String
     private lateinit var entitiesBvh: BvhWorld
@@ -81,6 +83,8 @@ class JunkDemoScene : Scene() {
         val rayzeSprite = KR.gfx.minotaur.__file.readImageDataContainer(ASE.toProps(), atlas).apply {
         }
         val bakaSprite = KR.gfx.wizardF.__file.readImageDataContainer(ASE.toProps(), atlas).apply {
+        }
+        val robotSprite = KR.gfx.clericF.__file.readImageDataContainer(ASE.toProps(), atlas).apply {
         }
         val ldtk = KR.gfx.dungeonTilesmapCalciumtrice.__file.readLDTKWorld().apply {
         }
@@ -190,6 +194,27 @@ class JunkDemoScene : Scene() {
             println("Baka initial position: ${entity.pos}")
         }
 
+        entities.firstOrNull { it.fieldsByName["Name"]?.valueString == "Robot" }?.let { entity ->
+            val robotStats = readEntityStats(entity)
+            println("Rayze HP: ${robotStats.hp}")
+
+            val x = entity.x
+            val y = entity.y
+            npcPositions.add(PointInt(x.toInt(), y.toInt()))
+
+            robot = entity.apply {
+                replaceView(
+                    ImageDataView2(robotSprite.default).also {
+                        it.smoothing = false
+                        it.animation = "idle"
+                        it.anchor(Anchor.BOTTOM_CENTER)
+                        it.play()
+                    }
+                )
+            }
+            println("Robot initial position: ${entity.pos}")
+        }
+
         pauseMenu = PauseMenu()
         controllerManager.apply {
             setupVirtualController()
@@ -273,11 +298,12 @@ class JunkDemoScene : Scene() {
         //TODO set up more sophisticated movement logic here
         GlobalScope.launch(movementCoroutineContext) {
             Movement(rayze, pathfinding).moveToPoint(253.0, 69.0)
-
         }
-
         GlobalScope.launch(movementCoroutineContext) {
             Movement(baka, pathfinding).patrol(patrolPoints)
+        }
+        GlobalScope.launch(movementCoroutineContext) {
+            Movement(robot,pathfinding).moveToSector(ldtk,"STATUE",grid)
         }
     }
 
@@ -455,13 +481,15 @@ class JunkDemoScene : Scene() {
             val npcFactions = mapOf(
                 "Rayze" to "Crypts",
                 "Baka" to "Fools",
-                "Lex" to "Non-Gang"
+                "Lex" to "Non-Gang",
+                "Robot" to "Non-Gang"
             )
             val factionName = npcFactions[npcName] ?: "Unknown"
             val npcBio = when (npcName) {
                 "Rayze" -> NPCBio.rayzeBio
                 "Baka" -> NPCBio.bakaBio
                 "Lex" -> NPCBio.lexBio
+                "Robot" -> NPCBio.robotBio
                 else -> ""
             }
             if (npcName != null) {
@@ -481,7 +509,7 @@ class JunkDemoScene : Scene() {
     private fun handleNorthButton(container: Container) {
         if (isPaused) {
             pauseMenu.resumeGame()
-        } else {
+        } else if (!isInDialog) {
             pauseMenu.show(container)
         }
     }
