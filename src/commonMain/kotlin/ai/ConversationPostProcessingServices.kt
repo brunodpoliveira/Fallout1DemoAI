@@ -3,6 +3,7 @@ package ai
 import ai.OpenAIService.msgs
 import ai.OpenAIService.sendMessage
 import com.theokanning.openai.completion.chat.*
+import img.TextDisplayManager
 
 object ActionVerbs {
     val verbs = listOf("MOVE", "GIVE", "TAKE", "ATTACK", "DEFEND", "CONSPIRE",

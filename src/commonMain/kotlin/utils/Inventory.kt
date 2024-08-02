@@ -1,3 +1,4 @@
+package utils
 
 class Inventory {
     private val items = mutableListOf<String>()
@@ -20,5 +21,20 @@ class Inventory {
 
     fun removeItem(item: String) {
         items.remove(item)
+    }
+
+    fun useAmmo(playerStats: EntityStats, updateAmmoUI: (Int) -> Unit): Boolean {
+        if (playerStats.ammo > 0) {
+            playerStats.ammo -= 1
+            updateAmmoUI(playerStats.ammo)
+            return true
+        }
+        return false
+    }
+
+    fun addAmmo(amount: Int, playerStats: EntityStats, updateAmmoUI: (Int) -> Unit) {
+        playerStats.ammo += amount
+        updateAmmoUI(playerStats.ammo)
+        println("Added $amount ammo. Total ammo: ${playerStats.ammo}")
     }
 }

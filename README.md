@@ -73,6 +73,8 @@ adhere to the project's coding standards.
 - OpenAI and theokanning for providing the GPT-3.5 Turbo API
 - Korge developers for the game engine, and the Dungeon Starter Kit
 - GNUGRAF for providing critical feedback and support
+- mikiz from itch.io for their crosshair pack
+- szadiart from itch.io for their Post Apo tile pack
 
 ## Troubleshooting: Run a .jar file
 The game is packaged as a .jar. Below is how to run it:
@@ -160,21 +162,26 @@ To do it: Open the Apple Mac Apple menu. Click System Preferences. Click Java. C
 tab. Click Update now.
 
 ## TODO
-- Split the map into sectors (locations) and send them to these locations to test the pathfinding
+- Implement a simple combat system: 
+- Finally, code the Turn-based system: you can move, or you can shoot, NPCs move and shoot first, that's it.
+if an NPC and player are in range and no walls or obstacles are in between, that's a hit.
 - Add an Action Model: if the NPC says "we'll meet at the town square" the Action Model will set the 
   NPC to move to the town square, and engage the pathfinding to make them move. If they say 
   "I'll give you my pistol" the game will add a gun to the player's inventory
-- Implement a simple combat system: if an NPC and player are in range and no walls or obstacles
-are in between, enable hit detection.
 - Add the Save/Load game logic
-- Add interrogation to the game, using the NPCs in the saved game
+- Add interrogation to the game, using the NPCs in the saved game; the option for interrogate should be in
+the load game screen; either load normally or load in interrogation room
+- Use custom Fallout-themed sprites
+- Create a custom level in the latest version of LDTK if possible for this demo, with custom graphics
+- Add sound effects to the demo
+- Add music to the demo
 - Add voice input for player interactions, allowing speech-to-text functionality.
 - Move API keys to gradle.properties to enhance security.
 - Remove the controller logic in JunkDemo and put it in the VCM
-- Use custom Fallout-themed sprites
-- Create a custom level for this demo
-- Add sound effects to the demo
-- Add music to the demo
+- Optimize the code to be as modular as possible; make it so the classes are as decoupled as possible
+- Fix as many bugs as feasible; priority must be give to show-stopping bugs or annoying glitches
+- Web deployment, so that it can be played in the itch.io webpage w/out needing a download
+- Train a custom LLM following the template below (this will be another project)
 
 TODO: Optimize our AI for RPG:
 The defensible business comes from optimizing the LLM for on-device performance. 

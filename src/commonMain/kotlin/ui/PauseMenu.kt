@@ -1,7 +1,7 @@
 package ui
 
 import KR
-import TextDisplayManager
+import img.TextDisplayManager
 import ai.*
 import korlibs.datastructure.*
 import korlibs.image.color.*

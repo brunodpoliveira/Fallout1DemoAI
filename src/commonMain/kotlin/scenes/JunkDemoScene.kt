@@ -1,7 +1,5 @@
 package scenes
 
-import EntityStats
-import Inventory
 import KR
 import ai.*
 import bvh.*
@@ -9,12 +7,14 @@ import controls.*
 import img.*
 import korlibs.datastructure.*
 import korlibs.datastructure.iterators.*
+import korlibs.event.*
 import korlibs.image.atlas.*
 import korlibs.image.bitmap.*
 import korlibs.image.color.*
 import korlibs.image.font.*
 import korlibs.image.format.*
 import korlibs.io.async.*
+import korlibs.io.file.std.*
 import korlibs.korge.animate.*
 import korlibs.korge.annotations.*
 import korlibs.korge.input.*
@@ -36,9 +36,9 @@ import korlibs.render.*
 import korlibs.time.*
 import kotlinx.coroutines.*
 import npc.*
-import readEntityStats
 import ui.*
 import ui.DialogWindow.Companion.isInDialog
+import utils.*
 import kotlin.math.*
 
 class JunkDemoScene : Scene() {
@@ -69,9 +69,57 @@ class JunkDemoScene : Scene() {
     private val playerInventory: Inventory = Inventory()
     private lateinit var playerStats: EntityStats
     private var playerStatsUI: PlayerStatsUI? = null
+    private var targetingReticule: Image? = null
+
+    private var currentTargetIndex: Int = 0
+    private lateinit var enemies: List<LDTKEntityView>
+    private val entityStatsMap = mutableMapOf<String, EntityStats>()
+
+    private fun updateTargetReticule() {
+        if (enemies.isNotEmpty()) {
+            val scaledPositions = scaleEntityPositions(enemies.map { PointInt(it.x.toInt(), it.y.toInt()) })
+            val targetPosition = scaledPositions[currentTargetIndex]
+            targetingReticule?.visible = true
+            targetingReticule?.xy(targetPosition.x.toDouble(), targetPosition.y.toDouble())
+        } else {
+            targetingReticule?.visible = false
+        }
+    }
+
+
+    private fun selectNextTarget() {
+        if (enemies.isNotEmpty()) {
+            currentTargetIndex = (currentTargetIndex + 1) % enemies.size
+            updateTargetReticule()
+        }
+    }
+
+    private fun selectPreviousTarget() {
+        if (enemies.isNotEmpty()) {
+            currentTargetIndex = (currentTargetIndex - 1 + enemies.size) % enemies.size
+            updateTargetReticule()
+        }
+    }
 
     override suspend fun SContainer.sceneMain() {
         setupScene()
+        targetingReticule = image(texture = resourcesVfs["cross.png"].readBitmapSlice()) {
+            visible = false
+        }
+        enemies = entities.filter { it.entity.identifier == "Enemy" }
+
+        // Initialize stats for enemies
+        enemies.forEach { enemy ->
+            val enemyId = enemy.entity.identifier + enemy.pos.toString()
+            entityStatsMap[enemyId] = readEntityStats(enemy)
+        }
+
+        // Setup key events for selecting targets
+        //TODO trigger new controls when in combat vs "onfoot"
+        keys {
+            down(Key.LEFT) { selectPreviousTarget() }
+            down(Key.RIGHT) { selectNextTarget() }
+        }
     }
 
     @OptIn(KorgeExperimental::class)
@@ -395,13 +443,94 @@ class JunkDemoScene : Scene() {
         }
     }
 
+    private fun scaleEntityPositions(entities: List<PointInt>): List<PointInt> {
+        val mapScale = 2
+        return entities.map { point ->
+            val x = (point.x * mapScale) - 10
+            val y = (point.y * mapScale) - 45
+            PointInt(x, y)
+        }
+    }
+
+    private fun handlePlayerShoot() {
+        if (!playerInventory.getItems().contains("Gun") || playerStats.ammo <= 0) {
+            println("Cannot shoot! Ensure player has both gun and ammo.")
+            return
+        }
+
+        if (enemies.isEmpty()) {
+            println("No targets available.")
+            return
+        }
+
+        val target = enemies[currentTargetIndex]
+        val enemyId = target.entity.identifier + target.pos.toString()
+        val targetStats = entityStatsMap[enemyId] ?: readEntityStats(target)
+
+        val ammoConsumed = playerInventory.useAmmo(playerStats) { newAmmo ->
+            updateAmmoUI(newAmmo)
+        }
+
+        if (ammoConsumed) {
+            val hitChance = 0.8 // 80% hit chance
+            if (Math.random() < hitChance) {
+                targetStats.hp -= 20
+                println("Hit! ${target.fieldsByName["Name"]?.value} HP: ${targetStats.hp}")
+
+                if (targetStats.hp <= 0) {
+                    target.removeFromParent()
+                    entitiesBvh -= target
+                    enemies = enemies.filterNot { it == target }
+                    entityStatsMap.remove(enemyId)
+                    println("Target has been killed and removed from the scene")
+                } else {
+                    entityStatsMap[enemyId] = targetStats
+                    // Indicate damage via visual effect
+                    target.filter = ColorMatrixFilter(ColorMatrixFilter.GRAYSCALE_MATRIX)
+                    launchImmediately {
+                        delay(500)
+                        target.filter = null
+                    }
+                }
+            } else {
+                println("Missed!")
+            }
+            playerStatsUI!!.update(playerStats.hp, playerStats.ammo)
+        } else {
+            println("Out of ammo!")
+        }
+    }
+
+    private fun chooseTarget(): LDTKEntityView? {
+        val enemies = entities.filter { it != player }
+        val target = if (enemies.isNotEmpty()) enemies.first() else null
+        if (target != null) {
+            targetingReticule?.visible = true
+            targetingReticule?.xy(target.x, target.y)
+        } else {
+            targetingReticule?.visible = false
+        }
+        return target
+    }
+
+    private fun updateAmmoUI(newAmmo: Int) {
+        playerStatsUI?.update(playerStats.hp, newAmmo)
+    }
+
     private fun handleAnyButton() {
         val view = getInteractiveView() ?: return
         val entityView = view as? LDTKEntityView ?: return
         val doBlock = entityView.fieldsByName["Items"] ?: return
         val items = doBlock.valueDyn.list.map { it.str }
 
-        items.forEach { playerInventory.addItem(it) }
+        items.forEach { item ->
+            playerInventory.addItem(item)
+            if (item == "Ammo") {
+                playerInventory.addAmmo(10, playerStats) { newAmmo ->
+                    updateAmmoUI(newAmmo)
+                }
+            }
+        }
 
         entityView.replaceView(
             Image(entityView.tileset!!.unextrudedTileSet!!.base.sliceWithSize(openChestTile.x,
@@ -503,7 +632,10 @@ class JunkDemoScene : Scene() {
         val playerView = (player.view as ImageDataView2)
         playerView.animation = "attack"
         playerState = "attack"
-        handleAnyButton()  // Placeholder, assuming attack shares logic with 'use' for now
+        val target = chooseTarget()
+        if (target != null) {
+            handlePlayerShoot()
+        }
     }
 
     private fun handleNorthButton(container: Container) {

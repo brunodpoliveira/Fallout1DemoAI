@@ -3021,7 +3021,8 @@
 	], "enums": [{ "identifier": "Items", "uid": 144, "values": [
 		{ "id": "Red_potion", "tileRect": { "tilesetUid": 1, "x": 0, "y": 384, "w": 16, "h": 16 }, "tileId": -1, "color": 12470831, "__tileSrcRect": [0,384,16,16] },
 		{ "id": "Blue_potion", "tileRect": { "tilesetUid": 1, "x": 16, "y": 384, "w": 16, "h": 16 }, "tileId": -1, "color": 14120515, "__tileSrcRect": [16,384,16,16] },
-		{ "id": "Sword", "tileRect": { "tilesetUid": 1, "x": 128, "y": 384, "w": 16, "h": 16 }, "tileId": -1, "color": 15389866, "__tileSrcRect": [128,384,16,16] }
+		{ "id": "Gun", "tileRect": { "tilesetUid": 1, "x": 128, "y": 384, "w": 16, "h": 16 }, "tileId": -1, "color": 15389866, "__tileSrcRect": [128,384,16,16] },
+		{ "id": "Ammo", "tileRect": { "tilesetUid": 1, "x": 384, "y": 352, "w": 16, "h": 16 }, "tileId": -1, "color": 14984818, "__tileSrcRect": [384,352,16,16] }
 	], "iconTilesetUid": 1, "externalRelPath": null, "externalFileChecksum": null, "tags": [] }], "externalEnums": [], "levelFields": [] },
 	"levels": [
 		{
@@ -3409,12 +3410,15 @@
 							"fieldInstances": [
 								{ "__identifier": "Name", "__type": "String", "__value": null, "__tile": null, "defUid": 187, "realEditorValues": [] },
 								{ "__identifier": "Tile", "__type": "Tile", "__value": { "tilesetUid": 1, "x": 32, "y": 304, "w": 16, "h": 16 }, "__tile": { "tilesetUid": 1, "x": 32, "y": 304, "w": 16, "h": 16 }, "defUid": 143, "realEditorValues": [] },
-								{ "__identifier": "Items", "__type": "Array<LocalEnum.Items>", "__value": [ "Red_potion", "Sword" ], "__tile": null, "defUid": 145, "realEditorValues": [ {
+								{ "__identifier": "Items", "__type": "Array<LocalEnum.Items>", "__value": [ "Red_potion", "Gun", "Ammo" ], "__tile": null, "defUid": 145, "realEditorValues": [ {
 									"id": "V_String",
 									"params": ["Red_potion"]
 								}, {
 									"id": "V_String",
-									"params": ["Sword"]
+									"params": ["Gun"]
+								}, {
+									"id": "V_String",
+									"params": ["Ammo"]
 								} ] },
 								{ "__identifier": "Occludes", "__type": "Bool", "__value": false, "__tile": null, "defUid": 173, "realEditorValues": [{
 									"id": "V_Bool",
@@ -3471,12 +3475,12 @@
 									"params": ["288,464,32,32"]
 								}] },
 								{ "__identifier": "HP", "__type": "Int", "__value": 100, "__tile": null, "defUid": 156, "realEditorValues": [{ "id": "V_Int", "params": [100] }] },
-								{ "__identifier": "DROP", "__type": "Array<LocalEnum.Items>", "__value": [ "Red_potion", "Sword" ], "__tile": null, "defUid": 157, "realEditorValues": [ {
+								{ "__identifier": "DROP", "__type": "Array<LocalEnum.Items>", "__value": [ "Red_potion", "Gun" ], "__tile": null, "defUid": 157, "realEditorValues": [ {
 									"id": "V_String",
 									"params": ["Red_potion"]
 								}, {
 									"id": "V_String",
-									"params": ["Sword"]
+									"params": ["Gun"]
 								} ] },
 								{ "__identifier": "Name", "__type": "String", "__value": "Rayze", "__tile": null, "defUid": 169, "realEditorValues": [{
 									"id": "V_String",
@@ -3666,12 +3670,12 @@
 									"params": ["304,416,16,32"]
 								}] },
 								{ "__identifier": "HP", "__type": "Int", "__value": 100, "__tile": null, "defUid": 156, "realEditorValues": [{ "id": "V_Int", "params": [100] }] },
-								{ "__identifier": "DROP", "__type": "Array<LocalEnum.Items>", "__value": [ "Red_potion", "Sword" ], "__tile": null, "defUid": 157, "realEditorValues": [ {
+								{ "__identifier": "DROP", "__type": "Array<LocalEnum.Items>", "__value": [ "Red_potion", "Gun" ], "__tile": null, "defUid": 157, "realEditorValues": [ {
 									"id": "V_String",
 									"params": ["Red_potion"]
 								}, {
 									"id": "V_String",
-									"params": ["Sword"]
+									"params": ["Gun"]
 								} ] },
 								{ "__identifier": "Name", "__type": "String", "__value": "Baka", "__tile": null, "defUid": 169, "realEditorValues": [{
 									"id": "V_String",
@@ -3702,12 +3706,12 @@
 							"fieldInstances": [
 								{ "__identifier": "Tile", "__type": "Tile", "__value": { "tilesetUid": 1, "x": 192, "y": 464, "w": 16, "h": 32 }, "__tile": { "tilesetUid": 1, "x": 192, "y": 464, "w": 16, "h": 32 }, "defUid": 155, "realEditorValues": [] },
 								{ "__identifier": "HP", "__type": "Int", "__value": 100, "__tile": null, "defUid": 156, "realEditorValues": [{ "id": "V_Int", "params": [100] }] },
-								{ "__identifier": "DROP", "__type": "Array<LocalEnum.Items>", "__value": [ "Red_potion", "Sword" ], "__tile": null, "defUid": 157, "realEditorValues": [ {
+								{ "__identifier": "DROP", "__type": "Array<LocalEnum.Items>", "__value": [ "Red_potion", "Gun" ], "__tile": null, "defUid": 157, "realEditorValues": [ {
 									"id": "V_String",
 									"params": ["Red_potion"]
 								}, {
 									"id": "V_String",
-									"params": ["Sword"]
+									"params": ["Gun"]
 								} ] },
 								{ "__identifier": "Name", "__type": "String", "__value": "Robot", "__tile": null, "defUid": 169, "realEditorValues": [{
 									"id": "V_String",
