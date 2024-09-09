@@ -70,10 +70,10 @@ class JunkDemoScene : Scene() {
     private lateinit var playerStats: EntityStats
     private var playerStatsUI: PlayerStatsUI? = null
     private var targetingReticule: Image? = null
-
     private var currentTargetIndex: Int = 0
     private lateinit var enemies: List<LDTKEntityView>
     private val entityStatsMap = mutableMapOf<String, EntityStats>()
+    private lateinit var actionModel: ActionModel
 
     private fun updateTargetReticule() {
         if (enemies.isNotEmpty()) {
@@ -142,6 +142,8 @@ class JunkDemoScene : Scene() {
         val closedChest = tileEntitiesByName["ClosedChest"]
         val openedChest = tileEntitiesByName["OpenedChest"]
         openChestTile = openedChest!!.tile!!
+
+        actionModel = ActionModel(ldtk, grid, gridSize)
 
         lateinit var levelView: LDTKLevelView
 
@@ -324,34 +326,6 @@ class JunkDemoScene : Scene() {
                     lastInteractiveView = interactiveView
                 }
             }
-        }
-    }
-
-    @OptIn(ExperimentalCoroutinesApi::class, DelicateCoroutinesApi::class)
-    private fun initNPCMovement(container: Container, ldtk: LDTKWorld) {
-        val movementCoroutineContext = newSingleThreadContext("MovementCoroutine")
-        val pathfinding = Pathfinding(generateMap(ldtk))
-
-        val patrolPoints = listOf(
-            Point(100.0, 100.0),
-            Point(200.0, 100.0),
-            Point(200.0, 200.0),
-            Point(100.0, 200.0)
-        )
-
-        //OPTIONAL: decomment to create a graphic representation of the obstacle map for debugging
-        //val obstacleMap = generateMap(ldtk)
-        //displayObstacleMap(container, obstacleMap)
-
-        //TODO set up more sophisticated movement logic here
-        GlobalScope.launch(movementCoroutineContext) {
-            Movement(rayze, pathfinding).moveToPoint(253.0, 69.0)
-        }
-        GlobalScope.launch(movementCoroutineContext) {
-            Movement(baka, pathfinding).patrol(patrolPoints)
-        }
-        GlobalScope.launch(movementCoroutineContext) {
-            Movement(robot,pathfinding).moveToSector(ldtk,"STATUE",grid)
         }
     }
 
@@ -581,32 +555,10 @@ class JunkDemoScene : Scene() {
         }
     }
 
-    fun updateInventoryUI(container: Container) {
-        container.removeChildren()
-
-        container.fixedSizeContainer(Size(200, 500),false) {
-            position(440, 150)
-
-            for (item in playerInventory.getItems()) {
-                uiButton(item) {
-                    onClick {
-                        if (item == "red_potion" && playerStats.hp < 100) {
-                            consumePotion(item)
-                            playerInventory.removeItem(item)
-                            updateInventoryUI(container)
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     private fun handleWestButton(container: Container) {
         val view = getInteractiveView() ?: return
         if (view is LDTKEntityView && view.fieldsByName["Name"] != null) {
             val npcName = view.fieldsByName["Name"]!!.valueString
-            //TODO Put faction info in ldtk entity
-            //TODO transfer all this logic to NPC init or some other class
             val npcFactions = mapOf(
                 "Rayze" to "Crypts",
                 "Baka" to "Fools",
@@ -622,7 +574,16 @@ class JunkDemoScene : Scene() {
                 else -> ""
             }
             if (npcName != null) {
-                DialogWindow().show(container, npcBio, npcName,factionName)
+                val dialogWindow = DialogWindow()
+                dialogWindow.show(container, npcBio, npcName, factionName)
+                dialogWindow.onConversationEnd = { conversation ->
+                    launchImmediately {
+                        val (updatedBio, secretConspiracyPair, actions) = ConversationPostProcessingServices(actionModel).conversationPostProcessingLoop(conversation, npcBio)
+                        val (isSecretPlan, conspirators) = secretConspiracyPair
+                        Director.updateNPCContext(npcName, updatedBio, isSecretPlan, conspirators)
+                        executeActions(actions)
+                    }
+                }
             }
             println("INTERACTED WITH: $view :: $npcName")
         }
@@ -643,6 +604,120 @@ class JunkDemoScene : Scene() {
             pauseMenu.resumeGame()
         } else if (!isInDialog) {
             pauseMenu.show(container)
+        }
+    }
+
+    private suspend fun executeActions(actions: List<String>) {
+        val ldtk = KR.gfx.dungeonTilesmapCalciumtrice.__file.readLDTKWorld()
+        actions.forEach { action ->
+            val parts = action.split(",")
+            if (parts.size >= 3) {
+                val actionType = parts[0]
+                val actor = parts[1]
+                val subject = parts[2]
+                val location = if (parts.size > 3) parts[3] else null
+                val item = if (parts.size > 4) parts[4] else null
+
+                when (actionType) {
+                    "MOVE" -> handleMoveAction(ldtk,actor, location)
+                    "GIVE" -> handleGiveAction(actor, subject, item)
+                    "TAKE" -> handleTakeAction(actor, subject, item)
+                }
+            }
+        }
+    }
+
+    private fun handleMoveAction(ldtk: LDTKWorld, actor: String, location: String?) {
+        if (location != null) {
+            val entityToMove = when (actor) {
+                "Rayze" -> rayze
+                "Baka" -> baka
+                "Robot" -> robot
+                else -> null
+            }
+            entityToMove?.let { entity ->
+                launchImmediately {
+                    val movement = Movement(entity, Pathfinding(generateMap(ldtk)))
+                    movement.moveToSector(ldtk, location, grid)
+                }
+            }
+        }
+    }
+
+    private fun handleGiveAction(giver: String, receiver: String, item: String?) {
+        if (item != null) {
+            if (giver == "NPC" && receiver == "Player") {
+                playerInventory.addItem(item)
+                //updateInventoryUI(this@JunkDemoScene)
+                println("$giver gave $item to the player")
+            } else {
+                // Handle NPC to NPC item transfer if needed
+                println("$giver gave $item to $receiver")
+            }
+        }
+    }
+
+    private fun handleTakeAction(taker: String, giver: String, item: String?) {
+        if (item != null) {
+            if (taker == "Player" && giver == "NPC") {
+                if (playerInventory.getItems().contains(item)) {
+                    playerInventory.removeItem(item)
+                    //updateInventoryUI(this)
+                    println("Player took $item from $giver")
+                }
+            } else {
+                // Handle NPC to NPC item transfer if needed
+                println("$taker took $item from $giver")
+            }
+        }
+    }
+
+    // Update the updateInventoryUI method to reflect changes in player inventory
+    fun updateInventoryUI(container: Container) {
+        container.removeChildren()
+
+        container.fixedSizeContainer(Size(200, 500), false) {
+            position(440, 150)
+
+            for (item in playerInventory.getItems()) {
+                uiButton(item) {
+                    onClick {
+                        if (item == "red_potion" && playerStats.hp < 100) {
+                            consumePotion(item)
+                            playerInventory.removeItem(item)
+                            updateInventoryUI(container)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Update the initNPCMovement method to register NPC movements
+    @OptIn(ExperimentalCoroutinesApi::class, DelicateCoroutinesApi::class)
+    private fun initNPCMovement(container: Container, ldtk: LDTKWorld) {
+        val movementCoroutineContext = newSingleThreadContext("MovementCoroutine")
+        val pathfinding = Pathfinding(generateMap(ldtk))
+
+        val patrolPoints = listOf(
+            Point(100.0, 100.0),
+            Point(200.0, 100.0),
+            Point(200.0, 200.0),
+            Point(100.0, 200.0)
+        )
+
+        MovementRegistry.addMovementForNPC("Rayze", Movement(rayze, pathfinding))
+        MovementRegistry.addMovementForNPC("Baka", Movement(baka, pathfinding))
+        MovementRegistry.addMovementForNPC("Robot", Movement(robot, pathfinding))
+
+        GlobalScope.launch(movementCoroutineContext) {
+            Movement(rayze, pathfinding).moveToPoint(253.0, 69.0)
+        }
+        GlobalScope.launch(movementCoroutineContext) {
+            Movement(baka, pathfinding).patrol(patrolPoints)
+        }
+        GlobalScope.launch(movementCoroutineContext) {
+            Movement(robot, pathfinding).moveToSector(ldtk, "STATUE", grid)
         }
     }
 

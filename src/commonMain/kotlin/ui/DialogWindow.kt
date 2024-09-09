@@ -28,6 +28,8 @@ class DialogWindow : Container() {
     private var loadingJob: Job? = null
     private var cooldownActive = false
 
+    var onConversationEnd: ((String) -> Unit)? = null
+
     init {
         addChild(loadingProgressBar)
 
@@ -125,9 +127,10 @@ class DialogWindow : Container() {
 
     private fun handleCloseConversation() {
         val conversation = getCurrentConversation()
-        val (updatedBio, secretConspiracyPair) = ConversationPostProcessingServices().conversationPostProcessingLoop(conversation, currentNpcBio)
-        val (isSecretPlan, conspirators) = secretConspiracyPair
-        Director.updateNPCContext(npcName, updatedBio, isSecretPlan, conspirators)
+        onConversationEnd?.invoke(conversation)
+        OpenAIService.resetConversation()
+        disableButtons()
+        showLoadingScreen(reversing = true)
     }
 
     @OptIn(DelicateCoroutinesApi::class)
