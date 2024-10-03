@@ -14,11 +14,13 @@ import korlibs.korge.ui.*
 import korlibs.korge.view.*
 import korlibs.korge.view.align.*
 import korlibs.math.geom.*
+import maps.*
 import scenes.*
 import scenes.JunkDemoScene.Companion.isPaused
 import ui.DialogWindow.Companion.isInDialog
 
-class PauseMenu : Container() {
+class PauseMenu(private val mapManager: MapManager,
+    private  val levelView: LDTKLevelView) : Container() {
 
     init {
         if (!isInDialog) {
@@ -73,7 +75,7 @@ class PauseMenu : Container() {
             position(440, 150)
             uiText("Inventory:")
 
-            JunkDemoScene.instance?.updateInventoryUI(this@uiVerticalStack)
+            //JunkDemoScene.instance?.updateInventoryUI(this@uiVerticalStack)
 
             uiButton("Back to Menu") {
                 onClick {
@@ -241,11 +243,7 @@ class PauseMenu : Container() {
                 val ldtk = KR.gfx.dungeonTilesmapCalciumtrice.__file.readLDTKWorld().apply { }
 
                 // Generate the obstacle map from the specific level in the LDTK world
-                val obstacleMap = JunkDemoScene.instance?.generateMap(ldtk, "Level_0")
-                if (obstacleMap == null) {
-                    println("Obstacle map generation failed.")
-                    return@container
-                }
+                val obstacleMap = mapManager.generateMap(levelView)
 
                 val playerPosition = PointInt(JunkDemoScene.instance?.player?.x?.toInt() ?: 0, JunkDemoScene.instance?.player?.y?.toInt() ?: 0)
 

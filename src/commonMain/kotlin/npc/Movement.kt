@@ -4,57 +4,59 @@ import korlibs.datastructure.*
 import korlibs.korge.ldtk.view.*
 import korlibs.korge.view.*
 import korlibs.math.geom.*
-import kotlinx.coroutines.delay
-import scenes.*
-import kotlin.math.*
+import korlibs.time.*
+import kotlinx.coroutines.*
 import kotlin.random.*
 
-class Movement(private val character: View, private val pathfinding: Pathfinding) {
+class Movement(private val character: View,
+               private val pathfinding: Pathfinding,) {
+    private val speed = 50.0 // Adjust the speed as needed (pixels per second)
 
-    //TODO fix; chars still zig-zagging a bit;
     suspend fun moveToPoint(targetX: Double, targetY: Double) {
         val target = Point(targetX, targetY)
-        moveToSmooth(target)
+        moveAlongPath(target)
     }
 
     suspend fun patrol(points: List<Point>) {
         if (points.size > 5) throw IllegalArgumentException("Patrol can have a maximum of 5 points")
-
         while (true) {
             for (point in points) {
-                moveToSmooth(point)
+                moveAlongPath(point)
+                delay(500) // Optional delay between points
             }
         }
     }
 
-    private suspend fun moveToSmooth(target: Point) {
-        //println("Moving ${character.name} to $target")
+    private suspend fun moveAlongPath(target: Point) {
         val path = pathfinding.findPath(character.pos, target)
-        //println("Path found for ${character.name}: $path")
-        val stepCount = 20
-        for (point in path) {
-            if (JunkDemoScene.isPaused) {
-                delay(100)
-                continue
-            }
-            val startPosition = character.pos
-            val stepX = (point.x - startPosition.x) / stepCount
-            val stepY = (point.y - startPosition.y) / stepCount
 
-            for (i in 1..stepCount) {
-                if (JunkDemoScene.isPaused) {
-                    delay(100)
-                    continue
-                }
-                val nextX = (startPosition.x + stepX * i).roundToInt().toDouble()
-                val nextY = (startPosition.y + stepY * i).roundToInt().toDouble()
-                character.pos = Point(nextX, nextY)
-                //println("Position of ${character.name} at ${character.pos}")
-                delay(1)
-            }
+        if (path.isEmpty()) {
+            println("No path found to $target")
+            return
         }
-        // Once reaching the final destination point, break the loop
-        character.pos = target
+
+        var currentIndex = 0
+        while (currentIndex < path.size) {
+            val nextPoint = path[currentIndex]
+            val direction = (nextPoint - character.pos).normalized
+            val distance = character.pos.distanceTo(nextPoint)
+            var remainingDistance = distance
+
+            while (remainingDistance > 0) {
+                val deltaTime = 16.milliseconds
+                val moveDistance = speed * (deltaTime.seconds)
+                if (moveDistance >= remainingDistance) {
+                    character.pos = nextPoint
+                    remainingDistance = 0.0
+                } else {
+                    character.pos += direction * moveDistance
+                    remainingDistance -= moveDistance
+                }
+                character.zIndex = character.y
+                delay(deltaTime)
+            }
+            currentIndex++
+        }
     }
 
     private val sectorMap = mapOf(
@@ -138,6 +140,6 @@ class Movement(private val character: View, private val pathfinding: Pathfinding
         val scaledCoords = Point(targetCoords.x * tileWidth, targetCoords.y * tileHeight)
         println("Found sector $sectorName and picked random position $scaledCoords")
 
-        moveToSmooth(scaledCoords)
+        moveAlongPath(scaledCoords)
     }
 }

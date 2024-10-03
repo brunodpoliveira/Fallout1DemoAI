@@ -2,90 +2,89 @@ package ai
 
 import korlibs.datastructure.*
 import korlibs.korge.ldtk.view.*
-import korlibs.math.geom.*
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
-import npc.Movement
-import utils.Inventory
+import kotlinx.coroutines.*
+import npc.*
+import utils.*
 
-class ActionModel(private val ldtk: LDTKWorld, private val grid: IntIArray2, private val gridSize: Size) {
-    private val npcInventories: MutableMap<String, Inventory> = mutableMapOf()
-    private val playerInventory: Inventory = Inventory()
+class ActionModel(
+    private val ldtk: LDTKWorld,
+    private val grid: IntIArray2,
+    private val npcManager: NPCManager,
+    private val playerInventory: Inventory,
+    private val coroutineScope: CoroutineScope
+) {
 
-    private fun executeAction(action: String, actor: String, subject: String, location: String?, item: String?) {
-        when (action) {
-            "MOVE" -> moveActorToLocation(actor, location)
-            "GIVE" -> giveItemToActor(actor, subject, item)
-            "TAKE" -> takeItemFromActor(actor, subject, item)
+    fun executeActions(actions: List<String>) {
+        actions.forEach { action ->
+            val parts = action.split(",")
+            if (parts.size >= 3) {
+                val actionType = parts[0]
+                val actor = parts[1]
+                val subject = parts[2]
+                val location = if (parts.size > 3 && parts[3].isNotEmpty()) parts[3] else null
+                val item = if (parts.size > 4 && parts[4].isNotEmpty()) parts[4] else null
+                executeAction(actionType, actor, subject, location, item)
+            }
         }
     }
 
-    @OptIn(DelicateCoroutinesApi::class)
-    private fun moveActorToLocation(actor: String, location: String?) {
-        val movement = MovementRegistry.getMovementForNPC(actor)
-        movement?.let { move ->
-            location?.let { loc ->
-                GlobalScope.launch {
-                    move.moveToSector(ldtk, loc, grid)
+    private fun executeAction(
+        actionType: String,
+        actor: String,
+        subject: String,
+        location: String?,
+        item: String?
+    ) {
+        when (actionType) {
+            "MOVE" -> handleMoveAction(actor, location)
+            "GIVE" -> handleGiveAction(actor, subject, item)
+            "TAKE" -> handleTakeAction(actor, subject, item)
+            else -> {
+                println("Unknown action type: $actionType")
+            }
+        }
+    }
+
+    private fun handleMoveAction(actor: String, location: String?) {
+        if (location != null) {
+            val entityToMove = npcManager.npcs[actor]
+            entityToMove?.let { entity ->
+                coroutineScope.launch {
+                    val movement = Movement(entity, npcManager.pathfinding)
+                    movement.moveToSector(ldtk, location, grid)
                 }
             }
         }
     }
 
-    private fun giveItemToActor(giver: String, receiver: String, itemName: String?) {
-        itemName?.let {
-            if (giver == "Player") {
-                val item = playerInventory.getItems().find { it == itemName }
-                item?.let {
-                    playerInventory.removeItem(it)
-                    npcInventories.getOrPut(receiver) { Inventory() }.addItem(it)
-                }
+    private fun handleGiveAction(giver: String, receiver: String, item: String?) {
+        if (item != null) {
+            if (giver == "NPC" && receiver == "Player") {
+                playerInventory.addItem(item)
+                println("$giver gave $item to the player")
             } else {
-                npcInventories[giver]?.let { giverInventory ->
-                    val item = giverInventory.getItems().find { it == itemName }
-                    item?.let {
-                        giverInventory.removeItem(it)
-                        if (receiver == "Player") {
-                            playerInventory.addItem(it)
-                        } else {
-                            npcInventories.getOrPut(receiver) { Inventory() }.addItem(it)
-                        }
-                    }
-                }
+                println("$giver gave $item to $receiver")
             }
         }
     }
 
-    private fun takeItemFromActor(taker: String, giver: String, itemName: String?) {
-        itemName?.let {
-            if (giver == "Player") {
-                val item = playerInventory.getItems().find { it == itemName }
-                item?.let {
-                    playerInventory.removeItem(it)
-                    npcInventories.getOrPut(taker) { Inventory() }.addItem(it)
+    private fun handleTakeAction(taker: String, giver: String, item: String?) {
+        if (item != null) {
+            if (taker == "Player" && giver == "NPC") {
+                if (playerInventory.getItems().contains(item)) {
+                    playerInventory.removeItem(item)
+                    println("Player took $item from $giver")
                 }
             } else {
-                npcInventories[giver]?.let { giverInventory ->
-                    val item = giverInventory.getItems().find { it == itemName }
-                    item?.let {
-                        giverInventory.removeItem(it)
-                        if (taker == "Player") {
-                            playerInventory.addItem(it)
-                        } else {
-                            npcInventories.getOrPut(taker) { Inventory() }.addItem(it)
-                        }
-                    }
-                }
+                println("$taker took $item from $giver")
             }
         }
     }
 
     fun processNPCReflection(npcReflection: String): List<String> {
         val actions = translateNextStepsToActionModel(npcReflection)
-        actions.forEach { actionModel ->
-            val (action, actor, subject, location, item) = actionModel.split(",")
-            executeAction(action, actor, subject, location, item)
+        coroutineScope.launch {
+            executeActions(actions)
         }
         return actions
     }
@@ -107,7 +106,10 @@ class ActionModel(private val ldtk: LDTKWorld, private val grid: IntIArray2, pri
                 givePattern.containsMatchIn(line) -> {
                     val match = givePattern.find(line)
                     val item = match?.groupValues?.get(2)?.uppercase()
-                    actionList.add("GIVE,NPC,Player,,${item}")
+                    actionList.add("GIVE,NPC,Player,,$item")
+                }
+                else -> {
+                    println("No matching action found in line: $line")
                 }
             }
         }

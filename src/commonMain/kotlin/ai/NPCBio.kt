@@ -1,6 +1,16 @@
 package ai
 
 object NPCBio {
+    fun getBioForNPC(npcName: String): String {
+        return when (npcName) {
+            "Rayze" -> rayzeBio
+            "Baka" -> bakaBio
+            "Lex" -> lexBio
+            "Robot" -> robotBio
+            else -> "You are $npcName. No biography available for you."
+        }
+    }
+
     val rayzeBio = """
         You are Rayze. You are the leader of the Crypts. 
         You are a cunning man, and you pride yourself in your tactical mind and ruthlessness. 

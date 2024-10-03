@@ -205,3 +205,8 @@ Do what George RR Martin did for Elden Ring and write a whole bunch of lore to f
 “you are this NPC. I want you to generate more conversations for this NPC.”
 
 (6) Then you take all of that synthetic NPC dialogue and use it fine-tune your small, GPT-2 sized LLM.
+
+For a state machine to manage that, you'd essentially need states for "normal" and "combat", 
+and transitions between them based on conditions like enemy presence and intent. 
+The rules for movement and shooting during combat can be defined within the combat state,
+keeping things relatively straightforward
