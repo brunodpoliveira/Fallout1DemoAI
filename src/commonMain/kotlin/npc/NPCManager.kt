@@ -1,6 +1,7 @@
 package npc
 
 import ai.*
+import bvh.*
 import img.*
 import korlibs.datastructure.*
 import korlibs.image.atlas.*
@@ -18,10 +19,11 @@ class NPCManager(
     private val entities: List<LDTKEntityView>,
     private val ldtk: LDTKWorld,
     private val grid: IntIArray2,
-    private val gridSize: Size,
-    private val mapManager: MapManager,
-    private val levelView: LDTKLevelView
+    mapManager: MapManager,
+    levelView: LDTKLevelView,
+    private val entitiesBvh: BvhWorld,
 ) {
+
     val npcs = mutableMapOf<String, LDTKEntityView>()
     private val npcStats: MutableMap<String, EntityStats> = mutableMapOf()
     var pathfinding: Pathfinding = Pathfinding(mapManager.generateMap(levelView))
@@ -36,8 +38,10 @@ class NPCManager(
             // Add more NPCs here
         )
 
-        entities.filter {
-            it.fieldsByName["Name"] != null && it.fieldsByName["Name"]!!.valueString != "Player"
+        entities.filter { entity ->
+            val nameField = entity.fieldsByName["Name"]
+            val npcName = nameField?.valueString
+            !npcName.isNullOrEmpty() && npcName != "Player"
         }.forEach { entity ->
             val npcName = entity.fieldsByName["Name"]!!.valueString
             val npcSprite = npcSprites[npcName]
@@ -50,6 +54,7 @@ class NPCManager(
 
         // Initialize NPC movements
         initNPCMovements()
+        startUpdatingBVH()
     }
 
     private fun initializeNPC(entity: LDTKEntityView, npcSprite: ImageDataContainer) {
@@ -69,9 +74,21 @@ class NPCManager(
         }
 
         npcs[npcName] = npcView
-
+        entitiesBvh += npcView
         println("$npcName initial position: ${entity.pos}")
         println("$npcName HP: ${stats.hp}")
+    }
+
+
+    private fun startUpdatingBVH() {
+        coroutineScope.launch {
+            while (true) {
+                npcs.values.forEach { npcView ->
+                    entitiesBvh.getBvhEntity(npcView)?.update()
+                }
+                delay(16) // Wait for ~1 frame (assuming 60fps)
+            }
+        }
     }
 
     private fun initNPCMovements() {

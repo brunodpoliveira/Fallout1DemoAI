@@ -28,22 +28,22 @@ open class SceneLoader(
 ) {
     // Common properties accessible by subclasses
     lateinit var ldtk: LDTKWorld
-    lateinit var levelView: LDTKLevelView
+    private lateinit var levelView: LDTKLevelView
     lateinit var player: LDTKEntityView
     lateinit var entitiesBvh: BvhWorld
     lateinit var grid: IntIArray2
-    lateinit var gridSize: Size
+    private lateinit var gridSize: Size
     lateinit var entities: List<LDTKEntityView>
-    lateinit var highlight: Graphics
+    private lateinit var highlight: Graphics
     lateinit var playerStats: EntityStats
-    lateinit var mapManager: MapManager
+    private lateinit var mapManager: MapManager
     lateinit var raycaster: Raycaster
     lateinit var npcManager: NPCManager
     lateinit var uiManager: UIManager
     lateinit var openChestTile: TilesetRectangle
-    lateinit var defaultFont: Font
+    private lateinit var defaultFont: Font
     lateinit var playerInventory: Inventory
-    lateinit var playerManager: PlayerManager
+    private lateinit var playerManager: PlayerManager
 
     open suspend fun loadScene(): SceneLoader {
         loadResources()
@@ -122,9 +122,9 @@ open class SceneLoader(
             },
             ldtk = ldtk,
             grid = grid,
-            gridSize = gridSize,
             mapManager = mapManager,
-            levelView = levelView
+            levelView = levelView,
+            entitiesBvh = entitiesBvh
         )
         npcManager.initializeNPCs()
 

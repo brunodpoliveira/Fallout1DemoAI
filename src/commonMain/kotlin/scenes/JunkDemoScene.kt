@@ -1,6 +1,7 @@
 package scenes
 
 import ai.*
+import bvh.*
 import combat.*
 import controls.*
 import dialog.*
@@ -31,6 +32,7 @@ class JunkDemoScene : Scene() {
     private lateinit var inputManager: InputManager
     private lateinit var interactionManager: InteractionManager
     lateinit var ldtk: LDTKWorld
+    private lateinit var entitiesBvh: BvhWorld
 
     override suspend fun SContainer.sceneMain() {
         val sceneLoader = object : SceneLoader(this@JunkDemoScene, this) {
@@ -89,7 +91,11 @@ class JunkDemoScene : Scene() {
         // mapManager = sceneLoader.mapManager
         // ...
 
+        entitiesBvh = sceneLoader.entitiesBvh
         addUpdater(60.hz) {
+            for (entity in entitiesBvh.getAll()) {
+                entity.value?.update()
+            }
             playerMovementController.update()
         }
     }

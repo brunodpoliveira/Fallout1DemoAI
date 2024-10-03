@@ -1,11 +1,13 @@
 package bvh
 
+import korlibs.datastructure.ds.*
 import korlibs.korge.view.*
 import korlibs.math.geom.ds.*
 
 class BvhWorld(val baseView: View) {
     val bvh = BVH2D<BvhEntity>()
     private val entityMap = mutableMapOf<View, BvhEntity>()
+    fun getAll(): List<BVH.Node<BvhEntity>> = bvh.search(bvh.envelope())
 
     fun add(view: View): BvhEntity {
         val entity = BvhEntity(this, view)
