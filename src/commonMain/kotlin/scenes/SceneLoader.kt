@@ -15,6 +15,7 @@ import korlibs.korge.view.*
 import korlibs.korge.view.filter.*
 import korlibs.korge.view.mask.*
 import korlibs.math.geom.*
+import korlibs.math.geom.PointInt
 import maps.*
 import npc.*
 import player.*
@@ -136,10 +137,15 @@ open class SceneLoader(
             mapManager = mapManager,
             levelView = levelView,
             playerManager = playerManager,
-            defaultFont = defaultFont
+            defaultFont = defaultFont,
+            getPlayerPosition = PointInt(player.x.toInt(), player.y.toInt())
         )
         uiManager.initializeUI()
         playerManager.playerStatsUI = uiManager.playerStatsUI
+
+        //TODO reimplement InventoryUpdateUI
+        // Create PauseMenu after UIManager is initialized
+        //val pauseMenu = PauseMenu(mapManager, levelView, PointInt(player.x.toInt(), player.y.toInt()))
 
         // Initialize Raycaster
         raycaster = Raycaster(

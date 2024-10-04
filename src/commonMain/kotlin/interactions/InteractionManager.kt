@@ -13,6 +13,7 @@ import korlibs.math.geom.*
 import korlibs.render.*
 import movement.PlayerMovementController
 import raycasting.*
+import ui.*
 import utils.*
 
 class InteractionManager(
@@ -24,6 +25,7 @@ class InteractionManager(
     private val combatManager: CombatManager,
     private val gameWindow: GameWindow,
     private val openChestTile: TilesetRectangle,
+    private val uiManager: UIManager,
     var playerMovementController: PlayerMovementController? = null
 ) {
     private var playerState: String = ""
@@ -97,7 +99,8 @@ class InteractionManager(
     }
 
     fun handleNorthButton() {
-        // uiManager.showPauseMenu()
+        println("InteractionManager: North button pressed, showing pause menu")
+        uiManager.showPauseMenu()
     }
 
     private fun getInteractiveView(): View? {

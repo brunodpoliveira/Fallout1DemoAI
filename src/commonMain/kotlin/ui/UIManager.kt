@@ -17,10 +17,12 @@ class UIManager(
     val mapManager: MapManager,
     val levelView: LDTKLevelView,
     val playerManager: PlayerManager,
-    private val defaultFont: Font
+    private val defaultFont: Font,
+    getPlayerPosition: PointInt
 ) {
-    val pauseMenu = PauseMenu(mapManager, levelView)
+    val pauseMenu = PauseMenu(mapManager, levelView, getPlayerPosition)
     var playerStatsUI: PlayerStatsUI? = null
+    private var inventoryContainer: Container? = null
 
     fun initializeUI() {
         playerStatsUI = container.stage?.let { PlayerStatsUI(it, defaultFont) }
@@ -30,7 +32,7 @@ class UIManager(
         addDebugReduceHealthButton()
     }
 
-    fun updatePlayerStatsUI(playerStats: EntityStats) {
+    private fun updatePlayerStatsUI(playerStats: EntityStats) {
         playerStatsUI?.update(playerStats.hp, playerStats.ammo)
     }
 
@@ -38,40 +40,16 @@ class UIManager(
         if (JunkDemoScene.isPaused) {
             pauseMenu.resumeGame()
         } else {
-            pauseGame()
             pauseMenu.show(container)
         }
     }
 
-    private fun pauseGame() {
-        JunkDemoScene.isPaused = true
-        container.speed = 0.0
-    }
-
-    fun addDebugReduceHealthButton() {
+    private fun addDebugReduceHealthButton() {
         container.fixedSizeContainer(Size(200, 500), false) {
             position(700, 20)
             uiButton("Debug Reduce Health") {
                 onClick {
                     playerManager.debugReduceHealth(20)
-                }
-            }
-        }
-    }
-
-    fun updateInventoryUI() {
-        container.removeChildren()
-        container.fixedSizeContainer(Size(200, 500), false) {
-            position(440, 150)
-            for (item in playerInventory.getItems()) {
-                uiButton(item) {
-                    onClick {
-                        if (item == "red_potion" && playerManager.playerStats.hp < 100) {
-                            playerManager.consumePotion(item)
-                            playerInventory.removeItem(item)
-                            updateInventoryUI()
-                        }
-                    }
                 }
             }
         }

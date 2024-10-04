@@ -73,7 +73,6 @@ class NPCManager(
         }
 
         npcs[npcName] = npcView
-        // Remove this line: entitiesBvh += npcView
         println("$npcName initial position: ${entity.pos}")
         println("$npcName HP: ${stats.hp}")
     }
@@ -128,7 +127,5 @@ class NPCManager(
                 MovementRegistry.getMovementForNPC("Robot")?.moveToSector(ldtk, "STATUE", grid)
             }
         }
-
-
     }
 }

@@ -66,7 +66,8 @@ class JunkDemoScene : Scene() {
                     combatManager = combatManager,
                     gameWindow = views.gameWindow,
                     openChestTile = openChestTile,
-                    playerMovementController = null
+                    playerMovementController = null,
+                    uiManager = uiManager
                 )
 
                 inputManager = InputManager(controllerManager, interactionManager, scene)

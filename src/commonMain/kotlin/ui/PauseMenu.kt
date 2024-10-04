@@ -20,7 +20,8 @@ import scenes.JunkDemoScene.Companion.isPaused
 import ui.DialogWindow.Companion.isInDialog
 
 class PauseMenu(private val mapManager: MapManager,
-    private  val levelView: LDTKLevelView) : Container() {
+                private  val levelView: LDTKLevelView,
+                private val getPlayerPosition: PointInt) : Container() {
 
     init {
         if (!isInDialog) {
@@ -30,6 +31,14 @@ class PauseMenu(private val mapManager: MapManager,
 
     private fun setupPauseMenu(){
         removeChildren()
+
+        // Set the position and size explicitly
+        position(0, 0)
+        size(1280, 720)
+
+        // Ensure this container is on top
+        zIndex = 1000.0
+
         solidRect(1280, 720, Colors["#00000088"])
 
         uiVerticalStack(padding = 4.0, width = 400.0) {
@@ -64,6 +73,24 @@ class PauseMenu(private val mapManager: MapManager,
                 }
             }
         }
+    }
+
+    fun show(mainContainer: Container) {
+        pauseGame(mainContainer)
+    }
+
+    private fun pauseGame(mainContainer: Container) {
+        if (isPaused) return
+        isPaused = true
+        mainContainer.speed = 0.0 // Freezes game world updates
+        mainContainer.addChild(this)
+    }
+
+    fun resumeGame() {
+        if (!isPaused) return
+        isPaused = false
+        this@PauseMenu.parent?.speed = 1.0 // Resumes game world updates
+        this@PauseMenu.removeFromParent()
     }
 
     //TODO split this into new scenes
@@ -118,10 +145,6 @@ class PauseMenu(private val mapManager: MapManager,
                 setupPauseMenu()
             }
         }.xy(640, 530)
-    }
-
-    fun show(mainContainer: Container) {
-        pauseGame(mainContainer)
     }
 
     private suspend fun displayAutoMap(view: Container,
@@ -245,12 +268,11 @@ class PauseMenu(private val mapManager: MapManager,
                 // Generate the obstacle map from the specific level in the LDTK world
                 val obstacleMap = mapManager.generateMap(levelView)
 
-                val playerPosition = PointInt(JunkDemoScene.instance?.player?.x?.toInt() ?: 0, JunkDemoScene.instance?.player?.y?.toInt() ?: 0)
+                val playerPosition = getPlayerPosition
 
                 // Fetching positions as scaled using the map generation logic
                 val chestPositions = getEntityPositions(ldtk, "Chest")
                 val objectPositions = getEntityPositions(ldtk, "Object")
-                //TODO get up-to-date positions on the NPCs
                 val npcPositions = getEntityPositions(ldtk, "Enemy")
 
                 // Scaled positions based on the map grid
@@ -287,19 +309,5 @@ class PauseMenu(private val mapManager: MapManager,
         }
 
         return positions
-    }
-
-    private fun pauseGame(mainContainer: Container) {
-        if (isPaused) return
-        isPaused = true
-        mainContainer.speed = 0.0 // Freezes game world updates
-        mainContainer.addChild(this)
-    }
-
-    fun resumeGame() {
-        if (!isPaused) return
-        isPaused = false
-        this@PauseMenu.parent?.speed = 1.0 // Resumes game world updates
-        this@PauseMenu.removeFromParent()
     }
 }

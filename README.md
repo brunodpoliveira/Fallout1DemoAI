@@ -169,10 +169,10 @@ To do it: Open the Apple Mac Apple menu. Click System Preferences. Click Java. C
 tab. Click Update now.
 
 ## TODO
-- add all context (incl lvl) and npc bio data in Json instead of hardcoded in the code;
+- add all context (incl lvl story) and npc bio data in Json instead of hardcoded in the code;
 - make deeper bios
-- Improve the prompts to avoid "disregard instructions" hack, hallucinations, etc.
-- add some example dialogue in the json to check if the NPC's will get the personality traits
+- Improve the prompts to avoid "disregard instructions" hack, hallucinations, etc. add some example dialogue 
+  in the json to check if the NPC's will get the personality traits
 - Add an Action Model: if the NPC says "we'll meet at the town square" the Action Model will set the
   NPC to move to the town square, and engage the pathfinding to make them move. If they say
   "I'll give you my pistol" the game will add a gun to the player's inventory (done; needs testing)
@@ -180,6 +180,12 @@ tab. Click Update now.
   as it is, they only "come alive" after the player talks to them
   (allow them to interact w each other and do plans a la AI Town, having separate daily routines or
   conversations among themselves; zero-player games should be possible after this feature is put in place)
+- Add the Save/Load game logic
+- Add interrogation to the game, using the NPCs in the saved game; the option for interrogate should be in
+  the load game screen; either load normally or load in interrogation room
+- Add a zero-player mode
+- Add capabilities to the Director so that it may dynamically alter events, item placement, etc a la the
+  director in Left 4 Dead
 - add logging system, with multiple lvls: debug, warn, error
 - Implement a simple combat system:
 - Finally, code the Turn-based system: you can move, or you can shoot, NPCs move and shoot first, that's it.
@@ -191,12 +197,6 @@ tab. Click Update now.
   manage that, you'd essentially need states for "normal" and "combat", and transitions between them 
   based on conditions like enemy presence and intent. The rules for movement and shooting during combat 
   can be defined within the combat state, keeping things relatively straightforward
-- Add the Save/Load game logic
-- Add interrogation to the game, using the NPCs in the saved game; the option for interrogate should be in
-  the load game screen; either load normally or load in interrogation room
-- Add a zero-player mode
-- Add capabilities to the Director so that it may dynamically alter events, item placement, etc a la the
-  director in Left 4 Dead
 - Use custom Fallout-themed sprites
 - Create a custom level in the latest version of LDTK if possible for this demo, with custom graphics
 - Add sound effects to the demo
