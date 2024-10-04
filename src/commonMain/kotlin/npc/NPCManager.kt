@@ -91,6 +91,18 @@ class NPCManager(
         }
     }
 
+    fun initializeNPCCollisionBoxes() {
+        npcs.values.forEach { npcView ->
+            entitiesBvh.getBvhEntity(npcView)?.update()
+        }
+    }
+
+    fun updateNPCCollisionBoxes() {
+        npcs.values.forEach { npcView ->
+            entitiesBvh.getBvhEntity(npcView)?.update()
+        }
+    }
+
     private fun initNPCMovements() {
         val movementScope = coroutineScope
 
@@ -120,5 +132,7 @@ class NPCManager(
                 MovementRegistry.getMovementForNPC("Robot")?.moveToSector(ldtk, "STATUE", grid)
             }
         }
+
+
     }
 }

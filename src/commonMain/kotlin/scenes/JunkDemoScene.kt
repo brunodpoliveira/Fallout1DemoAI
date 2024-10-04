@@ -1,7 +1,6 @@
 package scenes
 
 import ai.*
-import bvh.*
 import combat.*
 import controls.*
 import dialog.*
@@ -32,7 +31,6 @@ class JunkDemoScene : Scene() {
     private lateinit var inputManager: InputManager
     private lateinit var interactionManager: InteractionManager
     lateinit var ldtk: LDTKWorld
-    private lateinit var entitiesBvh: BvhWorld
 
     override suspend fun SContainer.sceneMain() {
         val sceneLoader = object : SceneLoader(this@JunkDemoScene, this) {
@@ -81,22 +79,16 @@ class JunkDemoScene : Scene() {
                 )
 
                 interactionManager.playerMovementController = playerMovementController
+                entitiesBvh.getBvhEntity(player)?.update()
+                npcManager.initializeNPCCollisionBoxes()
             }
         }.loadScene()
 
-
-        // Assign components from sceneLoader if needed
-        // For example, if you need to access certain properties
-        // player = sceneLoader.player
-        // mapManager = sceneLoader.mapManager
-        // ...
-
-        entitiesBvh = sceneLoader.entitiesBvh
         addUpdater(60.hz) {
-            for (entity in entitiesBvh.getAll()) {
-                entity.value?.update()
-            }
             playerMovementController.update()
+            interactionManager.update()
+            //sceneLoader.entitiesBvh.getBvhEntity(player)?.update()
+            sceneLoader.npcManager.updateNPCCollisionBoxes()
         }
     }
 }

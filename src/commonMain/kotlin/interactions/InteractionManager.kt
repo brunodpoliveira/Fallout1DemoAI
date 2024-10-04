@@ -5,6 +5,7 @@ import combat.CombatManager
 import dialog.DialogManager
 import img.*
 import korlibs.image.bitmap.*
+import korlibs.image.color.*
 import korlibs.korge.ldtk.*
 import korlibs.korge.ldtk.view.*
 import korlibs.korge.view.*
@@ -26,7 +27,16 @@ class InteractionManager(
     var playerMovementController: PlayerMovementController? = null
 ) {
     private var playerState: String = ""
+    private var lastInteractiveView: View? = null
 
+    fun update() {
+        val interactiveView = getInteractiveView()
+        lastInteractiveView?.colorMul = Colors.WHITE
+        if (interactiveView != null) {
+            interactiveView.colorMul = Colors["#ffbec3"]
+            lastInteractiveView = interactiveView
+        }
+    }
 
     suspend fun handleAnyButton() {
         val view = getInteractiveView() ?: return

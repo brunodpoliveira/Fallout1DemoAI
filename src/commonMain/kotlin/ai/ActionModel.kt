@@ -14,7 +14,7 @@ class ActionModel(
     private val coroutineScope: CoroutineScope
 ) {
 
-    fun executeActions(actions: List<String>) {
+    private fun executeActions(actions: List<String>) {
         actions.forEach { action ->
             val parts = action.split(",")
             if (parts.size >= 3) {
