@@ -9,6 +9,12 @@ class BvhWorld(private val baseView: View) {
     private val entityMap = mutableMapOf<View, BvhEntity>()
 
     fun add(view: View): BvhEntity {
+        val existingEntity = entityMap[view]
+        if (existingEntity != null) {
+            updateEntityBounds(existingEntity)
+            return existingEntity
+        }
+
         val entity = BvhEntity(this, view)
         updateEntityBounds(entity)
         entityMap[view] = entity
@@ -28,12 +34,11 @@ class BvhWorld(private val baseView: View) {
         val view = entity.view
         val bounds = view.getBounds(baseView)
 
-        // Adjust the collision box to be more precise
         val adjustedBounds = Rectangle(
             bounds.x,
-            bounds.y + bounds.height * 0.75, // Adjust this value to fit your sprites
+            bounds.y + bounds.height * 0.75,
             bounds.width,
-            bounds.height * 0.25 // Adjust this value to fit your sprites
+            bounds.height * 0.25
         )
 
         bvh.remove(entity)

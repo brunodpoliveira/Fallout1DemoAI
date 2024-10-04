@@ -52,7 +52,6 @@ class NPCManager(
             }
         }
 
-        // Initialize NPC movements
         initNPCMovements()
         startUpdatingBVH()
     }
@@ -74,37 +73,34 @@ class NPCManager(
         }
 
         npcs[npcName] = npcView
-        entitiesBvh += npcView
+        // Remove this line: entitiesBvh += npcView
         println("$npcName initial position: ${entity.pos}")
         println("$npcName HP: ${stats.hp}")
     }
 
-
     private fun startUpdatingBVH() {
         coroutineScope.launch {
             while (true) {
-                npcs.values.forEach { npcView ->
-                    entitiesBvh.getBvhEntity(npcView)?.update()
-                }
+                updateNPCCollisionBoxes()
                 delay(16) // Wait for ~1 frame (assuming 60fps)
             }
         }
     }
 
-    fun initializeNPCCollisionBoxes() {
+    private fun updateNPCCollisionBoxes() {
         npcs.values.forEach { npcView ->
-            entitiesBvh.getBvhEntity(npcView)?.update()
-        }
-    }
-
-    fun updateNPCCollisionBoxes() {
-        npcs.values.forEach { npcView ->
-            entitiesBvh.getBvhEntity(npcView)?.update()
+            val bvhEntity = entitiesBvh.getBvhEntity(npcView)
+            if (bvhEntity == null) {
+                entitiesBvh += npcView
+            } else {
+                bvhEntity.update()
+            }
         }
     }
 
     private fun initNPCMovements() {
         val movementScope = coroutineScope
+        updateNPCCollisionBoxes()
 
         npcs["Rayze"]?.let { npc ->
             MovementRegistry.addMovementForNPC("Rayze", Movement(npc, pathfinding))

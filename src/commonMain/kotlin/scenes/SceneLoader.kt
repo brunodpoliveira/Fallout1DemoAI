@@ -1,5 +1,6 @@
 package scenes
 
+import KR
 import bvh.*
 import img.*
 import korlibs.datastructure.*

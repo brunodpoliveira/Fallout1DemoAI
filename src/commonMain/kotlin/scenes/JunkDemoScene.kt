@@ -80,15 +80,12 @@ class JunkDemoScene : Scene() {
 
                 interactionManager.playerMovementController = playerMovementController
                 entitiesBvh.getBvhEntity(player)?.update()
-                npcManager.initializeNPCCollisionBoxes()
             }
         }.loadScene()
 
         addUpdater(60.hz) {
             playerMovementController.update()
             interactionManager.update()
-            //sceneLoader.entitiesBvh.getBvhEntity(player)?.update()
-            sceneLoader.npcManager.updateNPCCollisionBoxes()
         }
     }
 }
