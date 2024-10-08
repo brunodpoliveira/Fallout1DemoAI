@@ -129,7 +129,7 @@ class CombatManager(
         }
     }
 
-    private fun updateAmmoUI(newAmmo: Int) {
+    fun updateAmmoUI(newAmmo: Int) {
         playerStatsUI?.update(playerStats.hp, newAmmo)
     }
 

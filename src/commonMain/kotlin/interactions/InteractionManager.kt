@@ -50,7 +50,7 @@ class InteractionManager(
             playerInventory.addItem(item)
             if (item == "Ammo") {
                 playerInventory.addAmmo(10, playerStats) { newAmmo ->
-                    // Update ammo UI if necessary
+                    combatManager.updateAmmoUI(newAmmo)
                 }
             }
         }

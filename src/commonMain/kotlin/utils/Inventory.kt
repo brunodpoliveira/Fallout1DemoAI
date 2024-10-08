@@ -12,7 +12,7 @@ class Inventory {
     }
 
     fun consumePotion(potion: String, playerStats: EntityStats, updateHealthUI: (Int) -> Unit) {
-        if (potion == "red_potion") {
+        if (potion == "Red_potion") {
             playerStats.hp += 10
             println("Consumed potion: increase hp by 10")
             updateHealthUI(playerStats.hp)

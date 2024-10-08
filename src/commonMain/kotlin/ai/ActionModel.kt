@@ -118,6 +118,7 @@ class ActionModel(
     }
 }
 
+//TODO add the capacity to remove movement so they can stop, esp if patrols are triggered
 object MovementRegistry {
     private val movements: MutableMap<String, Movement> = mutableMapOf()
 

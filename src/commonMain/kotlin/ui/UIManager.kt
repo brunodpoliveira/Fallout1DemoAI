@@ -20,7 +20,7 @@ class UIManager(
     private val defaultFont: Font,
     getPlayerPosition: PointInt
 ) {
-    val pauseMenu = PauseMenu(mapManager, levelView, getPlayerPosition)
+    private val pauseMenu = PauseMenu(mapManager, levelView, getPlayerPosition, this)
     var playerStatsUI: PlayerStatsUI? = null
     private var inventoryContainer: Container? = null
 
@@ -42,6 +42,39 @@ class UIManager(
         } else {
             pauseMenu.show(container)
         }
+    }
+
+    fun updateInventoryUI() {
+        clearInventoryUI()
+
+        inventoryContainer = container.fixedSizeContainer(Size(200, 500), false) {
+            position(640, 300)
+
+            var yOffset = 0.0
+            for (item in playerInventory.getItems()) {
+                uiButton(item) {
+                    position(0, yOffset)
+                    onClick {
+                        if (item == "Red_potion" && playerManager.playerStats.hp < 100) {
+                            playerManager.consumePotion(item)
+                            playerInventory.removeItem(item)
+                            updateInventoryUI()
+                            updatePlayerStatsUI()
+                        }
+                    }
+                }
+                yOffset += 40
+            }
+        }
+    }
+
+    fun clearInventoryUI() {
+        inventoryContainer?.removeFromParent()
+        inventoryContainer = null
+    }
+
+    fun updatePlayerStatsUI() {
+        playerStatsUI?.update(playerManager.playerStats.hp, playerManager.playerStats.ammo)
     }
 
     private fun addDebugReduceHealthButton() {

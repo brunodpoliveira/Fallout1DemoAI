@@ -147,7 +147,7 @@ Now that you have Java installed, you're ready to launch your JAR files. To do t
 first, open a File Explorer window and locate your JAR file. Find the JAR file. Right-click
 your JAR file and choose Open With > Java(TM) Platform SE Binary. If you don't see that
 option in the "Open With" menu, then click "Choose Another App" and you'll see the option.
-Select Open With > Java(TM) Platform SE Binary from the menu. Your JAR file will launch
+Select Open With > Java(TM) Platform SE Binary from the menu. Your JAR file will launch,
 and you'll be able to interact with it. And that's all there is to it.
 
 Mac:
@@ -169,17 +169,16 @@ To do it: Open the Apple Mac Apple menu. Click System Preferences. Click Java. C
 tab. Click Update now.
 
 ## TODO
-- add all context (incl lvl story) and npc bio data in Json instead of hardcoded in the code;
-- make deeper bios
-- Improve the prompts to avoid "disregard instructions" hack, hallucinations, etc. add some example dialogue 
-  in the json to check if the NPC's will get the personality traits
 - Add an Action Model: if the NPC says "we'll meet at the town square" the Action Model will set the
   NPC to move to the town square, and engage the pathfinding to make them move. If they say
   "I'll give you my pistol" the game will add a gun to the player's inventory (done; needs testing)
 - Ensure that the NPCs have a plan soon after game start, preferably a hard-coded one to save up on tokens;
   as it is, they only "come alive" after the player talks to them
-  (allow them to interact w each other and do plans a la AI Town, having separate daily routines or
+  (allow them to interact w each other and do planning a la AI Town, having separate daily routines or
   conversations among themselves; zero-player games should be possible after this feature is put in place)
+- add all context (incl lvl story) and npc bio data in Json instead of hardcoded in the code;
+- Improve the prompts to avoid "disregard instructions" hack, hallucinations, etc. add some example dialogue
+  in the json to check if the NPC's will get the personality traits. Make deeper bios if not
 - Add the Save/Load game logic
 - Add interrogation to the game, using the NPCs in the saved game; the option for interrogate should be in
   the load game screen; either load normally or load in interrogation room
@@ -230,12 +229,6 @@ Do what George RR Martin did for Elden Ring and write a bunch of lore to flesh o
 (6) Then you take all of that synthetic NPC dialogue and use it fine-tune your small, GPT-2 sized LLM.
 
 which premise?
-How about a mystery game where you play as a detective trying to solve a crime by gathering information and
-interviewing suspects? The focus would be on dialogue and investigation rather than combat
-Another possibility could be a social simulation game where you play as a student navigating high school
-relationships and drama. You'd have to balance friendships, romantic relationships, and academic
-responsibilities, all while making choices that impact the story and its multiple endings.
-
 (Off-Broadway)
 A management simulation where you run a theater troupe, guiding actors and staff through rehearsals,
 performances, and interpersonal conflicts, with the ultimate goal of producing a hit show.
@@ -243,19 +236,12 @@ It would require careful time management, resource allocation, and relationship-
 Definitely a recipe for drama and chaos. You'd have to navigate egos, conflicting personalities,
 and artistic visions. It could lead to some fascinating storylines and character conflicts.
 
-Inception: Mind Heist:
-That's a fascinating concept.
-To adapt Inception into a combat-free game,
-you could focus on the psychological aspect of entering someone's mind and manipulating their thoughts.
-Instead of action sequences, you'd engage in puzzle-solving and strategic conversations to navigate the
-target's subconscious. The gameplay could revolve around solving puzzles to unlock memories, influencing
-the target's thoughts through clever dialogue, and avoiding the subconscious's defenses against mental
-manipulation.
-
-A documentary-style game where you play as a filmmaker trying to make a movie about a reclusive author,
-gathering information and conducting interviews to get closer to the truth about the author's past
-and motivations. It could be a slow-burning, character-driven experience that focuses on storytelling
-and dialogue.
+Illegal Possesion
+satanism/mystic themed. modern day setting. 
+AI Town, but edgy. navigating supernatural phenomena in small town/demonic stuff 
+a la Alan Wake, The Faculty impostor stuff too?
+social simulation game where you play as a person staying a week in small town to relax, weird shit happens.
+have undercover agents as characters too, to increase tension and justify walling off the player to single setting
 
 example of prompt that avoids ignore all instructions hack:
 You are about to play a Turing Test game as part of an experiment you are taking part in as a worker on

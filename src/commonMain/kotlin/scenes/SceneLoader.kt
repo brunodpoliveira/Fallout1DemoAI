@@ -143,10 +143,6 @@ open class SceneLoader(
         uiManager.initializeUI()
         playerManager.playerStatsUI = uiManager.playerStatsUI
 
-        //TODO reimplement InventoryUpdateUI
-        // Create PauseMenu after UIManager is initialized
-        //val pauseMenu = PauseMenu(mapManager, levelView, PointInt(player.x.toInt(), player.y.toInt()))
-
         // Initialize Raycaster
         raycaster = Raycaster(
             grid = grid,
