@@ -10,6 +10,7 @@ import korlibs.korge.scene.*
 import korlibs.korge.view.*
 import korlibs.time.*
 import movement.*
+import utils.*
 
 class JunkDemoScene : Scene() {
     companion object {
@@ -81,12 +82,22 @@ class JunkDemoScene : Scene() {
 
                 interactionManager.playerMovementController = playerMovementController
                 entitiesBvh.getBvhEntity(player)?.update()
+
+                debugTestActionModel(playerInventory)
             }
         }.loadScene()
 
         addUpdater(60.hz) {
             playerMovementController.update()
             interactionManager.update()
+
         }
+    }
+    private fun debugTestActionModel(playerInventory:Inventory) {
+        val robotMovementTest = "I'll meet at the STATUE"
+        actionModel.processNPCReflection(robotMovementTest, "Robot")
+        val giveItemTest = "I'll give you my Gun"
+        actionModel.processNPCReflection(giveItemTest, "Robot")
+        println("Player inventory after debug test: ${playerInventory.getItems()}")
     }
 }

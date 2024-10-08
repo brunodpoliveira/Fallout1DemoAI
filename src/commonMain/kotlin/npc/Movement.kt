@@ -80,9 +80,9 @@ class Movement(private val character: View,
         "CHEST_ROOM" to 1,
         "MAIN_ROOM" to 2,
         "STATUE" to 3,
-        "CORRIDOR" to 4
+        "CORRIDOR" to 4,
+        "TOWN_SQUARE" to 5
     )
-
     suspend fun moveToSector(ldtk: LDTKWorld, sectorName: String, grid: IntIArray2) {
         val level = ldtk.levelsByName["Level_0"] ?: throw IllegalArgumentException("Level Level_0 not found")
         val gWidth = grid.width

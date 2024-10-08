@@ -59,7 +59,7 @@ class ActionModel(
 
     private fun handleGiveAction(giver: String, receiver: String, item: String?) {
         if (item != null) {
-            if (giver == "NPC" && receiver == "Player") {
+            if (giver != "Player" && receiver == "Player") {
                 playerInventory.addItem(item)
                 println("$giver gave $item to the player")
             } else {
@@ -70,7 +70,7 @@ class ActionModel(
 
     private fun handleTakeAction(taker: String, giver: String, item: String?) {
         if (item != null) {
-            if (taker == "Player" && giver == "NPC") {
+            if (taker == "Player" && giver != "Player") {
                 if (playerInventory.getItems().contains(item)) {
                     playerInventory.removeItem(item)
                     println("Player took $item from $giver")
@@ -81,32 +81,34 @@ class ActionModel(
         }
     }
 
-    fun processNPCReflection(npcReflection: String): List<String> {
-        val actions = translateNextStepsToActionModel(npcReflection)
+    fun processNPCReflection(npcReflection: String, npcName: String): List<String> {
+        val actions = translateNextStepsToActionModel(npcReflection, npcName)
         coroutineScope.launch {
             executeActions(actions)
         }
         return actions
     }
 
-    private fun translateNextStepsToActionModel(nextSteps: String): List<String> {
+    private fun translateNextStepsToActionModel(nextSteps: String, npcName: String): List<String> {
         val actionList = mutableListOf<String>()
 
         // Simple regex patterns to match action phrases
-        val movePattern = "(?i)meet at the (\\w+)".toRegex()
-        val givePattern = "(?i)give you (my |the )?(\\w+)".toRegex()
+        val movePattern = "(?i)(I'll|I will|Let's|We'll|We will) meet at the (\\w+)".toRegex()
+        val givePattern = "(?i)(I'll|I will) give you (my |the )?(\\w+)".toRegex()
 
         nextSteps.lines().forEach { line ->
             when {
                 movePattern.containsMatchIn(line) -> {
                     val match = movePattern.find(line)
-                    val location = match?.groupValues?.get(1)?.uppercase()
-                    actionList.add("MOVE,NPC,Player,$location,")
+                    val location = match?.groupValues?.get(2)?.uppercase()
+                    actionList.add("MOVE,$npcName,Player,$location,")
+                    println("Adding move action: MOVE,$npcName,Player,$location,")
                 }
                 givePattern.containsMatchIn(line) -> {
                     val match = givePattern.find(line)
-                    val item = match?.groupValues?.get(2)?.uppercase()
-                    actionList.add("GIVE,NPC,Player,,$item")
+                    val item = match?.groupValues?.get(3)?.uppercase()
+                    actionList.add("GIVE,$npcName,Player,,$item")
+                    println("Adding give action: GIVE,$npcName,Player,,$item")
                 }
                 else -> {
                     println("No matching action found in line: $line")

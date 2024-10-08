@@ -161,7 +161,7 @@ class ConversationPostProcessingServices (private val actionModel: ActionModel){
         }
     }
 
-    fun conversationPostProcessingLoop(conversation: String, npcBio: String): Triple<String, Pair<Boolean, List<String>>, List<String>> {
+    fun conversationPostProcessingLoop(conversation: String, npcBio: String, npcName: String): Triple<String, Pair<Boolean, List<String>>, List<String>> {
         val summary = summarizeConversation(conversation)
         val selfReflection = npcSelfReflect(summary)
         val nextSteps = thinkOfNextSteps(selfReflection, npcBio)
@@ -171,7 +171,7 @@ class ConversationPostProcessingServices (private val actionModel: ActionModel){
         val metadata = parts.getOrNull(1)?.trim() ?: ""
 
         val (isSecretPlan, conspirators) = checkForSecretsOrConspiracy(metadata)
-        val actionModels = actionModel.processNPCReflection(actions)
+        val actionModels = actionModel.processNPCReflection(actions, npcName)
 
         Director.updateContext(summary)
         println("Summary: $summary")

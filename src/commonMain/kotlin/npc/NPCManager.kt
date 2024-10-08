@@ -98,34 +98,10 @@ class NPCManager(
     }
 
     private fun initNPCMovements() {
-        val movementScope = coroutineScope
         updateNPCCollisionBoxes()
 
-        npcs["Rayze"]?.let { npc ->
-            MovementRegistry.addMovementForNPC("Rayze", Movement(npc, pathfinding))
-            coroutineScope.launch {
-                MovementRegistry.getMovementForNPC("Rayze")?.moveToPoint(253.0, 69.0)
-            }
-        }
-
-        npcs["Baka"]?.let { npc ->
-            val patrolPoints = listOf(
-                Point(100.0, 100.0),
-                Point(200.0, 100.0),
-                Point(200.0, 200.0),
-                Point(100.0, 200.0)
-            )
-            MovementRegistry.addMovementForNPC("Baka", Movement(npc, pathfinding))
-            movementScope.launch {
-                MovementRegistry.getMovementForNPC("Baka")?.patrol(patrolPoints)
-            }
-        }
-
-        npcs["Robot"]?.let { npc ->
-            MovementRegistry.addMovementForNPC("Robot", Movement(npc, pathfinding))
-            movementScope.launch {
-                MovementRegistry.getMovementForNPC("Robot")?.moveToSector(ldtk, "STATUE", grid)
-            }
+        npcs.forEach { (npcName, npc) ->
+            MovementRegistry.addMovementForNPC(npcName, Movement(npc, pathfinding))
         }
     }
 }

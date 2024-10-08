@@ -171,12 +171,18 @@ tab. Click Update now.
 ## TODO
 - Add an Action Model: if the NPC says "we'll meet at the town square" the Action Model will set the
   NPC to move to the town square, and engage the pathfinding to make them move. If they say
-  "I'll give you my pistol" the game will add a gun to the player's inventory (done; needs testing)
-- Ensure that the NPCs have a plan soon after game start, preferably a hard-coded one to save up on tokens;
+  "I'll give you my pistol" the game will add a gun to the player's inventory
+- To do the above, you'll need to remove the placeholder movements in initNPCMovements and code the actionModel to read 
+from the director's summary and write valid commands to the movementRegistry as well
+- To test that, we'll need to add a debug function that'll add movements to the robot Npc and give a gun to the player 
+on startup using the same pathways that the action model will use, as well as any functions, classes, etc. necessary 
+for this feature to work
+- Then disable the debug and try it out via dialogue to ensure it can parse text from convos it correctly
+- add all context (incl lvl story) and npc bio data in a Json instead of hardcoded;
+- Ensure that the NPCs have a plan soon after game start, a hard-coded one to save up on tokens;
   as it is, they only "come alive" after the player talks to them
   (allow them to interact w each other and do planning a la AI Town, having separate daily routines or
   conversations among themselves; zero-player games should be possible after this feature is put in place)
-- add all context (incl lvl story) and npc bio data in Json instead of hardcoded in the code;
 - Improve the prompts to avoid "disregard instructions" hack, hallucinations, etc. add some example dialogue
   in the json to check if the NPC's will get the personality traits. Make deeper bios if not
 - Add the Save/Load game logic

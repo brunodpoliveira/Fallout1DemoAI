@@ -30,10 +30,10 @@ class DialogManager(
         val conversationProcessor = ConversationPostProcessingServices(actionModel)
         coroutineScope.launch {
             val (updatedBio, secretConspiracyPair, actions) =
-                conversationProcessor.conversationPostProcessingLoop(conversation, npcBio)
+                conversationProcessor.conversationPostProcessingLoop(conversation, npcBio, npcName)
             val (isSecretPlan, conspirators) = secretConspiracyPair
             Director.updateNPCContext(npcName, updatedBio, isSecretPlan, conspirators)
-            actionModel.processNPCReflection(actions.toString())
+            actionModel.processNPCReflection(actions.toString(), npcName)
         }
     }
 }
