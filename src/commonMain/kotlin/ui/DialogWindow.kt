@@ -25,8 +25,10 @@ class DialogWindow : Container() {
         position(128.0, 240.0)
         visible = false
     }
-
     private var loadingJob: Job? = null
+    private var cooldownActive = false
+
+    var onConversationEnd: ((String) -> Unit)? = null
 
     init {
         addChild(loadingProgressBar)
@@ -35,7 +37,6 @@ class DialogWindow : Container() {
             position(0, 480)
             solidRect(1280, 460) { color = Colors.LIGHTGREY }
         }
-
         val dialogScrollableContainer = uiScrollable(size = Size(1280, 240)) {
             position(0, 240)
         }
@@ -69,20 +70,29 @@ class DialogWindow : Container() {
         addChild(closeButton)
 
         sendMessageButton.onClick {
-            sendMessage()
+            if (isInDialog) {
+                sendMessage()
+            }
         }
 
         closeButton.onClick {
-            handleCloseConversation()
-            OpenAIService.resetConversation()
-            showLoadingScreen(reversing = true)
+            if (isInDialog) {
+                handleCloseConversation()
+                OpenAIService.resetConversation()
+                disableButtons()
+                showLoadingScreen(reversing = true)
+            }
         }
     }
 
     fun show(container: Container, npcBio: String, npcName: String, factionName: String) {
+        if (cooldownActive || isInDialog) return
+        isInDialog = true
+
         this.npcName = npcName
         this.currentNpcBio = npcBio
         this.factionName = factionName
+
         println("Showing dialog for $npcName with bio: $currentNpcBio")
         container.addChild(this)
         showLoadingScreen(reversing = false)
@@ -93,12 +103,15 @@ class DialogWindow : Container() {
         loadingProgressBar.visible = true
         loadingProgressBar.current = 0.0
         JunkDemoScene.dialogIsOpen = true
+
         loadingJob = GlobalScope.launch {
             while (loadingProgressBar.current < loadingProgressBar.maximum) {
                 loadingProgressBar.current += 1
                 delay(30)
             }
+
             loadingProgressBar.visible = false
+
             if (reversing) {
                 finishCloseDialog()
             } else {
@@ -114,15 +127,25 @@ class DialogWindow : Container() {
 
     private fun handleCloseConversation() {
         val conversation = getCurrentConversation()
-        val (updatedBio, secretConspiracyPair) = ConversationPostProcessingServices().conversationPostProcessingLoop(conversation, currentNpcBio)
-        val (isSecretPlan, conspirators) = secretConspiracyPair
-        Director.updateNPCContext(npcName, updatedBio, isSecretPlan, conspirators)
+        onConversationEnd?.invoke(conversation)
+        OpenAIService.resetConversation()
+        disableButtons()
+        showLoadingScreen(reversing = true)
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     private fun finishCloseDialog() {
         this.removeFromParent()
         loadingJob?.cancel()
         JunkDemoScene.dialogIsOpen = false
+        isInDialog = false
+
+        // Start cooldown
+        GlobalScope.launch {
+            cooldownActive = true
+            delay(5000)  // 5-second cooldown
+            cooldownActive = false
+        }
     }
 
     private fun sendMessage() {
@@ -137,5 +160,14 @@ class DialogWindow : Container() {
 
     private fun getCurrentConversation(): String {
         return OpenAIService.msgs.joinToString { it.content }
+    }
+
+    private fun disableButtons() {
+        sendMessageButton.disable()
+        closeButton.disable()
+    }
+
+    companion object {
+        var isInDialog: Boolean = false  // Shared flag for dialog state
     }
 }

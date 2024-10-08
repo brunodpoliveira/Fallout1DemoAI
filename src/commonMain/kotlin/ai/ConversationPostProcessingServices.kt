@@ -3,15 +3,9 @@ package ai
 import ai.OpenAIService.msgs
 import ai.OpenAIService.sendMessage
 import com.theokanning.openai.completion.chat.*
+import img.TextDisplayManager
 
-object ActionVerbs {
-    val verbs = listOf("MOVE", "GIVE", "TAKE", "ATTACK", "DEFEND", "CONSPIRE",
-        "PLAN", "GATHER_RESOURCE", "GATHER_INTELLIGENCE")
-    val locations = listOf("TOWN_SQUARE", "BAR", "CURRENT_LOCATION", "FARM", "GENERATOR_ROOM")
-    val items = listOf("GUN", "AMMUNITION", "FOOD", "WATER")
-}
-
-class ConversationPostProcessingServices {
+class ConversationPostProcessingServices (private val actionModel: ActionModel){
 
     private fun npcSelfReflect(conversation: String): String {
         val prompt = """
@@ -83,54 +77,6 @@ class ConversationPostProcessingServices {
             return choices[0].content
         } else {
             return selfReflection
-        }
-    }
-
-    private fun translateNextStepsToActionModel(nextSteps: String): List<String> {
-        val prompt = """
-            Translate the following next steps into an action model command(s) in the following format:
-            [ACTION],[SUBJECT],[LOCATION],[ITEM]
-            
-            Explanation:
-            [ACTION]: What will the character DO
-            [SUBJECT]: WHO will they do it to
-            [LOCATION]: WHERE will they do it
-            [ITEM]: (optional) Write down the ITEM that the character will want to act with here. 
-            Mostly used in the GIVE, TAKE, and GATHER_RESOURCE commands
-            
-            If there are multiple subjects (For example, CONSPIRE (secret planning) and PLAN (open planning) will 
-            usually involve multiple subjects) make one action for each that needs to be informed. 
-
-            Use ONLY the following verbs: ${ActionVerbs.verbs.joinToString(", ")}
-            Use ONLY these possible locations: ${ActionVerbs.locations.joinToString(", ")}
-            Use ONLY these possible items, if applicable: ${ActionVerbs.items.joinToString(", ")}
-
-            Next Steps: $nextSteps
-
-            Action Model (one per line):
-        """.trimIndent()
-
-        val assistantMessage = ChatMessage("assistant", prompt)
-        msgs.add(assistantMessage)
-
-        val chatCompletionRequest = ChatCompletionRequest.builder()
-            .model("gpt-3.5-turbo")
-            .messages(msgs)
-            .temperature(.5)
-            .maxTokens(512)
-            .topP(1.0)
-            .frequencyPenalty(.8)
-            .presencePenalty(.8)
-            .build()
-
-        val httpResponse = sendMessage(chatCompletionRequest)
-        val choices = httpResponse.choices.mapNotNull { it.message }
-
-        if (choices.isNotEmpty()) {
-            msgs.add(choices[0])
-            return choices[0].content.lines().filter { it.isNotBlank() }
-        } else {
-            return listOf("No action defined")
         }
     }
 
@@ -215,7 +161,7 @@ class ConversationPostProcessingServices {
         }
     }
 
-    fun conversationPostProcessingLoop(conversation: String, npcBio: String): Pair<String, Pair<Boolean, List<String>>> {
+    fun conversationPostProcessingLoop(conversation: String, npcBio: String): Triple<String, Pair<Boolean, List<String>>, List<String>> {
         val summary = summarizeConversation(conversation)
         val selfReflection = npcSelfReflect(summary)
         val nextSteps = thinkOfNextSteps(selfReflection, npcBio)
@@ -225,7 +171,7 @@ class ConversationPostProcessingServices {
         val metadata = parts.getOrNull(1)?.trim() ?: ""
 
         val (isSecretPlan, conspirators) = checkForSecretsOrConspiracy(metadata)
-        val actionModels = translateNextStepsToActionModel(actions)
+        val actionModels = actionModel.processNPCReflection(actions)
 
         Director.updateContext(summary)
         println("Summary: $summary")
@@ -240,6 +186,6 @@ class ConversationPostProcessingServices {
 
         actionModels.forEach { action -> println("Action Model: $action") }
         val updatedBio = editNPCBio(summary, npcBio)
-        return Pair(updatedBio, Pair(isSecretPlan, conspirators))
+        return Triple(updatedBio, Pair(isSecretPlan, conspirators), actionModels)
     }
 }

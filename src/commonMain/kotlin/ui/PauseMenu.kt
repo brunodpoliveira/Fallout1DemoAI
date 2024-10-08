@@ -1,7 +1,7 @@
 package ui
 
 import KR
-import TextDisplayManager
+import img.TextDisplayManager
 import ai.*
 import korlibs.datastructure.*
 import korlibs.image.color.*
@@ -14,17 +14,32 @@ import korlibs.korge.ui.*
 import korlibs.korge.view.*
 import korlibs.korge.view.align.*
 import korlibs.math.geom.*
+import maps.*
 import scenes.*
 import scenes.JunkDemoScene.Companion.isPaused
+import ui.DialogWindow.Companion.isInDialog
 
-class PauseMenu : Container() {
+class PauseMenu(private val mapManager: MapManager,
+                private  val levelView: LDTKLevelView,
+                private val getPlayerPosition: PointInt,
+                private val uiManager: UIManager) : Container() {
 
     init {
-        setupPauseMenu()
+        if (!isInDialog) {
+            setupPauseMenu()
+        }
     }
 
     private fun setupPauseMenu(){
         removeChildren()
+
+        // Set the position and size explicitly
+        position(0, 0)
+        size(1280, 720)
+
+        // Ensure this container is on top
+        zIndex = 1000.0
+
         solidRect(1280, 720, Colors["#00000088"])
 
         uiVerticalStack(padding = 4.0, width = 400.0) {
@@ -61,23 +76,35 @@ class PauseMenu : Container() {
         }
     }
 
-    //TODO split this into new scenes
+    fun show(mainContainer: Container) {
+        pauseGame(mainContainer)
+    }
+
+    private fun pauseGame(mainContainer: Container) {
+        if (isPaused) return
+        isPaused = true
+        mainContainer.speed = 0.0 // Freezes game world updates
+        mainContainer.addChild(this)
+    }
+
+    fun resumeGame() {
+        if (!isPaused) return
+        isPaused = false
+        uiManager.clearInventoryUI()
+        this@PauseMenu.parent?.speed = 1.0 // Resumes game world updates
+        this@PauseMenu.removeFromParent()
+    }
+
     private fun showInventory(container: Container) {
         container.removeChildren()
-        solidRect(1280, 720, Colors["#00000088"]) // Semi-transparent background
+        uiManager.updateInventoryUI()
 
-        uiVerticalStack(padding = 4.0, width = 400.0) {
-            position(440, 150)
-            uiText("Inventory:")
-
-            JunkDemoScene.instance?.updateInventoryUI(this@uiVerticalStack)
-
-            uiButton("Back to Menu") {
-                onClick {
-                    setupPauseMenu()
-                }
+        uiButton("Back to Menu") {
+            onClick {
+                uiManager.clearInventoryUI()
+                setupPauseMenu()
             }
-        }
+        }.position(640, 600)
     }
 
     private suspend fun showNotes(container: Container) {
@@ -113,10 +140,6 @@ class PauseMenu : Container() {
                 setupPauseMenu()
             }
         }.xy(640, 530)
-    }
-
-    fun show(mainContainer: Container) {
-        pauseGame(mainContainer)
     }
 
     private suspend fun displayAutoMap(view: Container,
@@ -222,34 +245,22 @@ class PauseMenu : Container() {
         }
     }
 
-    // Method in your Game Scene to open the auto-map
     private suspend fun showAutoMap(container: Container) {
         container.removeChildren()
 
         // Semi-transparent background
         solidRect(1280, 720, Colors.BLACK.withAd(0.5))
-
-        // Scrollable UI for the auto-map
         uiScrollable(size = Size(800, 600)) {
             position(240.0, 60.0)
 
             val autoMapContainer = container {
-                // Read the LDTKWorld object - customize the path as needed
                 val ldtk = KR.gfx.dungeonTilesmapCalciumtrice.__file.readLDTKWorld().apply { }
-
-                // Generate the obstacle map from the specific level in the LDTK world
-                val obstacleMap = JunkDemoScene.instance?.generateMap(ldtk, "Level_0")
-                if (obstacleMap == null) {
-                    println("Obstacle map generation failed.")
-                    return@container
-                }
-
-                val playerPosition = PointInt(JunkDemoScene.instance?.player?.x?.toInt() ?: 0, JunkDemoScene.instance?.player?.y?.toInt() ?: 0)
+                val obstacleMap = mapManager.generateMap(levelView)
+                val playerPosition = getPlayerPosition
 
                 // Fetching positions as scaled using the map generation logic
                 val chestPositions = getEntityPositions(ldtk, "Chest")
                 val objectPositions = getEntityPositions(ldtk, "Object")
-                //TODO get up-to-date positions on the NPCs
                 val npcPositions = getEntityPositions(ldtk, "Enemy")
 
                 // Scaled positions based on the map grid
@@ -286,19 +297,5 @@ class PauseMenu : Container() {
         }
 
         return positions
-    }
-
-    private fun pauseGame(mainContainer: Container) {
-        if (isPaused) return
-        isPaused = true
-        mainContainer.speed = 0.0 // Freezes game world updates
-        mainContainer.addChild(this)
-    }
-
-    fun resumeGame() {
-        if (!isPaused) return
-        isPaused = false
-        this@PauseMenu.parent?.speed = 1.0 // Resumes game world updates
-        this@PauseMenu.removeFromParent()
     }
 }

@@ -11,7 +11,7 @@
 	"iid": "8db93ce0-ed50-11ed-926a-4957c7fbc019",
 	"jsonVersion": "1.3.2",
 	"appBuildId": 467535,
-	"nextUid": 192,
+	"nextUid": 193,
 	"identifierStyle": "Capitalize",
 	"toc": [],
 	"worldLayout": "Free",
@@ -1469,6 +1469,41 @@
 			],
 			"autoSourceLayerDefUid": null,
 			"tilesetDefUid": 1,
+			"tilePivotX": 0,
+			"tilePivotY": 0
+		},
+		{
+			"__type": "IntGrid",
+			"identifier": "Sector",
+			"type": "IntGrid",
+			"uid": 192,
+			"doc": null,
+			"uiColor": null,
+			"gridSize": 16,
+			"guideGridWid": 0,
+			"guideGridHei": 0,
+			"displayOpacity": 1,
+			"inactiveOpacity": 1,
+			"hideInList": false,
+			"hideFieldsWhenInactive": false,
+			"canSelectWhenInactive": true,
+			"renderInWorldView": true,
+			"pxOffsetX": 0,
+			"pxOffsetY": 0,
+			"parallaxFactorX": 0,
+			"parallaxFactorY": 0,
+			"parallaxScaling": true,
+			"requiredTags": [],
+			"excludedTags": [],
+			"intGridValues": [
+				{ "value": 1, "identifier": "CHEST_ROOM", "color": "#000000" },
+				{ "value": 2, "identifier": "MAIN_ROOM", "color": "#BE4A2F" },
+				{ "value": 3, "identifier": "STATUE", "color": "#D77643" },
+				{ "value": 4, "identifier": "CORRIDOR", "color": "#EAD4AA" }
+			],
+			"autoRuleGroups": [],
+			"autoSourceLayerDefUid": null,
+			"tilesetDefUid": null,
 			"tilePivotX": 0,
 			"tilePivotY": 0
 		}
@@ -2986,7 +3021,8 @@
 	], "enums": [{ "identifier": "Items", "uid": 144, "values": [
 		{ "id": "Red_potion", "tileRect": { "tilesetUid": 1, "x": 0, "y": 384, "w": 16, "h": 16 }, "tileId": -1, "color": 12470831, "__tileSrcRect": [0,384,16,16] },
 		{ "id": "Blue_potion", "tileRect": { "tilesetUid": 1, "x": 16, "y": 384, "w": 16, "h": 16 }, "tileId": -1, "color": 14120515, "__tileSrcRect": [16,384,16,16] },
-		{ "id": "Sword", "tileRect": { "tilesetUid": 1, "x": 128, "y": 384, "w": 16, "h": 16 }, "tileId": -1, "color": 15389866, "__tileSrcRect": [128,384,16,16] }
+		{ "id": "Gun", "tileRect": { "tilesetUid": 1, "x": 128, "y": 384, "w": 16, "h": 16 }, "tileId": -1, "color": 15389866, "__tileSrcRect": [128,384,16,16] },
+		{ "id": "Ammo", "tileRect": { "tilesetUid": 1, "x": 384, "y": 352, "w": 16, "h": 16 }, "tileId": -1, "color": 14984818, "__tileSrcRect": [384,352,16,16] }
 	], "iconTilesetUid": 1, "externalRelPath": null, "externalFileChecksum": null, "tags": [] }], "externalEnums": [], "levelFields": [] },
 	"levels": [
 		{
@@ -3374,12 +3410,15 @@
 							"fieldInstances": [
 								{ "__identifier": "Name", "__type": "String", "__value": null, "__tile": null, "defUid": 187, "realEditorValues": [] },
 								{ "__identifier": "Tile", "__type": "Tile", "__value": { "tilesetUid": 1, "x": 32, "y": 304, "w": 16, "h": 16 }, "__tile": { "tilesetUid": 1, "x": 32, "y": 304, "w": 16, "h": 16 }, "defUid": 143, "realEditorValues": [] },
-								{ "__identifier": "Items", "__type": "Array<LocalEnum.Items>", "__value": [ "Red_potion", "Sword" ], "__tile": null, "defUid": 145, "realEditorValues": [ {
+								{ "__identifier": "Items", "__type": "Array<LocalEnum.Items>", "__value": [ "Red_potion", "Gun", "Ammo" ], "__tile": null, "defUid": 145, "realEditorValues": [ {
 									"id": "V_String",
 									"params": ["Red_potion"]
 								}, {
 									"id": "V_String",
-									"params": ["Sword"]
+									"params": ["Gun"]
+								}, {
+									"id": "V_String",
+									"params": ["Ammo"]
 								} ] },
 								{ "__identifier": "Occludes", "__type": "Bool", "__value": false, "__tile": null, "defUid": 173, "realEditorValues": [{
 									"id": "V_Bool",
@@ -3436,12 +3475,12 @@
 									"params": ["288,464,32,32"]
 								}] },
 								{ "__identifier": "HP", "__type": "Int", "__value": 100, "__tile": null, "defUid": 156, "realEditorValues": [{ "id": "V_Int", "params": [100] }] },
-								{ "__identifier": "DROP", "__type": "Array<LocalEnum.Items>", "__value": [ "Red_potion", "Sword" ], "__tile": null, "defUid": 157, "realEditorValues": [ {
+								{ "__identifier": "DROP", "__type": "Array<LocalEnum.Items>", "__value": [ "Red_potion", "Gun" ], "__tile": null, "defUid": 157, "realEditorValues": [ {
 									"id": "V_String",
 									"params": ["Red_potion"]
 								}, {
 									"id": "V_String",
-									"params": ["Sword"]
+									"params": ["Gun"]
 								} ] },
 								{ "__identifier": "Name", "__type": "String", "__value": "Rayze", "__tile": null, "defUid": 169, "realEditorValues": [{
 									"id": "V_String",
@@ -3631,16 +3670,52 @@
 									"params": ["304,416,16,32"]
 								}] },
 								{ "__identifier": "HP", "__type": "Int", "__value": 100, "__tile": null, "defUid": 156, "realEditorValues": [{ "id": "V_Int", "params": [100] }] },
-								{ "__identifier": "DROP", "__type": "Array<LocalEnum.Items>", "__value": [ "Red_potion", "Sword" ], "__tile": null, "defUid": 157, "realEditorValues": [ {
+								{ "__identifier": "DROP", "__type": "Array<LocalEnum.Items>", "__value": [ "Red_potion", "Gun" ], "__tile": null, "defUid": 157, "realEditorValues": [ {
 									"id": "V_String",
 									"params": ["Red_potion"]
 								}, {
 									"id": "V_String",
-									"params": ["Sword"]
+									"params": ["Gun"]
 								} ] },
 								{ "__identifier": "Name", "__type": "String", "__value": "Baka", "__tile": null, "defUid": 169, "realEditorValues": [{
 									"id": "V_String",
 									"params": ["Baka"]
+								}] },
+								{ "__identifier": "Occludes", "__type": "Bool", "__value": false, "__tile": null, "defUid": 171, "realEditorValues": [{
+									"id": "V_Bool",
+									"params": [ false ]
+								}] },
+								{ "__identifier": "Collides", "__type": "Bool", "__value": true, "__tile": null, "defUid": 182, "realEditorValues": [{
+									"id": "V_Bool",
+									"params": [ true ]
+								}] }
+							]
+						},
+						{
+							"__identifier": "Enemy",
+							"__grid": [9,14],
+							"__pivot": [0,1],
+							"__tags": ["hide_on_fog"],
+							"__tile": { "tilesetUid": 1, "x": 192, "y": 464, "w": 16, "h": 32 },
+							"__smartColor": "#E4A672",
+							"iid": "e99fc2d0-25d0-11ef-b5f0-d9db1651bea7",
+							"width": 16,
+							"height": 32,
+							"defUid": 154,
+							"px": [144,240],
+							"fieldInstances": [
+								{ "__identifier": "Tile", "__type": "Tile", "__value": { "tilesetUid": 1, "x": 192, "y": 464, "w": 16, "h": 32 }, "__tile": { "tilesetUid": 1, "x": 192, "y": 464, "w": 16, "h": 32 }, "defUid": 155, "realEditorValues": [] },
+								{ "__identifier": "HP", "__type": "Int", "__value": 100, "__tile": null, "defUid": 156, "realEditorValues": [{ "id": "V_Int", "params": [100] }] },
+								{ "__identifier": "DROP", "__type": "Array<LocalEnum.Items>", "__value": [ "Red_potion", "Gun" ], "__tile": null, "defUid": 157, "realEditorValues": [ {
+									"id": "V_String",
+									"params": ["Red_potion"]
+								}, {
+									"id": "V_String",
+									"params": ["Gun"]
+								} ] },
+								{ "__identifier": "Name", "__type": "String", "__value": "Robot", "__tile": null, "defUid": 169, "realEditorValues": [{
+									"id": "V_String",
+									"params": ["Robot"]
 								}] },
 								{ "__identifier": "Occludes", "__type": "Bool", "__value": false, "__tile": null, "defUid": 171, "realEditorValues": [{
 									"id": "V_Bool",
@@ -4158,6 +4233,49 @@
 						{ "px": [144,64], "src": [352,112], "f": 0, "t": 232, "d": [48,121], "a": 1 }
 					],
 					"seed": 4195209,
+					"overrideTilesetUid": null,
+					"gridTiles": [],
+					"entityInstances": []
+				},
+				{
+					"__identifier": "Sector",
+					"__type": "IntGrid",
+					"__cWid": 28,
+					"__cHei": 20,
+					"__gridSize": 16,
+					"__opacity": 1,
+					"__pxTotalOffsetX": 0,
+					"__pxTotalOffsetY": 0,
+					"__tilesetDefUid": null,
+					"__tilesetRelPath": null,
+					"iid": "28e67340-25d0-11ef-b5f0-07dc203f877d",
+					"levelId": 0,
+					"layerDefUid": 192,
+					"pxOffsetX": 0,
+					"pxOffsetY": 0,
+					"visible": true,
+					"optionalRules": [],
+					"intGridCsv": [
+						0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,
+						4,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,4,4,4,4,4,4,4,
+						4,4,4,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,4,4,0,0,4,4,4,4,4,4,4,0,0,0,
+						0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,4,4,4,4,4,4,4,0,0,0,0,0,0,0,0,0,0,
+						0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,
+						0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,2,2,2,2,2,2,2,2,2,
+						2,2,2,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0,0,0,
+						1,1,1,1,1,0,0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0,0,0,1,1,1,1,1,0,0,
+						2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1,0,0,2,2,2,2,2,2,2,
+						2,2,2,3,3,3,2,2,2,2,2,2,2,2,1,1,1,1,1,0,0,2,2,2,2,2,2,2,2,2,2,3,3,3,2,
+						2,2,2,2,2,2,2,1,1,1,1,1,0,0,2,2,2,2,2,2,2,2,2,2,3,3,3,2,2,2,2,2,2,2,2,
+						1,1,1,1,1,0,0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1,0,0,
+						0,0,0,0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1,0,0,0,0,0,0,2,2,2,
+						2,2,2,2,2,2,2,2,2,2,2,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,2,2,2,2,2,
+						0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,2,2,2,2,2,0,0,0,0,0,0,0,
+						0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,2,2,2,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+						
+					],
+					"autoLayerTiles": [],
+					"seed": 5680541,
 					"overrideTilesetUid": null,
 					"gridTiles": [],
 					"entityInstances": []
@@ -4769,6 +4887,36 @@
 					"overrideTilesetUid": null,
 					"gridTiles": [],
 					"entityInstances": []
+				},
+				{
+					"__identifier": "Sector",
+					"__type": "IntGrid",
+					"__cWid": 10,
+					"__cHei": 12,
+					"__gridSize": 16,
+					"__opacity": 1,
+					"__pxTotalOffsetX": 0,
+					"__pxTotalOffsetY": 0,
+					"__tilesetDefUid": null,
+					"__tilesetRelPath": null,
+					"iid": "28e73690-25d0-11ef-b5f0-95890018c576",
+					"levelId": 158,
+					"layerDefUid": 192,
+					"pxOffsetX": 0,
+					"pxOffsetY": 0,
+					"visible": true,
+					"optionalRules": [],
+					"intGridCsv": [
+						0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+						0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+						0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+						0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+					],
+					"autoLayerTiles": [],
+					"seed": 8215099,
+					"overrideTilesetUid": null,
+					"gridTiles": [],
+					"entityInstances": []
 				}
 			],
 			"__neighbours": []
@@ -5105,6 +5253,40 @@
 					],
 					"autoLayerTiles": [],
 					"seed": 4133872,
+					"overrideTilesetUid": null,
+					"gridTiles": [],
+					"entityInstances": []
+				},
+				{
+					"__identifier": "Sector",
+					"__type": "IntGrid",
+					"__cWid": 16,
+					"__cHei": 16,
+					"__gridSize": 16,
+					"__opacity": 1,
+					"__pxTotalOffsetX": 0,
+					"__pxTotalOffsetY": 0,
+					"__tilesetDefUid": null,
+					"__tilesetRelPath": null,
+					"iid": "28e75da0-25d0-11ef-b5f0-7d18a9a5f455",
+					"levelId": 186,
+					"layerDefUid": 192,
+					"pxOffsetX": 0,
+					"pxOffsetY": 0,
+					"visible": true,
+					"optionalRules": [],
+					"intGridCsv": [
+						0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+						0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+						0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+						0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+						0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+						0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+						0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+						0,0,0,0,0,0,0,0,0,0,0
+					],
+					"autoLayerTiles": [],
+					"seed": 1418186,
 					"overrideTilesetUid": null,
 					"gridTiles": [],
 					"entityInstances": []

@@ -1,3 +1,5 @@
+package img
+
 import korlibs.korge.view.*
 
 object TextDisplayManager {

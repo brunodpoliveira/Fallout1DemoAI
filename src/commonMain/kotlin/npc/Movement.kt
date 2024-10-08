@@ -1,57 +1,164 @@
 package npc
 
+import korlibs.datastructure.*
+import korlibs.korge.ldtk.view.*
 import korlibs.korge.view.*
-import korlibs.math.geom.Point
-import kotlinx.coroutines.delay
-import kotlin.math.*
+import korlibs.math.geom.*
+import korlibs.time.*
+import kotlinx.coroutines.*
+import kotlin.random.*
+import scenes.JunkDemoScene
 
-class Movement(private val character: View, private val pathfinding: Pathfinding) {
-
-    //TODO fix; chars still zig-zagging a bit;
-    //TODO it keeps running even after NPC gets to destination; make it stop once it reaches their destination
-    //TODO add patrol movem which will make char move in a perimeter until said otherwise
-    //TODO pause movement if game is paused
-    suspend fun moveInSquare() {
-        val startPoint = character.pos
-        val points = listOf(
-            Point(startPoint.x + 50, startPoint.y),
-            Point(startPoint.x + 50, startPoint.y + 50),
-            Point(startPoint.x, startPoint.y + 50),
-            Point(startPoint.x, startPoint.y)
-        )
-
-        for (point in points) {
-            moveToSmooth(point)
-        }
-    }
+class Movement(private val character: View,
+               private val pathfinding: Pathfinding,) {
+    private val speed = 50.0 // pixels per second
 
     suspend fun moveToPoint(targetX: Double, targetY: Double) {
-        while (true) {
-            delay(1000)
+        if (!JunkDemoScene.isPaused) {
             val target = Point(targetX, targetY)
-            moveToSmooth(target)
+            moveAlongPath(target)
         }
     }
 
-    private suspend fun moveToSmooth(target: Point) {
-        //println("Moving ${character.name} to $target")
-
-        val path = pathfinding.findPath(character.pos, target)
-        //println("Path found for ${character.name}: $path")
-
-        val stepCount = 20
-        for (point in path) {
-            val startPosition = character.pos
-            val stepX = (point.x - startPosition.x) / stepCount
-            val stepY = (point.y - startPosition.y) / stepCount
-
-            for (i in 1..stepCount) {
-                val nextX = (startPosition.x + stepX * i).roundToInt().toDouble()
-                val nextY = (startPosition.y + stepY * i).roundToInt().toDouble()
-                character.pos = Point(nextX, nextY)
-                //println("Position of ${character.name} at ${character.pos}")
-                delay(1)
+    suspend fun patrol(points: List<Point>) {
+        if (points.size > 5) throw IllegalArgumentException("Patrol can have a maximum of 5 points")
+        while (true) {
+            for (point in points) {
+                if (!JunkDemoScene.isPaused) {
+                    moveAlongPath(point)
+                    delay(500) // Optional delay between points
+                } else {
+                    delay(100) // Small delay to prevent busy waiting when paused
+                }
             }
+        }
+    }
+
+    private suspend fun moveAlongPath(target: Point) {
+        val path = pathfinding.findPath(character.pos, target)
+
+        if (path.isEmpty()) {
+            println("No path found to $target")
+            return
+        }
+
+        var currentIndex = 0
+        while (currentIndex < path.size) {
+            if (JunkDemoScene.isPaused) {
+                delay(100) // Small delay to prevent busy waiting when paused
+                continue
+            }
+
+            val nextPoint = path[currentIndex]
+            val direction = (nextPoint - character.pos).normalized
+            val distance = character.pos.distanceTo(nextPoint)
+            var remainingDistance = distance
+
+            while (remainingDistance > 0) {
+                if (JunkDemoScene.isPaused) {
+                    delay(100) // Small delay to prevent busy waiting when paused
+                    continue
+                }
+
+                val deltaTime = 16.milliseconds
+                val moveDistance = speed * (deltaTime.seconds)
+                if (moveDistance >= remainingDistance) {
+                    character.pos = nextPoint
+                    remainingDistance = 0.0
+                } else {
+                    character.pos += direction * moveDistance
+                    remainingDistance -= moveDistance
+                }
+                character.zIndex = character.y
+                delay(deltaTime)
+            }
+            currentIndex++
+        }
+    }
+
+    private val sectorMap = mapOf(
+        "CHEST_ROOM" to 1,
+        "MAIN_ROOM" to 2,
+        "STATUE" to 3,
+        "CORRIDOR" to 4
+    )
+
+    suspend fun moveToSector(ldtk: LDTKWorld, sectorName: String, grid: IntIArray2) {
+        val level = ldtk.levelsByName["Level_0"] ?: throw IllegalArgumentException("Level Level_0 not found")
+        val gWidth = grid.width
+        val gHeight = grid.height
+
+        println("Attempting to move to sector: $sectorName")
+
+        val targetIntGridValue = sectorMap[sectorName]
+            ?: throw IllegalArgumentException("Sector $sectorName is not defined in sectorMap")
+
+        if (!JunkDemoScene.isPaused) {
+            // Initialize the BooleanArray2 with all cells set to false (walkable)
+            val gridArray = BooleanArray(gWidth * gHeight) { false }
+            val array = BooleanArray2(gWidth, gHeight, gridArray)
+
+            val tileWidth = 16
+            val tileHeight = 16
+
+            // First Pass: Mark cells in the "Kind" layer as walkable (false) or obstacles (true)
+            level.layersByName.values.forEach { layer ->
+                when (layer.layer.identifier) {
+                    "Kind" -> {
+                        layer.layer.intGridCSV.forEachIndexed { index, value ->
+                            val x = index % gWidth
+                            val y = index / gWidth
+                            array[x, y] = when (value) {
+                                1, 3 -> false
+                                else -> true  // Any other value means blocked
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Mark cells in the "Entities" layer as walkable (false) or obstacles (true)
+            level.layersByName.values.forEach { layer ->
+                when (layer.layer.identifier) {
+                    "Entities" -> {
+                        layer.layer.entityInstances.forEach { entity ->
+                            val cx = entity.grid[0]
+                            val cy = entity.grid[1]
+                            when (entity.identifier) {
+                                "Object", "Chest" -> {
+                                    array[cx, cy] = true // Obstacles
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Collect all cells that belong to the target sector and are walkable
+            val walkableCells = mutableListOf<Point>()
+
+            level.layersByName["Sector"]!!.layer.intGridCSV.forEachIndexed { index, value ->
+                if (value == targetIntGridValue) {
+                    val x = (index % gWidth)
+                    val y = (index / gWidth)
+                    if (!array[x, y]) {  // Filter out obstacles
+                        walkableCells.add(Point(x.toDouble(), y.toDouble()))
+                    }
+                }
+            }
+
+            if (walkableCells.isEmpty()) {
+                throw IllegalArgumentException("No walkable cells found in sector $sectorName")
+            }
+
+            // Pick a random walkable cell
+            val targetCoords = walkableCells[Random.nextInt(walkableCells.size)]
+
+            // Scale the coordinates by the tile size
+            val scaledCoords = Point(targetCoords.x * tileWidth, targetCoords.y * tileHeight)
+            println("Found sector $sectorName and picked random position $scaledCoords")
+
+            moveAlongPath(scaledCoords)
         }
     }
 }
