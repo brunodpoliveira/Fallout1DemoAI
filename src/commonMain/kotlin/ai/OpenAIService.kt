@@ -10,7 +10,7 @@ import java.util.concurrent.*
 import kotlin.math.*
 
 object OpenAIService {
-    private const val API_KEY = "YOUR_OPENAI_API_KEY"
+    private val API_KEY: String = System.getenv("openApiKey") ?: throw IllegalStateException("API key not found")
     private val api: OpenAiApi
     private val service: OpenAiService
     val msgs: MutableList<ChatMessage> = ArrayList()
