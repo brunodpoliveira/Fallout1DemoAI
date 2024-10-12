@@ -22,8 +22,9 @@ korge {
 
 dependencies {
     add("commonMainApi", project(":deps"))
-    add("commonMainApi", "com.theokanning.openai-gpt3-java:api:0.18.2")
-    add("commonMainApi", "com.theokanning.openai-gpt3-java:service:0.18.2")
+    add("commonMainApi", "io.github.lambdua:service:0.22.3")
+    add("commonMainApi", "io.github.lambdua:client:0.22.3")
+    add("commonMainApi", "io.github.lambdua:api:0.22.3")
     //add("commonMainApi", "io.ktor:ktor-client-core:2.0.0")
     //add("commonMainApi", "io.ktor:ktor-client-cio:2.0.0")
     //add("commonMainApi", "io.ktor:ktor-client-content-negotiation:2.0.0")
