@@ -135,7 +135,9 @@ class DialogWindow : Container() {
 
     @OptIn(DelicateCoroutinesApi::class)
     private fun finishCloseDialog() {
-        this.removeFromParent()
+        if (this.parent != null) {
+            this.removeFromParent()
+        }
         loadingJob?.cancel()
         JunkDemoScene.dialogIsOpen = false
         isInDialog = false
@@ -159,7 +161,7 @@ class DialogWindow : Container() {
     }
 
     private fun getCurrentConversation(): String {
-        return OpenAIService.msgs.joinToString { it.content }
+        return OpenAIService.msgs.joinToString {it.textContent}
     }
 
     private fun disableButtons() {

@@ -1,13 +1,13 @@
 package ai
 
-import ai.OpenAIService.msgs
 import ai.OpenAIService.sendMessage
 import com.theokanning.openai.completion.chat.*
-import img.TextDisplayManager
+import img.*
+import kotlinx.coroutines.*
 
 class ConversationPostProcessingServices (private val actionModel: ActionModel){
 
-    private fun npcSelfReflect(conversation: String): String {
+    suspend fun npcSelfReflect(conversation: String): String = withContext(Dispatchers.Default) {
         val prompt = """
             Have the character below self-reflect and gauge their opinions and thoughts
             of the below conversation. Have the self-reflection be in first-person and in-character:
@@ -17,31 +17,32 @@ class ConversationPostProcessingServices (private val actionModel: ActionModel){
             Self-Reflection:
         """.trimIndent()
 
-        val assistantMessage = ChatMessage("assistant", prompt)
-        msgs.add(assistantMessage)
+        val messages = listOf(
+            SystemMessage("You are an AI assistant helping with character self-reflection."),
+            UserMessage(prompt)
+        )
 
         val chatCompletionRequest = ChatCompletionRequest.builder()
             .model("gpt-3.5-turbo")
-            .messages(msgs)
-            .temperature(.9)
+            .messages(messages)
+            .temperature(0.9)
             .maxTokens(1024)
             .topP(1.0)
-            .frequencyPenalty(.8)
-            .presencePenalty(.8)
+            .frequencyPenalty(0.8)
+            .presencePenalty(0.8)
             .build()
 
-        val httpResponse = sendMessage(chatCompletionRequest)
-        val choices = httpResponse.choices.mapNotNull { it.message }
-
-        if (choices.isNotEmpty()) {
-            msgs.add(choices[0])
-            return choices[0].content
-        } else {
-            return conversation
+        try {
+            val response = sendMessage(chatCompletionRequest)
+            (response.choices.firstOrNull()?.message as? AssistantMessage)?.content
+                ?: "Unable to generate self-reflection."
+        } catch (e: Exception) {
+            println("Error in npcSelfReflect: ${e.message}")
+            "Error occurred during self-reflection."
         }
     }
 
-    private fun thinkOfNextSteps(selfReflection: String, npcBio: String): String {
+    private suspend fun thinkOfNextSteps(selfReflection: String, npcBio: String): String {
         val prompt = """
             Based on the self-reflection and the NPC bio below, think of the next steps the character should take. 
             Write it in a way that can be translated to actions later. There can be multiple actions:
@@ -56,31 +57,27 @@ class ConversationPostProcessingServices (private val actionModel: ActionModel){
             <SECRET or CONSPIRACY - [LIST OF CONSPIRATORS] if applicable>
         """.trimIndent()
 
-        val assistantMessage = ChatMessage("assistant", prompt)
-        msgs.add(assistantMessage)
+        val messages = listOf(
+            SystemMessage("You are an AI assistant helping to determine a character's next actions."),
+            UserMessage(prompt)
+        )
 
         val chatCompletionRequest = ChatCompletionRequest.builder()
             .model("gpt-3.5-turbo")
-            .messages(msgs)
-            .temperature(.9)
+            .messages(messages)
+            .temperature(0.9)
             .maxTokens(1024)
             .topP(1.0)
-            .frequencyPenalty(.8)
-            .presencePenalty(.8)
+            .frequencyPenalty(0.8)
+            .presencePenalty(0.8)
             .build()
 
-        val httpResponse = sendMessage(chatCompletionRequest)
-        val choices = httpResponse.choices.mapNotNull { it.message }
-
-        if (choices.isNotEmpty()) {
-            msgs.add(choices[0])
-            return choices[0].content
-        } else {
-            return selfReflection
-        }
+        val response = sendMessage(chatCompletionRequest)
+        return (response.choices.firstOrNull()?.message as? AssistantMessage)?.content
+            ?: selfReflection
     }
 
-    private fun summarizeConversation(conversation: String): String {
+    private suspend fun summarizeConversation(conversation: String): String {
         val prompt = """
             Summarize the following conversation in a concise way:
             
@@ -91,28 +88,24 @@ class ConversationPostProcessingServices (private val actionModel: ActionModel){
             <List of Actions>
         """.trimIndent()
 
-        val assistantMessage = ChatMessage("assistant", prompt)
-        msgs.add(assistantMessage)
+        val messages = listOf(
+            SystemMessage("You are an AI assistant tasked with summarizing conversations."),
+            UserMessage(prompt)
+        )
 
         val chatCompletionRequest = ChatCompletionRequest.builder()
             .model("gpt-3.5-turbo")
-            .messages(msgs)
-            .temperature(.9)
+            .messages(messages)
+            .temperature(0.9)
             .maxTokens(1024)
             .topP(1.0)
-            .frequencyPenalty(.8)
-            .presencePenalty(.8)
+            .frequencyPenalty(0.8)
+            .presencePenalty(0.8)
             .build()
 
-        val httpResponse = sendMessage(chatCompletionRequest)
-        val choices = httpResponse.choices.mapNotNull { it.message }
-
-        if (choices.isNotEmpty()) {
-            msgs.add(choices[0])
-            return choices[0].content
-        } else {
-            return conversation
-        }
+        val response = sendMessage(chatCompletionRequest)
+        return (response.choices.firstOrNull()?.message as? AssistantMessage)?.content
+            ?: conversation
     }
 
     private fun checkForSecretsOrConspiracy(metadata: String): Pair<Boolean, List<String>> {
@@ -126,7 +119,7 @@ class ConversationPostProcessingServices (private val actionModel: ActionModel){
         }
     }
 
-    private fun editNPCBio(summary: String, npcBio: String): String {
+    private suspend fun editNPCBio(summary: String, npcBio: String): String {
         val prompt = """
             Edit the following NPC Bio to reflect the summary of this conversation and the NPC's personality:
             
@@ -137,31 +130,27 @@ class ConversationPostProcessingServices (private val actionModel: ActionModel){
             Edited Bio:
         """.trimIndent()
 
-        val assistantMessage = ChatMessage("assistant", prompt)
-        msgs.add(assistantMessage)
+        val messages = listOf(
+            SystemMessage("You are an AI assistant responsible for updating character biographies."),
+            UserMessage(prompt)
+        )
 
         val chatCompletionRequest = ChatCompletionRequest.builder()
             .model("gpt-3.5-turbo")
-            .messages(msgs)
-            .temperature(.9)
+            .messages(messages)
+            .temperature(0.9)
             .maxTokens(1024)
             .topP(1.0)
-            .frequencyPenalty(.8)
-            .presencePenalty(.8)
+            .frequencyPenalty(0.8)
+            .presencePenalty(0.8)
             .build()
 
-        val httpResponse = sendMessage(chatCompletionRequest)
-        val choices = httpResponse.choices.mapNotNull { it.message }
-
-        if (choices.isNotEmpty()) {
-            msgs.add(choices[0])
-            return choices[0].content
-        } else {
-            return npcBio
-        }
+        val response = sendMessage(chatCompletionRequest)
+        return (response.choices.firstOrNull()?.message as? AssistantMessage)?.content
+            ?: npcBio
     }
 
-    fun conversationPostProcessingLoop(conversation: String, npcBio: String, npcName: String): Triple<String, Pair<Boolean, List<String>>, List<String>> {
+    suspend fun conversationPostProcessingLoop(conversation: String, npcBio: String, npcName: String): Triple<String, Pair<Boolean, List<String>>, List<String>> {
         val summary = summarizeConversation(conversation)
         val selfReflection = npcSelfReflect(summary)
         val nextSteps = thinkOfNextSteps(selfReflection, npcBio)
@@ -171,7 +160,7 @@ class ConversationPostProcessingServices (private val actionModel: ActionModel){
         val metadata = parts.getOrNull(1)?.trim() ?: ""
 
         val (isSecretPlan, conspirators) = checkForSecretsOrConspiracy(metadata)
-        val actionModels = actionModel.processNPCReflection(actions, npcName)
+        val (actionModels, _, _) = actionModel.processNPCReflection(actions, npcName)
 
         Director.updateContext(summary)
         println("Summary: $summary")

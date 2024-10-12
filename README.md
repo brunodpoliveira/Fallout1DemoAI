@@ -76,9 +76,9 @@ Contributions are welcome! Please ensure any pull requests include proper docume
 adhere to the project's coding standards.
 
 ## Acknowledgements
-- The Fallout franchise by Bethesda Softworks
+- The Fallout franchise by Bethesda Softworks/Interplay
 - OpenAI and theokanning for providing the GPT-3.5 Turbo API
-- Korge developers for the game engine, and the Dungeon Starter Kit
+- Korge developers for the game engine, their support in their Discord server, and the Dungeon Starter Kit
 - GNUGRAF for providing critical feedback and support
 - mikiz from itch.io for their crosshair pack
 - szadiart from itch.io for their Post Apo tile pack

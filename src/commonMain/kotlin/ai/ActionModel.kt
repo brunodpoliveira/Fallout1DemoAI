@@ -81,20 +81,24 @@ class ActionModel(
         }
     }
 
-    fun processNPCReflection(npcReflection: String, npcName: String): List<String> {
-        val actions = translateNextStepsToActionModel(npcReflection, npcName)
+    fun processNPCReflection(npcReflection: String, npcName: String): Triple<List<String>, Boolean, List<String>> {
+        val (actions, isSecret, conspirators) = translateNextStepsToActionModel(npcReflection, npcName)
         coroutineScope.launch {
             executeActions(actions)
         }
-        return actions
+        return Triple(actions, isSecret, conspirators)
     }
 
-    private fun translateNextStepsToActionModel(nextSteps: String, npcName: String): List<String> {
+    private fun translateNextStepsToActionModel(nextSteps: String, npcName: String): Triple<List<String>, Boolean, List<String>> {
         val actionList = mutableListOf<String>()
+        var isSecret = false
+        val conspirators = mutableListOf<String>()
 
-        // Simple regex patterns to match action phrases
+        // Regex patterns to match action phrases and metadata
         val movePattern = "(?i)(I'll|I will|Let's|We'll|We will) meet at the (\\w+)".toRegex()
         val givePattern = "(?i)(I'll|I will) give you (my |the )?(\\w+)".toRegex()
+        val secretPattern = "(?i)SECRET".toRegex()
+        val conspiracyPattern = "(?i)CONSPIRACY - \\[(.*?)]".toRegex()
 
         nextSteps.lines().forEach { line ->
             when {
@@ -102,21 +106,25 @@ class ActionModel(
                     val match = movePattern.find(line)
                     val location = match?.groupValues?.get(2)?.uppercase()
                     actionList.add("MOVE,$npcName,Player,$location,")
-                    println("Adding move action: MOVE,$npcName,Player,$location,")
                 }
                 givePattern.containsMatchIn(line) -> {
                     val match = givePattern.find(line)
                     val item = match?.groupValues?.get(3)?.uppercase()
                     actionList.add("GIVE,$npcName,Player,,$item")
-                    println("Adding give action: GIVE,$npcName,Player,,$item")
+                }
+                secretPattern.containsMatchIn(line) -> {
+                    isSecret = true
+                }
+                conspiracyPattern.containsMatchIn(line) -> {
+                    val match = conspiracyPattern.find(line)
+                    conspirators.addAll(match?.groupValues?.get(1)?.split(",")?.map { it.trim() } ?: emptyList())
                 }
                 else -> {
                     println("No matching action found in line: $line")
                 }
             }
         }
-
-        return actionList
+        return Triple(actionList, isSecret, conspirators)
     }
 }
 
