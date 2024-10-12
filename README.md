@@ -63,13 +63,79 @@ restarting the application.
 4. Deploy using ./gradlew packageJvmFatJar. Run it using java -jar build/libs/Fallout1DemoAI-all.jar
 
 ### Folder Structure
-# TODO redo this section
-src/commonMain/kotlin/ai: Holds the AI files, such as the bios, the services (director, summ, openai),
-and a to-do Action Model.
-src/commonMain/kotlin/ui: Includes DialogWindow.
-src/commonMain/kotlin: Main entry point main.kt.
-src/commonMain/assets/: Placeholder assets for UI and sprites.
-build.gradle.kts: Build configuration file.
+src/
+├── commonMain/
+│   └── kotlin/
+│       ├── ai/
+│       │   ├── ActionModel.kt
+│       │   ├── ConversationPostProcessingServices.kt
+│       │   ├── Director.kt
+│       │   ├── NPCBio.kt
+│       │   └── OpenAIService.kt
+│       ├── bvh/
+│       │   ├── BvhEntity.kt
+│       │   └── BvhWorld.kt
+│       ├── combat/
+│       │   ├── Combat.kt
+│       │   └── CombatManager.kt
+│       ├── controls/
+│       │   ├── InputManager.kt
+│       │   └── VirtualControllerManager.kt
+│       ├── dialog/
+│       │   └── DialogManager.kt
+│       ├── img/
+│       │   ├── ImageAnimationView2.kt
+│       │   ├── ImageDataView2.kt
+│       │   ├── PixelAnchorable.kt
+│       │   └── TextDisplayManager.kt
+│       ├── interactions/
+│       │   └── InteractionManager.kt
+│       ├── maps/
+│       │   └── MapManager.kt
+│       ├── movement/
+│       │   └── PlayerMovementController.kt
+│       ├── npc/
+│       │   ├── Movement.kt
+│       │   ├── NPCManager.kt
+│       │   └── Pathfinding.kt
+│       ├── player/
+│       │   └── PlayerManager.kt
+│       ├── raycasting/
+│       │   └── Raycaster.kt
+│       ├── scenes/
+│       │   ├── GameOverScene.kt
+│       │   ├── JunkDemoScene.kt
+│       │   ├── MainMenuScene.kt
+│       │   ├── OptionsScene.kt
+│       │   └── SceneLoader.kt
+│       ├── ui/
+│       │   ├── DialogWindow.kt
+│       │   ├── PauseMenu.kt
+│       │   ├── PlayerStatsUI.kt
+│       │   └── UIManager.kt
+│       └── utils/
+│           ├── EntityStats.kt
+│           ├── Inventory.kt
+│           └── RayResultExtensions.kt
+└── main.kt
+
+- ai: Contains AI-related logic and models
+- bvh: Bounding Volume Hierarchy implementation
+- combat: Combat-related classes
+- controls: Input and controller management
+- dialog: Dialog management system
+- img: Image and animation-related utilities
+- interactions: Interaction management
+- maps: Map-related functionality
+- movement: Player movement control
+- npc: NPC-related classes and pathfinding
+- player: Player management
+- raycasting: Raycasting implementation
+- scenes: Different game scenes and scene loading
+- ui: User interface components
+- utils: Utility classes and extensions
+
+The main.kt file serves as the entry point for the application.
 
 ## Contributing
 Contributions are welcome! Please ensure any pull requests include proper documentation and
@@ -169,15 +235,7 @@ To do it: Open the Apple Mac Apple menu. Click System Preferences. Click Java. C
 tab. Click Update now.
 
 ## TODO
-- Add an Action Model: if the NPC says "we'll meet at the town square" the Action Model will set the
-  NPC to move to the town square, and engage the pathfinding to make them move. If they say
-  "I'll give you my pistol" the game will add a gun to the player's inventory
-- To do the above, you'll need to remove the placeholder movements in initNPCMovements and code the actionModel to read 
-from the director's summary and write valid commands to the movementRegistry as well
-- To test that, we'll need to add a debug function that'll add movements to the robot Npc and give a gun to the player 
-on startup using the same pathways that the action model will use, as well as any functions, classes, etc. necessary 
-for this feature to work
-- Then disable the debug and try it out via dialogue to ensure it can parse text from convos it correctly
+- Test conspiracies, secrets
 - add all context (incl lvl story) and npc bio data in a Json instead of hardcoded;
 - Ensure that the NPCs have a plan soon after game start, a hard-coded one to save up on tokens;
   as it is, they only "come alive" after the player talks to them
@@ -203,7 +261,9 @@ for this feature to work
   based on conditions like enemy presence and intent. The rules for movement and shooting during combat 
   can be defined within the combat state, keeping things relatively straightforward
 - Use custom Fallout-themed sprites
-- Create a custom level in the latest version of LDTK if possible for this demo, with custom graphics
+- Design an actual UI that has to solve the UI bugs, esp in Dialog Window
+- Second round of optimization/ SOLID Clean Code refactor
+- Create a custom level in the latest version of LDTK, if possible, w custom graphics
 - Add sound effects to the demo
 - Add music to the demo
 - Add voice input for player interactions, allowing speech-to-text functionality.

@@ -5,9 +5,8 @@ import com.theokanning.openai.completion.chat.*
 import com.theokanning.openai.service.*
 import com.theokanning.openai.service.OpenAiService.buildApi
 import kotlinx.coroutines.*
+import utils.*
 import java.time.*
-import java.util.concurrent.*
-import kotlin.math.*
 
 object OpenAIService {
     private const val API_KEY = "YOUR_OPENAI_API_KEY"
@@ -19,50 +18,31 @@ object OpenAIService {
     private const val INITIAL_TIMEOUT = 30 // seconds
     private const val MAX_TIMEOUT = 120 // seconds
 
+    private val retryPolicy = RetryPolicy(
+        maxAttempts = MAX_RETRIES,
+        initialTimeout = INITIAL_TIMEOUT,
+        maxTimeout = MAX_TIMEOUT
+    )
+
     init {
         api = buildApi(API_KEY, Duration.ofSeconds(INITIAL_TIMEOUT.toLong()))
         service = OpenAiService(api)
     }
 
-    private fun handleTimeoutError(elapsedTime: Long): Boolean {
-        return elapsedTime > INITIAL_TIMEOUT * 1000
+    fun createChatCompletionRequest(messages: List<ChatMessage>, maxTokens: Int): ChatCompletionRequest {
+        return ChatCompletionRequest.builder()
+            .model("gpt-3.5-turbo")
+            .messages(messages)
+            .temperature(0.9)
+            .maxTokens(maxTokens)
+            .topP(1.0)
+            .frequencyPenalty(0.8)
+            .presencePenalty(0.8)
+            .build()
     }
 
-    suspend fun sendMessage(chatRequest: ChatCompletionRequest): ChatCompletionResult = withContext(Dispatchers.IO) {
-        var currentTimeout = INITIAL_TIMEOUT
-        repeat(MAX_RETRIES) { attempt ->
-            try {
-                val startTime = System.currentTimeMillis()
-                val response = withTimeout(currentTimeout * 1000L) {
-                    service.createChatCompletion(chatRequest)
-                }
-                val elapsedTime = System.currentTimeMillis() - startTime
-
-                if (handleTimeoutError(elapsedTime)) {
-                    println("Request timed out (Attempt ${attempt + 1}/$MAX_RETRIES)")
-                    if (attempt == MAX_RETRIES - 1) {
-                        throw TimeoutException("Request failed after $MAX_RETRIES attempts")
-                    }
-                    delay(calculateBackoff(attempt))
-                    currentTimeout = (currentTimeout * 2).coerceAtMost(MAX_TIMEOUT)
-                } else {
-                    return@withContext response
-                }
-            } catch (e: Exception) {
-                println("An error occurred (Attempt ${attempt + 1}/$MAX_RETRIES): ${e.message}")
-                if (attempt == MAX_RETRIES - 1) {
-                    throw e
-                }
-                delay(calculateBackoff(attempt))
-                currentTimeout = (currentTimeout * 2).coerceAtMost(MAX_TIMEOUT)
-            }
-        }
-        throw RuntimeException("Request failed after $MAX_RETRIES attempts")
-    }
-
-    private fun calculateBackoff(attempt: Int): Long {
-        return (2.0.pow(attempt.toDouble()) * 1000).toLong().coerceAtMost(30000)
-    }
+    suspend fun sendMessage(chatRequest: ChatCompletionRequest): ChatCompletionResult =
+        retryPolicy.execute { service.createChatCompletion(chatRequest) }
 
     fun getCharacterResponse(npcName: String, factionName: String?, characterBio: String, playerInput: String): String {
         println("Player input: $playerInput")
@@ -76,67 +56,52 @@ object OpenAIService {
             DO NOT talk about non-existent characters, items, and locations
         """.trimIndent()
 
-        if (!hasInjectedInitialPrompt) {
-            // Initial context injection
-            msgs.add(SystemMessage(completeContext))
-
-            val initialChatCompletionRequest = ChatCompletionRequest.builder()
-                .model("gpt-3.5-turbo")
-                .messages(msgs)
-                .temperature(0.9)
-                .maxTokens(512)
-                .topP(1.0)
-                .frequencyPenalty(0.8)
-                .presencePenalty(0.8)
-                .build()
-
+        return runBlocking {
             try {
-                val initialResponse = service.createChatCompletion(initialChatCompletionRequest)
-                val initialChoice = initialResponse.choices.firstOrNull()?.message as? AssistantMessage
-                if (initialChoice != null) {
-                    hasInjectedInitialPrompt = true
-                    println("Initial response: ${initialChoice.content}")
-                    msgs.add(initialChoice)
-                    return initialChoice.content
+                if (!hasInjectedInitialPrompt) {
+                    injectInitialPrompt(completeContext)
                 }
+                msgs.add(UserMessage(playerInput))
+                generateResponse()
             } catch (e: Exception) {
-                println("Error during initial prompt: ${e.message}")
-                return "I'm having trouble responding at the moment."
+                println("Error in getCharacterResponse: ${e.message}")
+                "I'm having trouble responding at the moment."
             }
         }
+    }
 
-        // Add the new user message
-        msgs.add(UserMessage(playerInput))
+    private suspend fun injectInitialPrompt(completeContext: String): String {
+        msgs.add(SystemMessage(completeContext))
+        val request = createChatCompletionRequest(msgs, 512)
 
-        val chatCompletionRequest = ChatCompletionRequest.builder()
-            .model("gpt-3.5-turbo")
-            .messages(msgs)
-            .temperature(0.9)
-            .maxTokens(1024)
-            .topP(1.0)
-            .frequencyPenalty(0.8)
-            .presencePenalty(0.8)
-            .build()
+        return retryPolicy.execute {
+            val initialResponse = sendMessage(request)
+            val initialChoice = initialResponse.choices.firstOrNull()?.message
+            if (initialChoice != null) {
+                hasInjectedInitialPrompt = true
+                println("Initial response: ${initialChoice.content}")
+                msgs.add(initialChoice)
+                initialChoice.content
+            } else {
+                throw Exception("Failed to get initial response")
+            }
+        }
+    }
 
-        try {
-            val response = service.createChatCompletion(chatCompletionRequest)
-            val choice = response.choices.firstOrNull()?.message as? AssistantMessage
+    private suspend fun generateResponse(): String {
+        val request = createChatCompletionRequest(msgs, 1024)
+
+        return retryPolicy.execute {
+            val response = sendMessage(request)
+            val choice = response.choices.firstOrNull()?.message
             if (choice != null) {
                 val npcResponse = choice.content
                 println("npcResponse: $npcResponse")
                 msgs.add(choice)
-                return npcResponse
+                npcResponse
+            } else {
+                throw Exception("Failed to generate response")
             }
-        } catch (e: Exception) {
-            println("Error during response generation: ${e.message}")
-            return "I'm having trouble responding at the moment."
         }
-
-        return "I don't have a response at the moment."
-    }
-
-    fun resetConversation() {
-        msgs.clear()
-        hasInjectedInitialPrompt = false
     }
 }

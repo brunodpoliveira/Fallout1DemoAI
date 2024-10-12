@@ -1,13 +1,15 @@
 package ai
 
+import ai.OpenAIService.createChatCompletionRequest
 import ai.OpenAIService.sendMessage
 import com.theokanning.openai.completion.chat.*
 import img.*
 import kotlinx.coroutines.*
+import utils.*
 
-class ConversationPostProcessingServices (private val actionModel: ActionModel){
+class ConversationPostProcessingServices (private val actionModel: ActionModel) {
 
-    suspend fun npcSelfReflect(conversation: String): String = withContext(Dispatchers.Default) {
+    private suspend fun npcSelfReflect(conversation: String): String = withContext(Dispatchers.Default) {
         val prompt = """
             Have the character below self-reflect and gauge their opinions and thoughts
             of the below conversation. Have the self-reflection be in first-person and in-character:
@@ -22,19 +24,11 @@ class ConversationPostProcessingServices (private val actionModel: ActionModel){
             UserMessage(prompt)
         )
 
-        val chatCompletionRequest = ChatCompletionRequest.builder()
-            .model("gpt-3.5-turbo")
-            .messages(messages)
-            .temperature(0.9)
-            .maxTokens(1024)
-            .topP(1.0)
-            .frequencyPenalty(0.8)
-            .presencePenalty(0.8)
-            .build()
+        val chatCompletionRequest = createChatCompletionRequest(messages, 1024)
 
         try {
             val response = sendMessage(chatCompletionRequest)
-            (response.choices.firstOrNull()?.message as? AssistantMessage)?.content
+            response.choices.firstOrNull()?.message?.content
                 ?: "Unable to generate self-reflection."
         } catch (e: Exception) {
             println("Error in npcSelfReflect: ${e.message}")
@@ -62,18 +56,10 @@ class ConversationPostProcessingServices (private val actionModel: ActionModel){
             UserMessage(prompt)
         )
 
-        val chatCompletionRequest = ChatCompletionRequest.builder()
-            .model("gpt-3.5-turbo")
-            .messages(messages)
-            .temperature(0.9)
-            .maxTokens(1024)
-            .topP(1.0)
-            .frequencyPenalty(0.8)
-            .presencePenalty(0.8)
-            .build()
+        val chatCompletionRequest = createChatCompletionRequest(messages, 1024)
 
         val response = sendMessage(chatCompletionRequest)
-        return (response.choices.firstOrNull()?.message as? AssistantMessage)?.content
+        return response.choices.firstOrNull()?.message?.content
             ?: selfReflection
     }
 
@@ -93,29 +79,30 @@ class ConversationPostProcessingServices (private val actionModel: ActionModel){
             UserMessage(prompt)
         )
 
-        val chatCompletionRequest = ChatCompletionRequest.builder()
-            .model("gpt-3.5-turbo")
-            .messages(messages)
-            .temperature(0.9)
-            .maxTokens(1024)
-            .topP(1.0)
-            .frequencyPenalty(0.8)
-            .presencePenalty(0.8)
-            .build()
+        val chatCompletionRequest = createChatCompletionRequest(messages, 1024)
 
         val response = sendMessage(chatCompletionRequest)
-        return (response.choices.firstOrNull()?.message as? AssistantMessage)?.content
+        return response.choices.firstOrNull()?.message?.content
             ?: conversation
     }
 
-    private fun checkForSecretsOrConspiracy(metadata: String): Pair<Boolean, List<String>> {
-        return if (metadata.contains("SECRET")) {
-            Pair(true, emptyList())
-        } else if (metadata.contains("CONSPIRACY")) {
-            val conspirators = """CONSPIRACY - \[(.*?)]""".toRegex().find(metadata)?.groups?.get(1)?.value?.split(", ") ?: emptyList()
-            Pair(false, conspirators)
-        } else {
-            Pair(false, emptyList())
+    private fun checkForSecretsOrConspiracy(metadata: String): Result<MetadataInfo> {
+        return try {
+            val secretPattern = """SECRET - \[(.*?)]""".toRegex()
+            val conspiracyPattern = """CONSPIRACY - \[(.*?)]""".toRegex()
+
+            val secretMatch = secretPattern.find(metadata)
+            val conspiracyMatch = conspiracyPattern.find(metadata)
+
+            val secretParticipants = secretMatch?.groups?.get(1)?.value?.split(", ") ?: emptyList()
+            val conspirators = conspiracyMatch?.groups?.get(1)?.value?.split(", ") ?: emptyList()
+
+            val hasSecret = secretMatch != null
+            val hasConspiracy = conspiracyMatch != null
+
+            Result.success(MetadataInfo(hasSecret, hasConspiracy, secretParticipants, conspirators))
+        } catch (e: Exception) {
+            Result.failure(Exception("Error parsing metadata: ${e.message}"))
         }
     }
 
@@ -135,22 +122,22 @@ class ConversationPostProcessingServices (private val actionModel: ActionModel){
             UserMessage(prompt)
         )
 
-        val chatCompletionRequest = ChatCompletionRequest.builder()
-            .model("gpt-3.5-turbo")
-            .messages(messages)
-            .temperature(0.9)
-            .maxTokens(1024)
-            .topP(1.0)
-            .frequencyPenalty(0.8)
-            .presencePenalty(0.8)
-            .build()
+        val chatCompletionRequest = createChatCompletionRequest(messages, 1024)
 
-        val response = sendMessage(chatCompletionRequest)
-        return (response.choices.firstOrNull()?.message as? AssistantMessage)?.content
-            ?: npcBio
+        return try {
+            val response = sendMessage(chatCompletionRequest)
+            response.choices.firstOrNull()?.message?.content ?: npcBio
+        } catch (e: Exception) {
+            println("Error in editNPCBio: ${e.message}")
+            npcBio // Return the original bio if there's an error
+        }
     }
 
-    suspend fun conversationPostProcessingLoop(conversation: String, npcBio: String, npcName: String): Triple<String, Pair<Boolean, List<String>>, List<String>> {
+    suspend fun conversationPostProcessingLoop(
+        conversation: String,
+        npcBio: String,
+        npcName: String
+    ): Triple<String, MetadataInfo, List<String>> {
         val summary = summarizeConversation(conversation)
         val selfReflection = npcSelfReflect(summary)
         val nextSteps = thinkOfNextSteps(selfReflection, npcBio)
@@ -159,13 +146,23 @@ class ConversationPostProcessingServices (private val actionModel: ActionModel){
         val actions = parts[0].trim()
         val metadata = parts.getOrNull(1)?.trim() ?: ""
 
-        val (isSecretPlan, conspirators) = checkForSecretsOrConspiracy(metadata)
+        val metadataInfo = checkForSecretsOrConspiracy(metadata).getOrElse {
+            println("Warning: ${it.message}")
+            MetadataInfo(
+                hasSecret = false,
+                hasConspiracy = false,
+                secretParticipants = emptyList(),
+                conspirators = emptyList()
+            )
+        }
+
         val (actionModels, _, _) = actionModel.processNPCReflection(actions, npcName)
 
         Director.updateContext(summary)
         println("Summary: $summary")
         println("Self-Reflection: $selfReflection")
         println("Next Steps: $actions")
+        println("Metadata Info: $metadataInfo")
 
         if (Director.getDifficulty() == "easy") {
             TextDisplayManager.directorText?.text = "Director:\n${Director.getContext()}"
@@ -175,6 +172,7 @@ class ConversationPostProcessingServices (private val actionModel: ActionModel){
 
         actionModels.forEach { action -> println("Action Model: $action") }
         val updatedBio = editNPCBio(summary, npcBio)
-        return Triple(updatedBio, Pair(isSecretPlan, conspirators), actionModels)
+
+        return Triple(updatedBio, metadataInfo, actionModels)
     }
 }
