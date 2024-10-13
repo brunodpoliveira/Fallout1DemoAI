@@ -30,19 +30,25 @@ class DialogManager(
         val conversationProcessor = ConversationPostProcessingServices(actionModel)
         coroutineScope.launch {
             try {
-                val (updatedBio, secretConspiracyPair, actions) =
+                val (updatedBio, metadataInfo, actions) =
                     conversationProcessor.conversationPostProcessingLoop(
                         conversation,
                         npcBio,
                         npcName
                     )
-                val (isSecretPlan, conspirators) = secretConspiracyPair
-                Director.updateNPCContext(npcName, updatedBio, isSecretPlan, conspirators)
+                Director.updateNPCContext(
+                    npcName,
+                    updatedBio,
+                    metadataInfo.hasSecret,
+                    metadataInfo.conspirators
+                )
                 println("Updated Bio: $updatedBio")
-                println("Is Secret Plan: $isSecretPlan")
-                println("Conspirators: $conspirators")
+                println("Is Secret Plan: ${metadataInfo.hasSecret}")
+                println("Has Conspiracy: ${metadataInfo.hasConspiracy}")
+                println("Conspirators: ${metadataInfo.conspirators}")
+                println("Secret Participants: ${metadataInfo.secretParticipants}")
                 println("Actions: $actions")
-                actionModel.processNPCReflection(actions.toString(), npcName)
+                actionModel.processNPCReflection(actions.joinToString("\n"), npcName)
             } catch (e: Exception) {
                 println("Error in conversation post-processing: ${e.message}")
                 // Handle the error appropriately

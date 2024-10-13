@@ -25,7 +25,7 @@ The game can be completed in multiple ways:
 #TODO virtualcontroller explanations
 - Player movement and interaction are placeholders: Arrow keys for directions and Z/West Button (the bottom
   button) for entering dialog with a NPC
-- Press the Return/North Button (the middle button) to pause the game. You can acess the Notes from this menu
+- Press the Return/North Button (the middle button) to pause the game. You can access the Notes from this menu
 - Press Space/South Button (the top button) to attack and interact with objects, such as chests
 - In the Dialog Window, interact with NPCs by typing messages on the Dialog Window, and click the buttons
   with your mouse to interact with them.

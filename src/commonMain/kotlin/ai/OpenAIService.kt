@@ -104,4 +104,11 @@ object OpenAIService {
             }
         }
     }
+
+    fun resetConversation() {
+        msgs.clear()
+        hasInjectedInitialPrompt = false
+        println("Conversation reset: message history cleared and initial prompt flag reset")
+    }
+
 }
