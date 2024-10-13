@@ -40,11 +40,6 @@ class CombatManager(
             val enemyId = enemy.entity.identifier + enemy.pos.toString()
             entityStatsMap[enemyId] = readEntityStats(enemy)
         }
-        // Initialize stats for enemies
-        enemies.forEach { enemy ->
-            val enemyId = enemy.entity.identifier + enemy.pos.toString()
-            entityStatsMap[enemyId] = readEntityStats(enemy)
-        }
 
         // Setup key events for selecting targets
         // TODO: Adjust controls when in combat vs "on foot"
@@ -90,7 +85,7 @@ class CombatManager(
 
 
     fun handlePlayerShoot() {
-        if (!playerInventory.getItems().contains("Gun") || playerStats.ammo <= 0) {
+        if (!playerInventory.getItems().contains("GUN") || playerStats.ammo <= 0) {
             println("Cannot shoot! Ensure player has both gun and ammo.")
             return
         }
@@ -117,8 +112,7 @@ class CombatManager(
                     println("Target has been killed and removed from the scene")
                 } else {
                     entityStatsMap[enemyId] = targetStats
-                    // Indicate damage via visual effect
-                    // ...
+                    // TODO Indicate damage via visual effect
                 }
             } else {
                 println("Missed!")
