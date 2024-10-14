@@ -8,7 +8,6 @@ import korlibs.korge.view.*
 import korlibs.math.geom.*
 import maps.*
 import player.*
-import scenes.*
 import utils.*
 
 class UIManager(
@@ -37,7 +36,7 @@ class UIManager(
     }
 
     fun showPauseMenu() {
-        if (JunkDemoScene.isPaused) {
+        if (GameState.isPaused) {
             pauseMenu.resumeGame()
         } else {
             pauseMenu.show(container)

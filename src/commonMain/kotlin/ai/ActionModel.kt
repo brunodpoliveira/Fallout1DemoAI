@@ -110,7 +110,7 @@ class ActionModel(
                 givePattern.containsMatchIn(line) -> {
                     val match = givePattern.find(line)
                     val item = match?.groupValues?.get(3)?.uppercase()
-                    actionList.add("GIVE,$npcName,Player,,$item")
+                    actionList.add("GIVE,$npcName,Player,$item")
                 }
                 secretPattern.containsMatchIn(line) -> {
                     isSecret = true

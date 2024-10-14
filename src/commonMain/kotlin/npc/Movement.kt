@@ -6,15 +6,15 @@ import korlibs.korge.view.*
 import korlibs.math.geom.*
 import korlibs.time.*
 import kotlinx.coroutines.*
+import utils.*
 import kotlin.random.*
-import scenes.JunkDemoScene
 
 class Movement(private val character: View,
                private val pathfinding: Pathfinding,) {
     private val speed = 50.0 // pixels per second
 
     suspend fun moveToPoint(targetX: Double, targetY: Double) {
-        if (!JunkDemoScene.isPaused) {
+        if (!GameState.isPaused) {
             val target = Point(targetX, targetY)
             moveAlongPath(target)
         }
@@ -24,7 +24,7 @@ class Movement(private val character: View,
         if (points.size > 5) throw IllegalArgumentException("Patrol can have a maximum of 5 points")
         while (true) {
             for (point in points) {
-                if (!JunkDemoScene.isPaused) {
+                if (!GameState.isPaused) {
                     moveAlongPath(point)
                     delay(500) // Optional delay between points
                 } else {
@@ -44,7 +44,7 @@ class Movement(private val character: View,
 
         var currentIndex = 0
         while (currentIndex < path.size) {
-            if (JunkDemoScene.isPaused) {
+            if (GameState.isPaused) {
                 delay(100) // Small delay to prevent busy waiting when paused
                 continue
             }
@@ -55,7 +55,7 @@ class Movement(private val character: View,
             var remainingDistance = distance
 
             while (remainingDistance > 0) {
-                if (JunkDemoScene.isPaused) {
+                if (GameState.isPaused) {
                     delay(100) // Small delay to prevent busy waiting when paused
                     continue
                 }
@@ -93,7 +93,7 @@ class Movement(private val character: View,
         val targetIntGridValue = sectorMap[sectorName]
             ?: throw IllegalArgumentException("Sector $sectorName is not defined in sectorMap")
 
-        if (!JunkDemoScene.isPaused) {
+        if (!GameState.isPaused) {
             // Initialize the BooleanArray2 with all cells set to false (walkable)
             val gridArray = BooleanArray(gWidth * gHeight) { false }
             val array = BooleanArray2(gWidth, gHeight, gridArray)

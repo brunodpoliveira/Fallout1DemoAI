@@ -16,8 +16,8 @@ import korlibs.korge.view.align.*
 import korlibs.math.geom.*
 import maps.*
 import scenes.*
-import scenes.JunkDemoScene.Companion.isPaused
 import ui.DialogWindow.Companion.isInDialog
+import utils.*
 
 class PauseMenu(private val mapManager: MapManager,
                 private  val levelView: LDTKLevelView,
@@ -81,15 +81,15 @@ class PauseMenu(private val mapManager: MapManager,
     }
 
     private fun pauseGame(mainContainer: Container) {
-        if (isPaused) return
-        isPaused = true
+        if (GameState.isPaused) return
+        GameState.isPaused = true
         mainContainer.speed = 0.0 // Freezes game world updates
         mainContainer.addChild(this)
     }
 
     fun resumeGame() {
-        if (!isPaused) return
-        isPaused = false
+        if (!GameState.isPaused) return
+        GameState.isPaused = false
         uiManager.clearInventoryUI()
         this@PauseMenu.parent?.speed = 1.0 // Resumes game world updates
         this@PauseMenu.removeFromParent()

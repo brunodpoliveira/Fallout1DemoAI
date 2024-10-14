@@ -1,12 +1,18 @@
 package scenes
 
 import KR
+import ai.*
 import bvh.*
+import combat.*
+import controls.*
+import dialog.*
 import img.*
+import interactions.*
 import korlibs.datastructure.*
 import korlibs.image.atlas.*
 import korlibs.image.font.*
 import korlibs.image.format.*
+import korlibs.io.file.*
 import korlibs.korge.annotations.*
 import korlibs.korge.ldtk.*
 import korlibs.korge.ldtk.view.*
@@ -17,56 +23,59 @@ import korlibs.korge.view.mask.*
 import korlibs.math.geom.*
 import korlibs.math.geom.PointInt
 import maps.*
+import movement.*
 import npc.*
 import player.*
 import raycasting.*
 import ui.*
 import utils.*
 
-
-open class SceneLoader(
-    protected val scene: Scene,
-    protected val container: SContainer
+class SceneLoader(
+    private val scene: Scene,
+    private val container: SContainer,
+    private val ldtkFile: VfsFile,
+    private val levelId: String
 ) {
-    // Common properties accessible by subclasses
     lateinit var ldtk: LDTKWorld
-    private lateinit var levelView: LDTKLevelView
+    lateinit var levelView: LDTKLevelView
     lateinit var player: LDTKEntityView
     lateinit var entitiesBvh: BvhWorld
     lateinit var grid: IntIArray2
-    private lateinit var gridSize: Size
+    lateinit var gridSize: Size
     lateinit var entities: List<LDTKEntityView>
-    private lateinit var highlight: Graphics
+    lateinit var highlight: Graphics
     lateinit var playerStats: EntityStats
-    private lateinit var mapManager: MapManager
+    lateinit var mapManager: MapManager
     lateinit var raycaster: Raycaster
     lateinit var npcManager: NPCManager
     lateinit var uiManager: UIManager
     lateinit var openChestTile: TilesetRectangle
-    private lateinit var defaultFont: Font
+    lateinit var defaultFont: Font
     lateinit var playerInventory: Inventory
-    private lateinit var playerManager: PlayerManager
+    lateinit var playerManager: PlayerManager
+    lateinit var inputManager: InputManager
 
-    open suspend fun loadScene(): SceneLoader {
+    lateinit var actionModel: ActionModel
+    lateinit var combatManager: CombatManager
+    lateinit var dialogManager: DialogManager
+    lateinit var interactionManager: InteractionManager
+    lateinit var playerMovementController: PlayerMovementController
+
+    suspend fun loadScene(): SceneLoader {
         loadResources()
         initializeCommonComponents()
-        onSceneLoad()
-
         return this
     }
 
-    protected open suspend fun onSceneLoad() {
-        // This method can be overridden by subclasses for scene-specific initializations
-    }
-
     @OptIn(KorgeExperimental::class)
-    protected open suspend fun loadResources() {
-        // Load resources required by all scenes
+    private suspend fun loadResources() {
         val atlas = MutableAtlasUnit()
         defaultFont = KR.fonts.publicpixel.__file.readTtfFont().lazyBitmapSDF
         val playerSprite = KR.gfx.clericF.__file.readImageDataContainer(ASE.toProps(), atlas)
-        ldtk = KR.gfx.dungeonTilesmapCalciumtrice.__file.readLDTKWorld()
-        val level = ldtk.levelsByName["Level_0"]!!
+        ldtk = ldtkFile.readLDTKWorld()
+
+        val level = ldtk.levelsByName["Level_0"] ?:
+        throw IllegalArgumentException("Level_0 not found in LDTK world for $levelId")
 
         val camera = container.camera {
             levelView = LDTKLevelView(level).addTo(this)
@@ -111,12 +120,10 @@ open class SceneLoader(
         )
     }
 
-    protected open suspend fun initializeCommonComponents() {
-        // Initialize MapManager
+    private suspend fun initializeCommonComponents() {
         mapManager = MapManager(ldtk, gridSize)
         val obstacleMap = mapManager.generateMap(levelView)
 
-        // Initialize NPCManager
         npcManager = NPCManager(
             coroutineScope = scene,
             entities = entities.filter {
@@ -130,7 +137,6 @@ open class SceneLoader(
         )
         npcManager.initializeNPCs()
 
-        // Initialize UIManager
         uiManager = UIManager(
             container = container,
             playerInventory = playerInventory,
@@ -143,7 +149,6 @@ open class SceneLoader(
         uiManager.initializeUI()
         playerManager.playerStatsUI = uiManager.playerStatsUI
 
-        // Initialize Raycaster
         raycaster = Raycaster(
             grid = grid,
             gridSize = gridSize,
@@ -152,5 +157,52 @@ open class SceneLoader(
             player = player,
             highlight = highlight
         )
+
+        combatManager = CombatManager(
+            enemies = entities.filter { it.entity.identifier == "Enemy" }.toMutableList(),
+            playerInventory = playerInventory,
+            playerStats = playerStats,
+            playerStatsUI = uiManager.playerStatsUI,
+            container = container
+        )
+        combatManager.initialize()
+
+        actionModel = ActionModel(
+            ldtk = ldtk,
+            grid = grid,
+            npcManager = npcManager,
+            playerInventory = playerInventory,
+            coroutineScope = scene
+        )
+
+        dialogManager = DialogManager(
+            coroutineScope = scene,
+            container = container,
+            actionModel = actionModel
+        )
+
+        interactionManager = InteractionManager(
+            player = player,
+            raycaster = raycaster,
+            dialogManager = dialogManager,
+            playerInventory = playerInventory,
+            playerStats = playerStats,
+            combatManager = combatManager,
+            gameWindow = scene.views.gameWindow,
+            openChestTile = openChestTile,
+            playerMovementController = null,
+            uiManager = uiManager
+        )
+
+        inputManager = InputManager(VirtualControllerManager(), interactionManager, scene)
+        inputManager.setupInput(container)
+
+        playerMovementController = PlayerMovementController(
+            player = player,
+            inputManager = inputManager,
+            raycaster = raycaster
+        )
+
+        interactionManager.playerMovementController = playerMovementController
     }
 }

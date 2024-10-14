@@ -1,6 +1,6 @@
 package interactions
 
-import ai.NPCBio
+import ai.*
 import combat.CombatManager
 import dialog.DialogManager
 import img.*
@@ -74,15 +74,9 @@ class InteractionManager(
         val view = getInteractiveView() ?: return
         if (view is LDTKEntityView && view.fieldsByName["Name"] != null) {
             val npcName = view.fieldsByName["Name"]!!.valueString
-            val npcFactions = mapOf(
-                "Rayze" to "Crypts",
-                "Baka" to "Fools",
-                "Lex" to "Non-Gang",
-                "Robot" to "Non-Gang"
-            )
-            val factionName = npcFactions[npcName] ?: "Unknown"
+            val factionName = npcName?.let { Director.getNPCFaction(it) }
             val npcBio = npcName?.let { NPCBio.getBioForNPC(it) }
-            if (npcBio != null) {
+            if (npcName != null && npcBio != null && factionName != null) {
                 dialogManager.showDialog(npcName, npcBio, factionName)
             }
         }

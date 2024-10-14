@@ -10,7 +10,7 @@ suspend fun main() = Korge(windowSize = Size(1280, 720), backgroundColor = Color
 
     injector.mapSingleton { MainMenuScene() }
     injector.mapSingleton { GameOverScene() }
-    injector.mapPrototype { JunkDemoScene() }
+    injector.mapPrototype { DemoLevel() }
 
     sceneContainer.changeTo { MainMenuScene() }
 }

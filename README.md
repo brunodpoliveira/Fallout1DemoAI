@@ -235,17 +235,13 @@ To do it: Open the Apple Mac Apple menu. Click System Preferences. Click Java. C
 tab. Click Update now.
 
 ## TODO
-- Test conspiracies, secrets
-- add all context (incl lvl story) and npc bio data in a Json instead of hardcoded;
-- Ensure that the NPCs have a plan soon after game start, a hard-coded one to save up on tokens;
-  as it is, they only "come alive" after the player talks to them
-  (allow them to interact w each other and do planning a la AI Town, having separate daily routines or
-  conversations among themselves; zero-player games should be possible after this feature is put in place)
-- Improve the prompts to avoid "disregard instructions" hack, hallucinations, etc. add some example dialogue
-  in the json to check if the NPC's will get the personality traits. Make deeper bios if not
+- Improve the prompts to avoid "disregard instructions" hack, hallucinations, etc.(ex below) Make deeper bios
 - Add the Save/Load game logic
-- Add interrogation to the game, using the NPCs in the saved game; the option for interrogate should be in
-  the load game screen; either load normally or load in interrogation room
+- Add interrogation to the game, using the NPCs in the saved game; this is a debug function that can be called from
+  whatever screen, since this is a text-only thing
+- turn on collision between each NPC in order for them to interact with one another(setup for convos w each other)
+- (allow them to interact w each other and do planning a la AI Town, having separate daily routines or
+  conversations among themselves; zero-player games should be possible after this feature is put in place)
 - Add a zero-player mode
 - Add capabilities to the Director so that it may dynamically alter events, item placement, etc a la the
   director in Left 4 Dead
@@ -261,7 +257,8 @@ tab. Click Update now.
   based on conditions like enemy presence and intent. The rules for movement and shooting during combat 
   can be defined within the combat state, keeping things relatively straightforward
 - Use custom Fallout-themed sprites
-- Design an actual UI that has to solve the UI bugs, esp in Dialog Window
+- Design an actual UI that has to solve the UI bugs, esp in Dialog Window (ex: player can click the other btns of 
+the controls)
 - Second round of optimization/ SOLID Clean Code refactor
 - Create a custom level in the latest version of LDTK, if possible, w custom graphics
 - Add sound effects to the demo

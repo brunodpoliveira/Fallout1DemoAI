@@ -10,7 +10,7 @@ import korlibs.korge.ui.*
 import korlibs.korge.view.*
 import korlibs.math.geom.*
 import kotlinx.coroutines.*
-import scenes.*
+import utils.*
 
 @OptIn(KorgeExperimental::class)
 class DialogWindow : Container() {
@@ -102,7 +102,7 @@ class DialogWindow : Container() {
     private fun showLoadingScreen(reversing: Boolean) {
         loadingProgressBar.visible = true
         loadingProgressBar.current = 0.0
-        JunkDemoScene.dialogIsOpen = true
+        GameState.isDialogOpen = true
 
         loadingJob = GlobalScope.launch {
             while (loadingProgressBar.current < loadingProgressBar.maximum) {
@@ -139,7 +139,7 @@ class DialogWindow : Container() {
             this.removeFromParent()
         }
         loadingJob?.cancel()
-        JunkDemoScene.dialogIsOpen = false
+        GameState.isDialogOpen = false
         isInDialog = false
 
         // Start cooldown

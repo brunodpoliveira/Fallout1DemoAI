@@ -4,7 +4,7 @@ import korlibs.event.*
 import korlibs.korge.view.*
 import korlibs.korge.virtualcontroller.*
 import korlibs.math.geom.*
-import scenes.*
+import utils.*
 
 class VirtualControllerManager {
     private lateinit var virtualController: VirtualController
@@ -53,7 +53,7 @@ class VirtualControllerManager {
     }
 
     fun getControllerInput(): Pair<Double, Double> {
-        return if (JunkDemoScene.dialogIsOpen) {
+        return if (GameState.isDialogOpen) {
             Pair(0.0, 0.0)
         } else {
             Pair(virtualController.lx.toDouble(), virtualController.ly.toDouble())
