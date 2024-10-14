@@ -79,6 +79,10 @@ object Director {
         return currentLevelData.npcData[npcName]?.bio ?: ""
     }
 
+    fun getAllNPCNames(): List<String> {
+        return currentLevelData.npcData.keys.toList()
+    }
+
     fun getNPCFaction(npcName: String): String {
         return currentLevelData.npcData[npcName]?.faction?.takeIf { it.isNotEmpty() } ?: "Civilian"
     }

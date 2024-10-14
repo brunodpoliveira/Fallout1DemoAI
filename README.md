@@ -236,7 +236,6 @@ To do it: Open the Apple Mac Apple menu. Click System Preferences. Click Java. C
 tab. Click Update now.
 
 ## TODO
-- Add interrogation to the game, using the NPCs in the running game; this is a debug function that can be  called from whatever screen, since this is a text-only thing
 - turn on collision between each NPC in order for them to interact with one another(setup for convos w each other)
 - augment action model in order to allow NPCs to find and collide with one another so they may converse,interact,etc
 - (allow them to interact w each other and do planning a la AI Town, having separate daily routines or
@@ -244,7 +243,7 @@ tab. Click Update now.
 - Add a zero-player mode
 - Add capabilities to the Director so that it may dynamically alter events, item placement, etc a la the
   director in Left 4 Dead
-- add logging system, with multiple lvls: debug, warn, error
+- add logging system, with multiple lvls: debug, warn, error and env detection: dev and prod
 - Implement a simple combat system:
 - Finally, code the Turn-based system: you can move, or you can shoot, NPCs move and shoot first, that's it.
   if an NPC and player are in range and no walls or obstacles are in between, that's a hit.

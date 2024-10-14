@@ -1,5 +1,6 @@
 package ui
 
+import ai.*
 import korlibs.image.font.*
 import korlibs.korge.input.*
 import korlibs.korge.ldtk.view.*
@@ -20,6 +21,7 @@ class UIManager(
     getPlayerPosition: PointInt
 ) {
     private val pauseMenu = PauseMenu(mapManager, levelView, getPlayerPosition, this)
+    private val interrogationWindow = InterrogationWindow()
     var playerStatsUI: PlayerStatsUI? = null
     private var inventoryContainer: Container? = null
 
@@ -28,7 +30,7 @@ class UIManager(
         playerStatsUI?.let { container.addChild(it) }
         updatePlayerStatsUI(playerManager.playerStats)
 
-        addDebugReduceHealthButton()
+        addDebugButtons()
     }
 
     private fun updatePlayerStatsUI(playerStats: EntityStats) {
@@ -76,7 +78,7 @@ class UIManager(
         playerStatsUI?.update(playerManager.playerStats.hp, playerManager.playerStats.ammo)
     }
 
-    private fun addDebugReduceHealthButton() {
+    private fun addDebugButtons() {
         container.fixedSizeContainer(Size(200, 500), false) {
             position(700, 20)
             uiButton("Debug Reduce Health") {
@@ -84,6 +86,17 @@ class UIManager(
                     playerManager.debugReduceHealth(20)
                 }
             }
+            uiButton("Open Interrogation") {
+                position(0, 40)
+                onClick {
+                    showInterrogationWindow()
+                }
+            }
         }
+    }
+
+    private fun showInterrogationWindow() {
+        val npcs = NPCBio.getAllNPCNames()
+        interrogationWindow.show(container, npcs)
     }
 }

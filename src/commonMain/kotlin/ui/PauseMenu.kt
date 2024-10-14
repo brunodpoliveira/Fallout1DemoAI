@@ -142,6 +142,8 @@ class PauseMenu(private val mapManager: MapManager,
         }.xy(640, 530)
     }
 
+    //TODO update NPC possition on automap
+
     private suspend fun displayAutoMap(view: Container,
                                        obstacleMap: BooleanArray2,
                                        playerPosition: PointInt,
