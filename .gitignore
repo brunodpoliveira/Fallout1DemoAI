@@ -9,6 +9,8 @@
 *.log
 korge.keystore
 local.properties
+config.properties
+gradle.properties
 src/main/*
 .DS_Store
 
