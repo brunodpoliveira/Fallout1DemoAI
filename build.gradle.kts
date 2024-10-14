@@ -25,7 +25,11 @@ val openApiKey: String = project.findProperty("open.api.key") as String
 tasks.withType<JavaExec> {
     environment("openApiKey", openApiKey)
 }
-
+tasks.withType<Jar> {
+    from("./") {
+        include("config.properties")
+    }
+}
 dependencies {
     add("commonMainApi", project(":deps"))
     add("commonMainApi", "io.github.lambdua:service:0.22.3")

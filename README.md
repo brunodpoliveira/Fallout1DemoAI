@@ -58,7 +58,7 @@ restarting the application.
 
 ### Build and Run
 1. Clone the repository.
-2. Ensure the API key for GPT-3.5 turbo is set in gradle.properties.
+2. Ensure the API key for GPT-3.5 turbo is set in gradle.properties and config.properties.
 3. Run the game using: ./gradlew runJvmAutoreload
 4. Deploy using ./gradlew packageJvmFatJar. Run it using java -jar build/libs/Fallout1DemoAI-all.jar
 
@@ -235,6 +235,10 @@ If the JAR file displays an error when double-clicking it, you may need to updat
 To do it: Open the Apple Mac Apple menu. Click System Preferences. Click Java. Click on the Update
 tab. Click Update now.
 
+To attach a debugger in a .jar running outside a dev environment, run the below command:
+```
+java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005 -jar Fallout1DemoAI-all.jar
+```
 ## TODO
 - turn on collision between each NPC in order for them to interact with one another(setup for convos w each other)
 - augment action model in order to allow NPCs to find and collide with one another so they may converse,interact,etc
@@ -262,7 +266,6 @@ the controls)
 - Add sound effects to the demo
 - Add music to the demo
 - Add voice input for player interactions, allowing speech-to-text functionality.
-- Move API keys to gradle.properties to enhance security.
 - Web deployment, so that it can be played in the itch.io webpage w/out needing a download
 - Train a custom LLM following the template below (this will be another project)
 
@@ -303,3 +306,4 @@ AI Town, but edgy. navigating supernatural phenomena in small town/demonic stuff
 a la Alan Wake, The Faculty impostor stuff too?
 social simulation game where you play as a person staying a week in small town to relax, weird shit happens.
 have undercover agents as characters too, to increase tension and justify walling off the player to single setting
+
