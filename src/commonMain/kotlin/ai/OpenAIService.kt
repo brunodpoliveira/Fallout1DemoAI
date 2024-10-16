@@ -1,5 +1,7 @@
 package ai
 
+import utils.Logger
+import utils.LogLevel
 import com.theokanning.openai.client.*
 import com.theokanning.openai.completion.chat.*
 import com.theokanning.openai.service.*
@@ -27,62 +29,70 @@ object OpenAIService {
     )
 
     init {
+        val environment = Logger.environment
+        Logger.setLogLevel(if (environment == "prod") LogLevel.ERROR else LogLevel.DEBUG)
+        Logger.debug("Initializing OpenAIService in $environment environment")
+
         api = buildApi(API_KEY, Duration.ofSeconds(INITIAL_TIMEOUT.toLong()))
         service = OpenAiService(api)
+        Logger.debug("OpenAI API and service initialized")
     }
 
     private fun getApiKey(): String {
-        println("Attempting to retrieve API key...")
+        Logger.debug("Attempting to retrieve API key...")
 
         // Try to load from classpath
         try {
             val inputStream = OpenAIService::class.java.classLoader.getResourceAsStream("config.properties")
             if (inputStream != null) {
-                println("Found config.properties in classpath")
+                Logger.debug("Found config.properties in classpath")
                 val properties = Properties()
                 properties.load(inputStream)
                 val apiKey = properties.getProperty("open.api.key")
                 if (apiKey != null) {
-                    println("API key found in classpath config.properties")
+                    Logger.debug("API key found in classpath config.properties")
                     return apiKey
                 } else {
-                    println("open.api.key property not found in classpath config.properties")
+                    Logger.warn("open.api.key property not found in classpath config.properties")
                 }
             } else {
-                println("config.properties not found in classpath")
+                Logger.warn("config.properties not found in classpath")
             }
         } catch (e: Exception) {
-            println("Error reading config.properties from classpath: ${e.message}")
+            Logger.error("Error reading config.properties from classpath: ${e.message}")
         }
 
         // Try to load from current working directory
         val currentDir = System.getProperty("user.dir")
-        println("Current working directory: $currentDir")
+        Logger.debug("Current working directory: $currentDir")
         val configFile = File(currentDir, "config.properties")
         if (configFile.exists()) {
-            println("Found config.properties in current working directory")
+            Logger.debug("Found config.properties in current working directory")
             try {
                 val properties = Properties()
                 configFile.inputStream().use { properties.load(it) }
                 val apiKey = properties.getProperty("open.api.key")
                 if (apiKey != null) {
-                    println("API key found in current directory config.properties")
+                    Logger.debug("API key found in current directory config.properties")
                     return apiKey
                 } else {
-                    println("open.api.key property not found in current directory config.properties")
+                    Logger.warn("open.api.key property not found in current directory config.properties")
                 }
             } catch (e: Exception) {
-                println("Error reading config.properties from current directory: ${e.message}")
+                Logger.error("Error reading config.properties from current directory: ${e.message}")
             }
         } else {
-            println("config.properties not found in current working directory")
+            Logger.warn("config.properties not found in current working directory")
         }
 
         // If we've reached this point, we couldn't find the API key
-        throw IllegalStateException("API key not found. Please ensure config.properties is present and contains the open.api.key property.")
+        val errorMessage = "API key not found. Please ensure config.properties is present and contains the open.api.key property."
+        Logger.error(errorMessage)
+        throw IllegalStateException(errorMessage)
     }
 
     fun createChatCompletionRequest(messages: List<ChatMessage>, maxTokens: Int): ChatCompletionRequest {
+        Logger.debug("Creating chat completion request with ${messages.size} messages and $maxTokens max tokens")
         return ChatCompletionRequest.builder()
             .model("gpt-3.5-turbo")
             .messages(messages)
@@ -94,11 +104,23 @@ object OpenAIService {
             .build()
     }
 
-    suspend fun sendMessage(chatRequest: ChatCompletionRequest): ChatCompletionResult =
-        retryPolicy.execute { service.createChatCompletion(chatRequest) }
+    suspend fun sendMessage(chatRequest: ChatCompletionRequest): ChatCompletionResult {
+        Logger.debug("Sending chat completion request")
+        return retryPolicy.execute {
+            try {
+                val result = service.createChatCompletion(chatRequest)
+                Logger.debug("Received chat completion response")
+                result
+            } catch (e: Exception) {
+                Logger.error("Error in sendMessage: ${e.message}")
+                throw e
+            }
+        }
+    }
 
     fun getCharacterResponse(npcName: String, factionName: String?, characterBio: String, playerInput: String): String {
-        println("Player input: $playerInput")
+        Logger.debug("Getting character response for NPC: $npcName, Faction: $factionName")
+        Logger.debug("Player input: $playerInput")
 
         val factionContext = factionName?.let { Director.getFactionContext(it) } ?: ""
         val completeContext = """
@@ -112,18 +134,20 @@ object OpenAIService {
         return runBlocking {
             try {
                 if (!hasInjectedInitialPrompt) {
+                    Logger.debug("Injecting initial prompt")
                     injectInitialPrompt(completeContext)
                 }
                 msgs.add(UserMessage(playerInput))
                 generateResponse()
             } catch (e: Exception) {
-                println("Error in getCharacterResponse: ${e.message}")
+                Logger.error("Error in getCharacterResponse: ${e.message}")
                 "I'm having trouble responding at the moment."
             }
         }
     }
 
     private suspend fun injectInitialPrompt(completeContext: String): String {
+        Logger.debug("Injecting initial prompt")
         msgs.add(SystemMessage(completeContext))
         val request = createChatCompletionRequest(msgs, 512)
 
@@ -132,16 +156,19 @@ object OpenAIService {
             val initialChoice = initialResponse.choices.firstOrNull()?.message
             if (initialChoice != null) {
                 hasInjectedInitialPrompt = true
-                println("Initial response: ${initialChoice.content}")
+                Logger.debug("Initial response: ${initialChoice.content}")
                 msgs.add(initialChoice)
                 initialChoice.content
             } else {
-                throw Exception("Failed to get initial response")
+                val errorMessage = "Failed to get initial response"
+                Logger.error(errorMessage)
+                throw Exception(errorMessage)
             }
         }
     }
 
     private suspend fun generateResponse(): String {
+        Logger.debug("Generating response")
         val request = createChatCompletionRequest(msgs, 1024)
 
         return retryPolicy.execute {
@@ -149,19 +176,21 @@ object OpenAIService {
             val choice = response.choices.firstOrNull()?.message
             if (choice != null) {
                 val npcResponse = choice.content
-                println("npcResponse: $npcResponse")
+                Logger.debug("NPC Response: $npcResponse")
                 msgs.add(choice)
                 npcResponse
             } else {
-                throw Exception("Failed to generate response")
+                val errorMessage = "Failed to generate response"
+                Logger.error(errorMessage)
+                throw Exception(errorMessage)
             }
         }
     }
 
     fun resetConversation() {
+        Logger.debug("Resetting conversation")
         msgs.clear()
         hasInjectedInitialPrompt = false
-        println("Conversation reset: message history cleared and initial prompt flag reset")
+        Logger.debug("Conversation reset: message history cleared and initial prompt flag reset")
     }
-
 }

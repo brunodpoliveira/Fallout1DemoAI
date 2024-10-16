@@ -18,17 +18,16 @@ and the Fools. The objective is to solve the gang problem plaguing the town.
 The game can be completed in multiple ways:
 1. **Side with the Crypts**: Help them wipe out the Fools and maintain control of the generator.
 2. **Side with the Fools**: Help them wipe out the Crypts and transfer the rule of the town to them.
-3. **Neutral Approach**: Wait for the gangs to wipe each other out, then finish off the survivors.
-4. **Destruction**: Use wire cutters to destroy the generator, dooming everyone in the town.
+3. **Side with the Civilians**: Negotiate a peace-deal or wipe out both gangs to return the city to the townsfolk
+4. **Neutral Approach**: Wait for the gangs to wipe each other out, then finish off the survivors.
+5. **Destruction**: Use wire cutters to destroy the generator, dooming everyone in the town.
 
 ### Controls
 #TODO virtualcontroller explanations
-- Player movement and interaction are placeholders: Arrow keys for directions and Z/West Button (the bottom
-  button) for entering dialog with a NPC
+- Player movement and interaction are placeholders: Arrow keys for directions and Z/West Button (the bottom button) for entering dialog with a NPC
 - Press the Return/North Button (the middle button) to pause the game. You can access the Notes from this menu
 - Press Space/South Button (the top button) to attack and interact with objects, such as chests
-- In the Dialog Window, interact with NPCs by typing messages on the Dialog Window, and click the buttons
-  with your mouse to interact with them.
+- In the Dialog Window, interact with NPCs by typing messages on the Dialog Window, and click the buttons  with your mouse to interact with them.
 - Hold and drag the right mouse button in the Dialog message window to scroll through it
 - Future versions will include voice input and additional controls.
 
@@ -43,11 +42,8 @@ This will compile and run the game with hot-reloading enabled, allowing you to s
 restarting the application.
 
 ### Game Setup
-1. Initialization: The game initializes with the player character, NPCs with predefined bios, and a
-   general context for the wider story.
-2. Context Injection: At the start of a conversation, the NPC's biography and current game context are
-   sent to the AI service, and updated at the end of it; this will ensure that the story and the NPCs evolve
-   organically as the player interacts with them and the world.
+1. Initialization: The game initializes with the player character, NPCs with predefined bios, and a general context for the wider story.
+2. Context Injection: At the start of a conversation, the NPC's biography and current game context are sent to the AI service, and updated at the end of it; this will ensure that the story and the NPCs evolve organically as the player interacts with them and the world.
 3. Dynamic Conversations: Based on player input, the NPC responses are generated dynamically.
 
 ## Development Setup
@@ -157,40 +153,42 @@ Linux:
 
 If you have Java installed, you should be able to run it. Check if Java is installed with:
 
+```
 java --version
+```
+
 If you see an error instead of the version number,
 install Java runtime environment using the following command:
 
+```
 sudo apt install default-jre
+```
 
 The first step is to open the file manager from the system menu and navigate to the jar
 file which you want to run.
 
 Then, right-click on the jar app and select Properties.
 From there, select Permissions and enable Allow executing file as program.
-That made the file executable.But you have yet to select which app it should use to run the jar files.
+That made the file executable. But you have yet to select which app it should use to run the jar files.
 
-To select an Application to start the jar files, again,
-click on the jar file and choose the second option Open with Other Application and
-choose the OpenJDK Java Runtime option That's it. Now, you can start the jar
-application like you do with any other files by pressing the Enter key.
+To select an Application to start the jar files, again, click on the jar file and choose the second option (Open with Other Application) and choose the OpenJDK Java Runtime option That's it. Now, you can start the jar application like you do with any other files by pressing the Enter key.
 
 Windows:
 
-To run a JAR file on Windows 10 or Windows 11, right-click it,
-then select Open With > Java Platform SE Binary.
+To run a JAR file on Windows 10 or Windows 11, right-click it, then select Open With > Java Platform SE Binary.
 
 Step 1: Check if Java Is Already Installed on Your PC
 
-It's worth checking if you have Java installed on your PC already, and if so, you can skip
-the Step 2 below.
+It's worth checking if you have Java installed on your PC already, and if so, you can skip the Step 2 below.
 
 To do that, first, launch the Run box by pressing Windows+R.
 Then, Type "cmd" in the Run box and press Enter.
 
 In the Command Prompt window that opens, type the following command and press Enter:
 
+```
 java -version
+```
 
 If you have Java installed on your PC, you'll see your Java version.
 In this case, skip Step 2 below and head straight to Step 3.
@@ -201,8 +199,7 @@ then you don't have Java installed. In this case, install the utility using Step
 
 Step 2: Download and Install Java on Windows
 
-You can download and install Java for free on your Windows PC. To do that, first, launch a web
-browser on your computer and open the Java download web page.
+You can download and install Java for free on your Windows PC. To do that, first, launch a web browser on your computer and open the Java download web page.
 There, in the "Windows" section, download the appropriate file for your machine.
 
 When Java is downloaded, double-click the installer file to install the utility on your PC.
@@ -210,21 +207,15 @@ Then, restart your Windows 10 or Windows 11 PC.
 
 Step 3: Run JAR Files on Windows 10 or Windows 11
 
-Now that you have Java installed, you're ready to launch your JAR files. To do that,
-first, open a File Explorer window and locate your JAR file. Find the JAR file. Right-click
-your JAR file and choose Open With > Java(TM) Platform SE Binary. If you don't see that
-option in the "Open With" menu, then click "Choose Another App" and you'll see the option.
+Now that you have Java installed, you're ready to launch your JAR files. To do that, first, open a File Explorer window and locate your JAR file. Find the JAR file. Right-click your JAR file and choose Open With > Java(TM) Platform SE Binary. If you don't see that option in the "Open With" menu, then click "Choose Another App" and you'll see the option.
 Select Open With > Java(TM) Platform SE Binary from the menu. Your JAR file will launch,
 and you'll be able to interact with it. And that's all there is to it.
 
 Mac:
 
 1: Install Java if you don't already have it on your computer.
-You cannot open JAR files without Java installed. To install it, go to https://www.java.com/br/download/
-and click Download below the most current version of Java, then open it when the download is complete.
-To install a non-Apple file on your Mac, first click OK on the prompt, then on the Apple menu,
-click System Preferences, click Security & Privacy, unlock the menu, click Open Anyway next to the file
-name. file and then select Open when prompted.
+You cannot open JAR files without Java installed. To install it, go to https://www.java.com/br/download/ and click Download below the most current version of Java, then open it when the download is complete.
+To install a non-Apple file on your Mac, first click OK on the prompt, then on the Apple menu, click System Preferences, click Security & Privacy, unlock the menu, click Open Anyway next to the file name file and then select Open when prompted.
 
 2: Try double-clicking the JAR file to open it.
 Try double-clicking the JAR file to open it. If it is an executable and Java is installed,
@@ -235,19 +226,25 @@ If the JAR file displays an error when double-clicking it, you may need to updat
 To do it: Open the Apple Mac Apple menu. Click System Preferences. Click Java. Click on the Update
 tab. Click Update now.
 
-To attach a debugger in a .jar running outside a dev environment, run the below command:
+### Attach a Debugger
+To attach a debugger in a .jar running outside an IDE or equivalent development environment, run the below command:
+
 ```
 java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005 -jar Fallout1DemoAI-all.jar
 ```
+
+Or:
+go to config.properties and set korge.env to development. You can also activate or deactivate the creation of a log file as well by setting logging.file.enabled to true
+
 ## TODO
 - turn on collision between each NPC in order for them to interact with one another(setup for convos w each other)
 - augment action model in order to allow NPCs to find and collide with one another so they may converse,interact,etc
 - (allow them to interact w each other and do planning a la AI Town, having separate daily routines or
-  conversations among themselves; zero-player games should be possible after this feature is put in place)
+conversations among themselves; zero-player games should be possible after this feature is put in place)
+allow dialog not triggered by the player, find a way for each NPC to send a beacon with their coordinates so that another NPC can lock onto it, and find a way for them to switch items between one another
 - Add a zero-player mode
 - Add capabilities to the Director so that it may dynamically alter events, item placement, etc a la the
   director in Left 4 Dead
-- add logging system, with multiple lvls: debug, warn, error and env detection: dev and prod
 - Implement a simple combat system:
 - Finally, code the Turn-based system: you can move, or you can shoot, NPCs move and shoot first, that's it.
   if an NPC and player are in range and no walls or obstacles are in between, that's a hit.
@@ -258,14 +255,14 @@ java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005 -jar Fal
   manage that, you'd essentially need states for "normal" and "combat", and transitions between them 
   based on conditions like enemy presence and intent. The rules for movement and shooting during combat 
   can be defined within the combat state, keeping things relatively straightforward
-- Use custom Fallout-themed sprites
-- Design an actual UI that has to solve the UI bugs, esp in Dialog Window (ex: player can click the other btns of 
-the controls)
+- Design an actual UI that has to solve the UI bugs, esp in Dialog Window (ex: player can click the other btns of the controls)
 - Second round of optimization/ SOLID Clean Code refactor
-- Create a custom level in the latest version of LDTK, if possible, w custom graphics
+- Create a custom level in the latest version of LDTK, if possible, w custom graphics (that includes custom sprites)
+- Fix the timeout issues with the OpenAI API; add timeout warning to the user
 - Add sound effects to the demo
 - Add music to the demo
 - Add voice input for player interactions, allowing speech-to-text functionality.
+- Agnostic re LLM: the user can pick from a local OLLAMA or an online OpenAI
 - Web deployment, so that it can be played in the itch.io webpage w/out needing a download
 - Train a custom LLM following the template below (this will be another project)
 
@@ -291,6 +288,7 @@ Do what George RR Martin did for Elden Ring and write a bunch of lore to flesh o
 “you are this NPC. I want you to generate more conversations for this NPC.”
 
 (6) Then you take all of that synthetic NPC dialogue and use it fine-tune your small, GPT-2 sized LLM.
+P.S: you can use a specialized in story-telling model for the director, another specialized in dialogue for the NPCs
 
 which premise?
 (Off-Broadway)
