@@ -38,7 +38,7 @@ class GameOverScene : Scene() {
             "interrogation" -> sceneContainer.changeTo<OtherDemoLevel>()
             // Add more levels as needed
             else -> {
-                println("Unknown level: ${GameState.currentLevel}. Defaulting to scrapheap.")
+                Logger.warn("Unknown level: ${GameState.currentLevel}. Defaulting to scrapheap.")
                 sceneContainer.changeTo<DemoLevel>()
             }
         }

@@ -32,38 +32,72 @@ class ActionModel(
         actionType: String,
         actor: String,
         subject: String,
-        location: String?,
+        target: String?,
         item: String?
     ) {
         when (actionType) {
-            "MOVE" -> handleMoveAction(actor, location)
+            "MOVE" -> {
+                if (subject == "NPC") {
+                    handleMoveAction(actor, null, target)
+                } else {
+                    handleMoveAction(actor, subject, null)
+                }
+            }
             "GIVE" -> handleGiveAction(actor, subject, item)
             "TAKE" -> handleTakeAction(actor, subject, item)
+            "INTERACT" -> handleInteractAction(actor, subject)
             else -> {
-                println("Unknown action type: $actionType")
+                Logger.debug("Unknown action type: $actionType")
             }
         }
     }
 
-    private fun handleMoveAction(actor: String, location: String?) {
-        if (location != null) {
-            val entityToMove = npcManager.npcs[actor]
-            entityToMove?.let { entity ->
-                coroutineScope.launch {
-                    val movement = Movement(entity, npcManager.pathfinding)
+    private fun handleMoveAction(actor: String, location: String?, targetNPC: String?) {
+        val entityToMove = npcManager.npcs[actor]
+        if (entityToMove == null) {
+            Logger.debug("Unable to move $actor: NPC not found")
+            return
+        }
+
+        coroutineScope.launch {
+            val movement = MovementRegistry.getMovementForNPC(actor)
+            if (movement == null) {
+                Logger.debug("Unable to move $actor: Movement not registered")
+                return@launch
+            }
+
+            when {
+                targetNPC != null -> {
+                    val targetEntity = npcManager.npcs[targetNPC]
+                    if (targetEntity != null) {
+                        Logger.debug("$actor is moving towards $targetNPC")
+                        movement.moveToPoint(targetEntity.x, targetEntity.y)
+                    } else {
+                        Logger.debug("Unable to move $actor towards $targetNPC: Target NPC not found")
+                    }
+                }
+                location != null -> {
+                    Logger.debug("$actor is moving to sector $location")
                     movement.moveToSector(ldtk, location, grid)
+                }
+                else -> {
+                    Logger.debug("Unable to move $actor: No valid destination provided")
                 }
             }
         }
+    }
+
+    private fun handleInteractAction(actor: String, subject: String) {
+        Logger.debug("$actor is interacting with $subject")
     }
 
     private fun handleGiveAction(giver: String, receiver: String, item: String?) {
         if (item != null) {
             if (giver != "Player" && receiver == "Player") {
                 playerInventory.addItem(item)
-                println("$giver gave $item to the player")
+                Logger.debug("$giver gave $item to the player")
             } else {
-                println("$giver gave $item to $receiver")
+                Logger.debug("$giver gave $item to $receiver")
             }
         }
     }
@@ -73,10 +107,10 @@ class ActionModel(
             if (taker == "Player" && giver != "Player") {
                 if (playerInventory.getItems().contains(item)) {
                     playerInventory.removeItem(item)
-                    println("Player took $item from $giver")
+                    Logger.debug("Player took $item from $giver")
                 }
             } else {
-                println("$taker took $item from $giver")
+                Logger.debug("$taker took $item from $giver")
             }
         }
     }
@@ -95,8 +129,10 @@ class ActionModel(
         val conspirators = mutableListOf<String>()
 
         // Regex patterns to match action phrases and metadata
-        val movePattern = "(?i)(I'll|I will|Let's|We'll|We will) meet at the (\\w+)".toRegex()
-        val givePattern = "(?i)(I'll|I will) give you (my |the )?(\\w+)".toRegex()
+        val movePattern = "(?i)(I'll|I will|Let's|We'll|We will) (move towards|go to) (\\w+)'s location".toRegex()
+        val interactPattern = "(?i)(I'll|I will) (initiate a conversation|talk|speak|interact) with (\\w+)".toRegex()
+        val givePattern = "(?i)(I'll|I will) give (\\w+) to (\\w+)".toRegex()
+        val takePattern = "(?i)(I'll|I will) take (\\w+) from (\\w+)".toRegex()
         val secretPattern = "(?i)SECRET".toRegex()
         val conspiracyPattern = "(?i)CONSPIRACY - \\[(.*?)]".toRegex()
 
@@ -104,13 +140,25 @@ class ActionModel(
             when {
                 movePattern.containsMatchIn(line) -> {
                     val match = movePattern.find(line)
-                    val location = match?.groupValues?.get(2)?.uppercase()
-                    actionList.add("MOVE,$npcName,Player,$location,")
+                    val targetNPC = match?.groupValues?.get(3)
+                    actionList.add("MOVE,$npcName,NPC,$targetNPC")
+                }
+                interactPattern.containsMatchIn(line) -> {
+                    val match = interactPattern.find(line)
+                    val targetNPC = match?.groupValues?.get(3)
+                    actionList.add("INTERACT,$npcName,$targetNPC")
                 }
                 givePattern.containsMatchIn(line) -> {
                     val match = givePattern.find(line)
-                    val item = match?.groupValues?.get(3)?.uppercase()
-                    actionList.add("GIVE,$npcName,Player,$item")
+                    val item = match?.groupValues?.get(2)
+                    val receiver = match?.groupValues?.get(3)
+                    actionList.add("GIVE,$npcName,$receiver,$item")
+                }
+                takePattern.containsMatchIn(line) -> {
+                    val match = takePattern.find(line)
+                    val item = match?.groupValues?.get(2)
+                    val giver = match?.groupValues?.get(3)
+                    actionList.add("TAKE,$npcName,$giver,$item")
                 }
                 secretPattern.containsMatchIn(line) -> {
                     isSecret = true
@@ -120,7 +168,7 @@ class ActionModel(
                     conspirators.addAll(match?.groupValues?.get(1)?.split(",")?.map { it.trim() } ?: emptyList())
                 }
                 else -> {
-                    println("No matching action found in line: $line")
+                    Logger.debug("No matching action found in line: $line")
                 }
             }
         }

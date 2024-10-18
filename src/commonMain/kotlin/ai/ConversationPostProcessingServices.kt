@@ -31,7 +31,7 @@ class ConversationPostProcessingServices (private val actionModel: ActionModel) 
             response.choices.firstOrNull()?.message?.content
                 ?: "Unable to generate self-reflection."
         } catch (e: Exception) {
-            println("Error in npcSelfReflect: ${e.message}")
+            Logger.debug("Error in npcSelfReflect: ${e.message}")
             "Error occurred during self-reflection."
         }
     }
@@ -128,7 +128,7 @@ class ConversationPostProcessingServices (private val actionModel: ActionModel) 
             val response = sendMessage(chatCompletionRequest)
             response.choices.firstOrNull()?.message?.content ?: npcBio
         } catch (e: Exception) {
-            println("Error in editNPCBio: ${e.message}")
+            Logger.error("Error in editNPCBio: ${e.message}")
             npcBio // Return the original bio if there's an error
         }
     }
@@ -147,7 +147,7 @@ class ConversationPostProcessingServices (private val actionModel: ActionModel) 
         val metadata = parts.getOrNull(1)?.trim() ?: ""
 
         val metadataInfo = checkForSecretsOrConspiracy(metadata).getOrElse {
-            println("Warning: ${it.message}")
+            Logger.warn("Warning: ${it.message}")
             MetadataInfo(
                 hasSecret = false,
                 hasConspiracy = false,
@@ -159,10 +159,10 @@ class ConversationPostProcessingServices (private val actionModel: ActionModel) 
         val (actionModels, _, _) = actionModel.processNPCReflection(actions, npcName)
 
         Director.updateContext(summary)
-        println("Summary: $summary")
-        println("Self-Reflection: $selfReflection")
-        println("Next Steps: $actions")
-        println("Metadata Info: $metadataInfo")
+        Logger.debug("Summary: $summary")
+        Logger.debug("Self-Reflection: $selfReflection")
+        Logger.debug("Next Steps: $actions")
+        Logger.debug("Metadata Info: $metadataInfo")
 
         if (Director.getDifficulty() == "easy") {
             TextDisplayManager.directorText?.text = "Director:\n${Director.getContext()}"
@@ -170,7 +170,7 @@ class ConversationPostProcessingServices (private val actionModel: ActionModel) 
             TextDisplayManager.nextStepsText?.text = "Next Steps:\n$actions"
         }
 
-        actionModels.forEach { action -> println("Action Model: $action") }
+        actionModels.forEach { action -> Logger.debug("Action Model: $action") }
         val updatedBio = editNPCBio(summary, npcBio)
 
         return Triple(updatedBio, metadataInfo, actionModels)

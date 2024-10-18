@@ -93,7 +93,7 @@ class DialogWindow : Container() {
         this.currentNpcBio = npcBio
         this.factionName = factionName
 
-        println("Showing dialog for $npcName with bio: $currentNpcBio")
+        Logger.debug("Showing dialog for $npcName with bio: $currentNpcBio")
         container.addChild(this)
         showLoadingScreen(reversing = false)
     }

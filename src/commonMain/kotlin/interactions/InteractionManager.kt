@@ -67,7 +67,7 @@ class InteractionManager(
 
         // Display a message to the player
         gameWindow.alert("Found $items")
-        println("Found items: $items")
+        Logger.debug("Found items: $items")
     }
 
     fun handleWestButton() {
@@ -93,7 +93,7 @@ class InteractionManager(
     }
 
     fun handleNorthButton() {
-        println("InteractionManager: North button pressed, showing pause menu")
+        Logger.debug("InteractionManager: North button pressed, showing pause menu")
         uiManager.showPauseMenu()
     }
 

@@ -4,6 +4,7 @@ import ai.*
 import korlibs.korge.view.*
 import kotlinx.coroutines.*
 import ui.*
+import utils.*
 
 class DialogManager(
     private val coroutineScope: CoroutineScope,
@@ -42,15 +43,15 @@ class DialogManager(
                     metadataInfo.hasSecret,
                     metadataInfo.conspirators
                 )
-                println("Updated Bio: $updatedBio")
-                println("Is Secret Plan: ${metadataInfo.hasSecret}")
-                println("Has Conspiracy: ${metadataInfo.hasConspiracy}")
-                println("Conspirators: ${metadataInfo.conspirators}")
-                println("Secret Participants: ${metadataInfo.secretParticipants}")
-                println("Actions: $actions")
+                Logger.debug("Updated Bio: $updatedBio")
+                Logger.debug("Is Secret Plan: ${metadataInfo.hasSecret}")
+                Logger.debug("Has Conspiracy: ${metadataInfo.hasConspiracy}")
+                Logger.debug("Conspirators: ${metadataInfo.conspirators}")
+                Logger.debug("Secret Participants: ${metadataInfo.secretParticipants}")
+                Logger.debug("Actions: $actions")
                 actionModel.processNPCReflection(actions.joinToString("\n"), npcName)
             } catch (e: Exception) {
-                println("Error in conversation post-processing: ${e.message}")
+                Logger.error("Error in conversation post-processing: ${e.message}")
                 // Handle the error appropriately
             }
         }

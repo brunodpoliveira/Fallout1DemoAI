@@ -1,10 +1,46 @@
 package scenes
 
 import ai.*
+import utils.*
 
 class DemoLevel : BaseLevelScene("scrapheap") {
     override suspend fun initializeLevelSpecifics() {
-        debugTestActionModel()
+       // debugTestActionModel()
+        debugTestNPCInteractions()
+    }
+
+    private fun debugTestNPCInteractions() {
+        val npcReflection = """
+        # Self-Reflection:
+        I've noticed Baka nearby and want to talk to them about the current situation in Scrapheap.
+
+        # Next Steps:
+        1. I'll move towards Baka's location.
+        2. Once I'm close enough, I'll initiate a conversation with Baka.
+
+        # Metadata:
+        """
+
+        Logger.debug("Starting debug test of NPC interactions...")
+
+        val (actions, _, _) = sceneLoader.actionModel.processNPCReflection(npcReflection, "Rayze")
+
+        Logger.debug("Detected Actions:")
+        actions.forEach { Logger.debug(it) }
+
+        // Additional debug information
+        Logger.debug("\nCurrent NPC Positions:")
+        sceneLoader.npcManager.npcs.forEach { (name, npc) ->
+            Logger.debug("$name: (${npc.x}, ${npc.y})")
+        }
+
+        Logger.debug("\nNearby NPCs for Rayze:")
+        val nearbyNPCs = sceneLoader.npcManager.getNearbyNPCs("Rayze", 100.0)
+        nearbyNPCs.forEach { (name, pos) ->
+            Logger.debug("$name: (${pos.x}, ${pos.y})")
+        }
+
+        Logger.debug("Debug test of NPC interactions completed.")
     }
 
     private fun debugTestActionModel() {
@@ -35,21 +71,21 @@ class DemoLevel : BaseLevelScene("scrapheap") {
         CONSPIRACY - [Rayze]
         """
 
-        println("Starting debug test of action model...")
+        Logger.debug("Starting debug test of action model...")
 
         val (actions, isSecret, conspirators) = sceneLoader.actionModel.processNPCReflection(npcReflection, "Robot")
 
-        println("Detected Actions:")
-        actions.forEach { println(it) }
-        println("\nIs Secret: $isSecret")
-        println("Conspirators: $conspirators")
+        Logger.debug("Detected Actions:")
+        actions.forEach { Logger.debug(it) }
+        Logger.debug("\nIs Secret: $isSecret")
+        Logger.debug("Conspirators: $conspirators")
 
         // Additional debug information
-        println("\nCurrent Director Context:")
-        println(Director.getContext())
-        println("\nRobot NPC Context:")
-        println(Director.getNPCContext("Robot"))
+        Logger.debug("\nCurrent Director Context:")
+        Logger.debug(Director.getContext())
+        Logger.debug("\nRobot NPC Context:")
+        Logger.debug(Director.getNPCContext("Robot"))
 
-        println("Debug test of action model completed.")
+        Logger.debug("Debug test of action model completed.")
     }
 }
