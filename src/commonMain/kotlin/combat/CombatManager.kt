@@ -2,32 +2,30 @@ package combat
 
 import korlibs.event.*
 import korlibs.image.format.*
+import korlibs.io.async.*
 import korlibs.io.file.std.*
 import korlibs.korge.input.*
 import korlibs.korge.ldtk.view.*
+import korlibs.korge.scene.*
 import korlibs.korge.view.*
-import korlibs.math.geom.*
+import scenes.*
 import ui.*
 import utils.*
-import kotlin.collections.List
-import kotlin.collections.MutableList
-import kotlin.collections.first
-import kotlin.collections.forEach
-import kotlin.collections.isNotEmpty
-import kotlin.collections.map
-import kotlin.collections.mutableMapOf
-import kotlin.collections.set
 
 class CombatManager(
     private val enemies: MutableList<LDTKEntityView>,
     private val playerInventory: Inventory,
     private val playerStats: EntityStats,
     private val playerStatsUI: PlayerStatsUI?,
-    private val container: Container
+    private val container: Container,
+    private val scene: Scene
 ) {
     private var targetingReticule: Image? = null
     private var currentTargetIndex: Int = 0
     private val entityStatsMap = mutableMapOf<String, EntityStats>()
+    private var currentTurnIndex: Int = 0
+    private var playerMovedSteps = 0
+    private var playerActionTaken = false
 
     suspend fun initialize() {
         // Load targeting reticule
@@ -41,54 +39,63 @@ class CombatManager(
             entityStatsMap[enemyId] = readEntityStats(enemy)
         }
 
-        // Setup key events for selecting targets
-        // TODO: Adjust controls when in combat vs "on foot"
+        // Setup key events for player actions (move or shoot)
         container.keys {
-            down(Key.LEFT) { selectPreviousTarget() }
-            down(Key.RIGHT) { selectNextTarget() }
+            down(Key.SPACE) { handlePlayerShoot() }
+            down(Key.LEFT) { handlePlayerMove(-1, 0) }
+            down(Key.RIGHT) { handlePlayerMove(1, 0) }
+            down(Key.UP) { handlePlayerMove(0, -1) }
+            down(Key.DOWN) { handlePlayerMove(0, 1) }
         }
+
+        startTurn()
     }
 
-    private fun updateTargetReticule() {
-        if (enemies.isNotEmpty()) {
-            val scaledPositions = scaleEntityPositions(enemies.map { PointInt(it.x.toInt(), it.y.toInt()) })
-            val targetPosition = scaledPositions[currentTargetIndex]
-            targetingReticule?.visible = true
-            targetingReticule?.xy(targetPosition.x.toDouble(), targetPosition.y.toDouble())
+    private fun startTurn() {
+        playerActionTaken = false
+        playerMovedSteps = 0
+        if (currentTurnIndex == 0) {
+            println("Player's turn!")
         } else {
-            targetingReticule?.visible = false
+            println("Enemy's turn!")
+            handleEnemyTurn()
         }
     }
 
-    private fun selectNextTarget() {
-        if (enemies.isNotEmpty()) {
-            currentTargetIndex = (currentTargetIndex + 1) % enemies.size
-            updateTargetReticule()
-        }
+    private fun endTurn() {
+        currentTurnIndex = (currentTurnIndex + 1) % (enemies.size + 1) // Alterna entre jogador e inimigos
+        startTurn()
     }
 
-    private fun selectPreviousTarget() {
-        if (enemies.isNotEmpty()) {
-            currentTargetIndex = (currentTargetIndex - 1 + enemies.size) % enemies.size
-            updateTargetReticule()
-        }
-    }
+    private fun handleEnemyTurn() {
+        // Lógica simples de movimentação ou ataque de inimigos
+        val enemy = enemies[currentTurnIndex - 1] // O índice 0 é o jogador
+        println("Enemy ${enemy.fieldsByName["Name"]?.value} is attacking!")
 
-    private fun scaleEntityPositions(entities: List<PointInt>): List<PointInt> {
-        val mapScale = 2
-        return entities.map { point ->
-            val x = (point.x * mapScale) - 10
-            val y = (point.y * mapScale) - 45
-            PointInt(x, y)
+        // Simulação de ataque ou movimento
+        if (Math.random() < 0.5) {
+            println("Enemy attacked the player!")
+            playerStats.hp -= 1
+            playerStatsUI?.update(playerStats.hp, playerStats.ammo)
+            checkPlayerHealth();
+        } else {
+            println("Enemy moved closer.")
         }
-    }
 
+        endTurn()
+    }
 
     fun handlePlayerShoot() {
+        if (playerActionTaken) {
+            println("You have already taken an action this turn.")
+            return
+        }
+
         if (!playerInventory.getItems().contains("GUN") || playerStats.ammo <= 0) {
             println("Cannot shoot! Ensure player has both gun and ammo.")
             return
         }
+
         if (enemies.isEmpty()) {
             println("No targets available.")
             return
@@ -112,14 +119,31 @@ class CombatManager(
                     println("Target has been killed and removed from the scene")
                 } else {
                     entityStatsMap[enemyId] = targetStats
-                    // TODO Indicate damage via visual effect
                 }
             } else {
                 println("Missed!")
             }
             playerStatsUI?.update(playerStats.hp, playerStats.ammo)
+            playerActionTaken = true
+            endTurn()
         } else {
             println("Out of ammo!")
+        }
+    }
+
+    private fun handlePlayerMove(dx: Int, dy: Int) {
+        if (playerMovedSteps >= 2 || playerActionTaken) {
+            println("You can't move anymore this turn.")
+            return
+        }
+
+        // Movimenta o jogador, ajustando sua posição
+        println("Player moved $dx, $dy")
+        playerMovedSteps++
+
+        if (playerMovedSteps >= 2) {
+            playerActionTaken = true
+            endTurn()
         }
     }
 
@@ -127,17 +151,16 @@ class CombatManager(
         playerStatsUI?.update(playerStats.hp, newAmmo)
     }
 
-    fun chooseTarget(): LDTKEntityView? {
-        if (enemies.isNotEmpty()) {
-            val target = enemies.first()
-            targetingReticule?.visible = true
-            targetingReticule?.xy(target.x, target.y)
-            return target
-        } else {
-            targetingReticule?.visible = false
-            return null
+    private fun checkPlayerHealth() {
+        if (playerStats.hp <= 0) {
+            triggerGameOver()
         }
     }
 
-    // Optionally, add other combat-related methods here
+    private fun triggerGameOver() {
+        println("Game Over! Player has been defeated.")
+        scene.launchImmediately {
+            scene.sceneContainer.changeTo<GameOverScene>("GameOver", scene)
+        }
+    }
 }

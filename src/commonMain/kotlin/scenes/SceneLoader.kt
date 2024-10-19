@@ -163,7 +163,8 @@ class SceneLoader(
             playerInventory = playerInventory,
             playerStats = playerStats,
             playerStatsUI = uiManager.playerStatsUI,
-            container = container
+            container = container,
+            scene = scene
         )
         combatManager.initialize()
 

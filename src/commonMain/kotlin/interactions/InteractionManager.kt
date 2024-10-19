@@ -57,9 +57,9 @@ class InteractionManager(
 
         // Replace the chest's view to show it as opened
         entityView.replaceView(
-            Image(entityView.tileset!!.unextrudedTileSet!!.base.sliceWithSize(
+            Image(entityView.tileset?.unextrudedTileSet?.base?.sliceWithSize(
                 openChestTile.x, openChestTile.y, openChestTile.w, openChestTile.h
-            )).also {
+            ) ?: return).also {
                 it.smoothing = false
                 it.anchor(entityView.anchor)
             }
@@ -86,10 +86,8 @@ class InteractionManager(
         val playerView = (player.view as ImageDataView2)
         playerView.animation = "attack"
         playerState = "attack"
-        val target = combatManager.chooseTarget()
-        if (target != null) {
-            combatManager.handlePlayerShoot()
-        }
+        // Em vez de `chooseTarget`, utilizamos diretamente o sistema de targeting já implementado
+        combatManager.handlePlayerShoot()  // O `handlePlayerShoot` já cuida da lógica de seleção de alvo
     }
 
     fun handleNorthButton() {
