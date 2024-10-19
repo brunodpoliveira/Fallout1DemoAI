@@ -9,7 +9,7 @@ class Pathfinding(private val map: BooleanArray2) {
     private val astar: AStar = AStar(map)
 
     fun findPath(start: Point, end: Point): List<Point> {
-        //println("Attempting to find path from $start to $end")
+        //Logger.debug("Attempting to find path from $start to $end")
         val startInt = clampPoint(start.toInt())
         val endInt = clampPoint(end.toInt())
         val pointsInt = astar.find(startInt.x, startInt.y, endInt.x, endInt.y, findClosest = true, diagonals = true)
@@ -33,7 +33,7 @@ class Pathfinding(private val map: BooleanArray2) {
         val maxY = if (map.height > 0) map.height - 1 else 0
         val clampedX = point.x.coerceIn(0, maxX)
         val clampedY = point.y.coerceIn(0, maxY)
-        //println("Clamping point $point to ($clampedX, $clampedY)")
+        //Logger.debug("Clamping point $point to ($clampedX, $clampedY)")
         return PointInt(clampedX, clampedY)
     }
 }

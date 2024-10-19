@@ -92,12 +92,12 @@ class CombatManager(
         }
 
         if (!playerInventory.getItems().contains("GUN") || playerStats.ammo <= 0) {
-            println("Cannot shoot! Ensure player has both gun and ammo.")
+            Logger.warn("Cannot shoot! Ensure player has both gun and ammo.")
             return
         }
 
         if (enemies.isEmpty()) {
-            println("No targets available.")
+            Logger.debug("No targets available.")
             return
         }
 
@@ -111,23 +111,23 @@ class CombatManager(
             val hitChance = 0.8 // 80% hit chance
             if (Math.random() < hitChance) {
                 targetStats.hp -= 20
-                println("Hit! ${target.fieldsByName["Name"]?.value} HP: ${targetStats.hp}")
+                Logger.debug("Hit! ${target.fieldsByName["Name"]?.value} HP: ${targetStats.hp}")
                 if (targetStats.hp <= 0) {
                     target.removeFromParent()
                     enemies.remove(target)
                     entityStatsMap.remove(enemyId)
-                    println("Target has been killed and removed from the scene")
+                    Logger.debug("Target has been killed and removed from the scene")
                 } else {
                     entityStatsMap[enemyId] = targetStats
                 }
             } else {
-                println("Missed!")
+                Logger.debug("Missed!")
             }
             playerStatsUI?.update(playerStats.hp, playerStats.ammo)
             playerActionTaken = true
             endTurn()
         } else {
-            println("Out of ammo!")
+            Logger.debug("Out of ammo!")
         }
     }
 

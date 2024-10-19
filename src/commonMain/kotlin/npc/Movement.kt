@@ -10,7 +10,10 @@ import utils.*
 import kotlin.random.*
 
 class Movement(private val character: View,
-               private val pathfinding: Pathfinding,) {
+               private val pathfinding: Pathfinding,
+               private val npcName: String,
+               private val broadcastLocation: (String, Point) -> Unit
+) {
     private val speed = 50.0 // pixels per second
 
     suspend fun moveToPoint(targetX: Double, targetY: Double) {
@@ -38,7 +41,7 @@ class Movement(private val character: View,
         val path = pathfinding.findPath(character.pos, target)
 
         if (path.isEmpty()) {
-            println("No path found to $target")
+            Logger.warn("No path found to $target")
             return
         }
 
@@ -70,6 +73,7 @@ class Movement(private val character: View,
                     remainingDistance -= moveDistance
                 }
                 character.zIndex = character.y
+                broadcastLocation(npcName, character.pos)
                 delay(deltaTime)
             }
             currentIndex++
@@ -88,7 +92,7 @@ class Movement(private val character: View,
         val gWidth = grid.width
         val gHeight = grid.height
 
-        println("Attempting to move to sector: $sectorName")
+        Logger.debug("Attempting to move to sector: $sectorName")
 
         val targetIntGridValue = sectorMap[sectorName]
             ?: throw IllegalArgumentException("Sector $sectorName is not defined in sectorMap")
@@ -156,7 +160,7 @@ class Movement(private val character: View,
 
             // Scale the coordinates by the tile size
             val scaledCoords = Point(targetCoords.x * tileWidth, targetCoords.y * tileHeight)
-            println("Found sector $sectorName and picked random position $scaledCoords")
+            Logger.debug("Found sector $sectorName and picked random position $scaledCoords")
 
             moveAlongPath(scaledCoords)
         }

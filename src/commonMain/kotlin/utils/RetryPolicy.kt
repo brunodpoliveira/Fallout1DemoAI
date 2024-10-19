@@ -14,7 +14,7 @@ class RetryPolicy(
             try {
                 return withTimeout(currentTimeout * 1000L) { block() }
             } catch (e: Exception) {
-                println("Attempt ${attempt + 1} failed: ${e.message}")
+                Logger.warn("Attempt ${attempt + 1} failed: ${e.message}")
                 if (attempt == maxAttempts - 2) throw e
                 delay(calculateBackoff(attempt))
                 currentTimeout = (currentTimeout * 2).coerceAtMost(maxTimeout)

@@ -14,7 +14,7 @@ class Inventory {
     fun consumePotion(potion: String, playerStats: EntityStats, updateHealthUI: (Int) -> Unit) {
         if (potion == "Red_potion") {
             playerStats.hp += 10
-            println("Consumed potion: increase hp by 10")
+            Logger.debug("Consumed potion: increase hp by 10")
             updateHealthUI(playerStats.hp)
         }
     }
@@ -35,6 +35,6 @@ class Inventory {
     fun addAmmo(amount: Int, playerStats: EntityStats, updateAmmoUI: (Int) -> Unit) {
         playerStats.ammo += amount
         updateAmmoUI(playerStats.ammo)
-        println("Added $amount ammo. Total ammo: ${playerStats.ammo}")
+        Logger.debug("Added $amount ammo. Total ammo: ${playerStats.ammo}")
     }
 }

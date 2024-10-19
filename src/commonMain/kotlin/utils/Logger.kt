@@ -50,7 +50,7 @@ object Logger {
                 }
             }
         } catch (e: Exception) {
-            println("Error loading config.properties: ${e.message}")
+            error("Error loading config.properties: ${e.message}")
         }
         return props
     }

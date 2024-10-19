@@ -236,12 +236,76 @@ java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005 -jar Fal
 Or:
 go to config.properties and set korge.env to development. You can also activate or deactivate the creation of a log file as well by setting logging.file.enabled to true
 
-## TODO
-- turn on collision between each NPC in order for them to interact with one another(setup for convos w each other)
+## TODO 
+------------
+Doing:
 - augment action model in order to allow NPCs to find and collide with one another so they may converse,interact,etc
 - (allow them to interact w each other and do planning a la AI Town, having separate daily routines or
 conversations among themselves; zero-player games should be possible after this feature is put in place)
 allow dialog not triggered by the player, find a way for each NPC to send a beacon with their coordinates so that another NPC can lock onto it, and find a way for them to switch items between one another
+Plan:
+  You're right to approach this thoughtfully before diving into implementation. Let's break down the requirements and consider the components we'd need to make NPCs interact autonomously:
+
+NPC Awareness:
+
+NPCs need a way to be aware of other NPCs in their vicinity.
+This could be implemented through a "perception" system or by querying nearby entities periodically.
+
+Decision-Making:
+
+NPCs need logic to decide when to initiate interactions with other NPCs.
+This could be based on factors like proximity, relationship status, current goals, etc.
+
+Pathfinding:
+
+NPCs need to be able to navigate to other NPCs they wish to interact with.
+The existing pathfinding system might need to be updated to handle NPC-to-NPC movement.
+
+Interaction System:
+
+A system to manage NPC-NPC dialogues and interactions.
+This would likely be similar to the player-NPC dialogue system, but without player input.
+
+AI Planning:
+
+NPCs need goals and the ability to plan actions to achieve those goals.
+This could involve creating daily routines or responding to dynamic events in the game world.
+
+Event Broadcasting:
+
+A system for NPCs to broadcast their location or status to other NPCs.
+This could be implemented as a "beacon" system as suggested.
+
+Item Exchange:
+
+A mechanism for NPCs to transfer items between each other.
+This would involve updating the inventory systems to work with NPC-NPC interactions.
+
+Scheduling:
+
+A system to manage when NPCs should perform certain actions or interactions.
+This could be time-based or event-driven.
+
+State Management:
+
+NPCs need to keep track of their current state (e.g., idle, moving, interacting) and transition between states.
+
+Conflict Resolution:
+
+A system to handle cases where multiple NPCs want to interact with the same NPC simultaneously.
+
+Performance Considerations:
+
+Optimize the system to handle multiple NPCs acting autonomously without significant performance impact.
+
+To implement this, we'd likely need to modify or extend several existing components:
+
+NPCManager: To handle NPC-NPC interactions and awareness.
+Movement: To allow NPCs to move towards each other. (Done)
+ActionModel: To incorporate NPC-NPC actions and planning.
+DialogManager: To handle NPC-NPC conversations.
+Director: To orchestrate overall NPC behaviors and events.
+-----------
 - Add a zero-player mode
 - Add capabilities to the Director so that it may dynamically alter events, item placement, etc a la the
   director in Left 4 Dead
@@ -255,10 +319,10 @@ allow dialog not triggered by the player, find a way for each NPC to send a beac
   manage that, you'd essentially need states for "normal" and "combat", and transitions between them 
   based on conditions like enemy presence and intent. The rules for movement and shooting during combat 
   can be defined within the combat state, keeping things relatively straightforward
-- Design an actual UI that has to solve the UI bugs, esp in Dialog Window (ex: player can click the other btns of the controls)
+- turn on collision for NPCs in order for them to interact with one another, and collide w walls, obstacles, etc
+- Design an actual UI that has to solve the UI bugs, esp in Dialog Window (ex: player can click the other btns of the controls,add timeout warning to the user,update automap constantly, etc)
 - Second round of optimization/ SOLID Clean Code refactor
 - Create a custom level in the latest version of LDTK, if possible, w custom graphics (that includes custom sprites)
-- Fix the timeout issues with the OpenAI API; add timeout warning to the user
 - Add sound effects to the demo
 - Add music to the demo
 - Add voice input for player interactions, allowing speech-to-text functionality.
@@ -299,6 +363,7 @@ Definitely a recipe for drama and chaos. You'd have to navigate egos, conflictin
 and artistic visions. It could lead to some fascinating storylines and character conflicts.
 
 Illegal Possesion
+westworld, but the park is this theme. so have workers, ceo, etc. too
 satanism/mystic themed. modern day setting. 
 AI Town, but edgy. navigating supernatural phenomena in small town/demonic stuff 
 a la Alan Wake, The Faculty impostor stuff too?
