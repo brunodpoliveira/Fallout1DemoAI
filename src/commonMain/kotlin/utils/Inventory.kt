@@ -1,14 +1,15 @@
 package utils
 
-class Inventory {
+class Inventory(val owner: String) {
     private val items = mutableListOf<String>()
+
+    fun hasItem(item: String): Boolean = item in items
+
+    fun getItems(): List<String> = items.toList()
 
     fun addItem(item: String) {
         items.add(item)
-    }
-
-    fun getItems(): List<String> {
-        return items
+        Logger.debug("$owner added $item to their inventory")
     }
 
     fun consumePotion(potion: String, playerStats: EntityStats, updateHealthUI: (Int) -> Unit) {
@@ -19,8 +20,12 @@ class Inventory {
         }
     }
 
-    fun removeItem(item: String) {
-        items.remove(item)
+    fun removeItem(item: String): Boolean {
+        val removed = items.remove(item)
+        if (removed) {
+            Logger.debug("$owner removed $item from their inventory")
+        }
+        return removed
     }
 
     fun useAmmo(playerStats: EntityStats, updateAmmoUI: (Int) -> Unit): Boolean {

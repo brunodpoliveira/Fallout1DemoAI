@@ -28,6 +28,7 @@ class NPCManager(
     private val npcPositions = mutableMapOf<String, Point>()
     private val npcStats: MutableMap<String, EntityStats> = mutableMapOf()
     var pathfinding: Pathfinding = Pathfinding(mapManager.generateMap(levelView))
+    private val npcInventories = mutableMapOf<String, Inventory>()
 
     private fun broadcastLocation(npcName: String, position: Point) {
         npcPositions[npcName] = position
@@ -51,6 +52,7 @@ class NPCManager(
         }.forEach { entity ->
             val npcName = entity.fieldsByName["Name"]!!.valueString
             val npcSprite = npcSprites[npcName]
+            npcInventories[npcName.toString()] = npcName?.let { Inventory(it) }!!
             if (npcSprite != null) {
                 initializeNPC(entity, npcSprite)
             } else {
@@ -61,6 +63,8 @@ class NPCManager(
         initNPCMovements()
         startUpdatingBVH()
     }
+
+    fun getNPCInventory(npcName: String): Inventory? = npcInventories[npcName]
 
     private fun initializeNPC(entity: LDTKEntityView, npcSprite: ImageDataContainer) {
         val npcName = entity.fieldsByName["Name"]!!.valueString.toString()

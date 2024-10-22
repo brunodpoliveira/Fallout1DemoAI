@@ -19,8 +19,8 @@ object OpenAIService {
     val msgs: MutableList<ChatMessage> = ArrayList()
     private var hasInjectedInitialPrompt = false
     private const val MAX_RETRIES = 3
-    private const val INITIAL_TIMEOUT = 30 // seconds
-    private const val MAX_TIMEOUT = 120 // seconds
+    private const val INITIAL_TIMEOUT = 15 // seconds
+    private const val MAX_TIMEOUT = 60 // seconds
 
     private val retryPolicy = RetryPolicy(
         maxAttempts = MAX_RETRIES,
