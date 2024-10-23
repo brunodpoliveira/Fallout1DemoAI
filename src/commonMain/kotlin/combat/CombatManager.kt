@@ -11,6 +11,8 @@ import korlibs.korge.view.*
 import scenes.*
 import ui.*
 import utils.*
+import korlibs.time.seconds
+import kotlinx.coroutines.delay
 
 class CombatManager(
     private val enemies: MutableList<LDTKEntityView>,
@@ -18,7 +20,8 @@ class CombatManager(
     private val playerStats: EntityStats,
     private val playerStatsUI: PlayerStatsUI?,
     private val container: Container,
-    private val scene: Scene
+    private val scene: Scene,
+    private val sceneView: View
 ) {
     private var targetingReticule: Image? = null
     private var currentTargetIndex: Int = 0
@@ -51,10 +54,12 @@ class CombatManager(
         startTurn()
     }
 
-    private fun startTurn() {
+    private suspend fun startTurn() {
         playerActionTaken = false
         playerMovedSteps = 0
-        if (currentTurnIndex == 0) {
+
+        // Verifica de quem é o turno
+        if (isPlayerTurn()) {
             println("Player's turn!")
         } else {
             println("Enemy's turn!")
@@ -62,22 +67,24 @@ class CombatManager(
         }
     }
 
-    private fun endTurn() {
-        currentTurnIndex = (currentTurnIndex + 1) % (enemies.size + 1) // Alterna entre jogador e inimigos
+    private suspend fun endTurn() {
+        currentTurnIndex = (currentTurnIndex + 1) % (enemies.size + 1)
+
+        // Adiciona um intervalo de 5 segundos entre as ações
+        delay(5.seconds)
+
         startTurn()
     }
 
-    private fun handleEnemyTurn() {
-        // Lógica simples de movimentação ou ataque de inimigos
+    private suspend fun handleEnemyTurn() {
         val enemy = enemies[currentTurnIndex - 1] // O índice 0 é o jogador
         println("Enemy ${enemy.fieldsByName["Name"]?.value} is attacking!")
 
-        // Simulação de ataque ou movimento
         if (Math.random() < 0.5) {
             println("Enemy attacked the player!")
             playerStats.hp -= 1
             playerStatsUI?.update(playerStats.hp, playerStats.ammo)
-            checkPlayerHealth();
+            checkPlayerHealth()
         } else {
             println("Enemy moved closer.")
         }
@@ -85,7 +92,16 @@ class CombatManager(
         endTurn()
     }
 
-    fun handlePlayerShoot() {
+    fun isPlayerTurn(): Boolean {
+        return currentTurnIndex == 0
+    }
+
+    suspend fun handlePlayerShoot() {
+        if (!isPlayerTurn()) {
+            println("It's not your turn!")
+            return
+        }
+
         if (playerActionTaken) {
             println("You have already taken an action this turn.")
             return
@@ -105,7 +121,6 @@ class CombatManager(
         val enemyId = target.entity.identifier + target.pos.toString()
         val targetStats = entityStatsMap[enemyId] ?: readEntityStats(target)
 
-        // Ammo consumption
         val ammoConsumed = playerInventory.useAmmo(playerStats) { newAmmo -> updateAmmoUI(newAmmo) }
         if (ammoConsumed) {
             val hitChance = 0.8 // 80% hit chance
@@ -131,20 +146,45 @@ class CombatManager(
         }
     }
 
-    private fun handlePlayerMove(dx: Int, dy: Int) {
-        if (playerMovedSteps >= 2 || playerActionTaken) {
+    private suspend fun handlePlayerMove(dx: Int, dy: Int) {
+        // Verificar se é o turno do jogador
+        if (!isPlayerTurn()) {
+            println("It's not your turn!")
+            return
+        }
+
+        // Verifica se o jogador já fez a ação ou já moveu o número máximo de passos
+        if (playerMovedSteps > 2 || playerActionTaken) {
             println("You can't move anymore this turn.")
             return
         }
 
-        // Movimenta o jogador, ajustando sua posição
+        if (!canPlayerMove(dx, dy)) {
+            println("Player can't move to this position.")
+            return
+        }
+
+        playerStats.position = playerStats.position.copy(
+            x = playerStats.position.x + dx,
+            y = playerStats.position.y + dy
+        )
+
         println("Player moved $dx, $dy")
+
         playerMovedSteps++
 
         if (playerMovedSteps >= 2) {
             playerActionTaken = true
-            endTurn()
+            endTurn() // Finaliza o turno se o jogador moveu o número máximo de passos
         }
+    }
+
+    private fun canPlayerMove(dx: Int, dy: Int): Boolean {
+        val newX = playerStats.position.x + dx
+        val newY = playerStats.position.y + dy
+
+        // Verifica se newX e newY estão dentro dos limites do sceneView
+        return newX in 0.0..sceneView.width && newY in 0.0..sceneView.height
     }
 
     fun updateAmmoUI(newAmmo: Int) {

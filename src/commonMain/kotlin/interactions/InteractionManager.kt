@@ -55,7 +55,6 @@ class InteractionManager(
             }
         }
 
-        // Replace the chest's view to show it as opened
         entityView.replaceView(
             Image(entityView.tileset?.unextrudedTileSet?.base?.sliceWithSize(
                 openChestTile.x, openChestTile.y, openChestTile.w, openChestTile.h
@@ -65,7 +64,6 @@ class InteractionManager(
             }
         )
 
-        // Display a message to the player
         gameWindow.alert("Found $items")
         Logger.debug("Found items: $items")
     }
@@ -82,12 +80,11 @@ class InteractionManager(
         }
     }
 
-    fun handleSouthButton() {
+    suspend fun handleSouthButton() {
         val playerView = (player.view as ImageDataView2)
         playerView.animation = "attack"
         playerState = "attack"
-        // Em vez de `chooseTarget`, utilizamos diretamente o sistema de targeting já implementado
-        combatManager.handlePlayerShoot()  // O `handlePlayerShoot` já cuida da lógica de seleção de alvo
+        combatManager.handlePlayerShoot()
     }
 
     fun handleNorthButton() {

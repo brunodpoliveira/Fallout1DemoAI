@@ -1,16 +1,22 @@
 package utils
 
 import korlibs.korge.ldtk.view.LDTKEntityView
+import korlibs.math.geom.*
 
 class EntityStats(
     var hp: Int,
-    var ammo: Int)
+    var ammo: Int,
+    var position: Point
+)
 
 fun readEntityStats(entityView: LDTKEntityView): EntityStats {
     val identifier = entityView.entity.identifier
     if (identifier !in listOf("Player", "Enemy")) {
-        return EntityStats(0,0)
+        return EntityStats(0, 0, Point.ZERO)
     }
+
+    // Pega a posição do player
+    val playerPosition = entityView.pos
 
     val hpEntity = entityView.fieldsByName.values.firstOrNull { it.identifier == "HP" }
     val ammoEntity = entityView.fieldsByName.values.firstOrNull { it.identifier == "Ammo" }
@@ -30,5 +36,5 @@ fun readEntityStats(entityView: LDTKEntityView): EntityStats {
         else -> null
     }
 
-    return EntityStats(hpField ?: 0, ammoField ?: 0)
+    return EntityStats(hpField ?: 0, ammoField ?: 0, playerPosition)
 }

@@ -14,9 +14,21 @@ class InputManager(
             container.setupVirtualController()
             setupButtonActions(
                 onAnyButton = { coroutineScope.launch { interactionManager.handleAnyButton() } },
-                onWestButton = { coroutineScope.launch { interactionManager.handleWestButton() } },
-                onSouthButton = { coroutineScope.launch { interactionManager.handleSouthButton() } },
-                onNorthButton = { coroutineScope.launch { interactionManager.handleNorthButton() } }
+                onWestButton = {
+                    if (controllerManager.combatManager.isPlayerTurn()) {
+                        coroutineScope.launch { interactionManager.handleWestButton() }
+                    }
+                },
+                onSouthButton = {
+                    if (controllerManager.combatManager.isPlayerTurn()) {
+                        coroutineScope.launch { interactionManager.handleSouthButton() }
+                    }
+                },
+                onNorthButton = {
+                    if (controllerManager.combatManager.isPlayerTurn()) {
+                        coroutineScope.launch { interactionManager.handleNorthButton() }
+                    }
+                }
             )
         }
     }

@@ -116,7 +116,7 @@ class SceneLoader(
             scene = scene,
             playerInventory = playerInventory,
             playerStats = playerStats,
-            playerStatsUI = null // PlayerStatsUI will be initialized in UIManager
+            playerStatsUI = null
         )
     }
 
@@ -164,7 +164,8 @@ class SceneLoader(
             playerStats = playerStats,
             playerStatsUI = uiManager.playerStatsUI,
             container = container,
-            scene = scene
+            scene = scene,
+            sceneView = levelView
         )
         combatManager.initialize()
 
@@ -195,7 +196,7 @@ class SceneLoader(
             uiManager = uiManager
         )
 
-        inputManager = InputManager(VirtualControllerManager(), interactionManager, scene)
+        inputManager = InputManager(VirtualControllerManager(combatManager), interactionManager, scene)
         inputManager.setupInput(container)
 
         playerMovementController = PlayerMovementController(
