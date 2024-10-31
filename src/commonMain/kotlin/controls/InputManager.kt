@@ -13,7 +13,9 @@ class InputManager(
         controllerManager.apply {
             container.setupVirtualController()
             setupButtonActions(
-                onAnyButton = { coroutineScope.launch { interactionManager.handleAnyButton() } },
+                onAnyButton = { coroutineScope.launch {
+                    interactionManager.handleAnyButton()
+                }},
                 onWestButton = {
                     if (controllerManager.combatManager.isPlayerTurn()) {
                         coroutineScope.launch { interactionManager.handleWestButton() }

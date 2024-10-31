@@ -70,9 +70,8 @@ class VirtualControllerManager(
     }
 
     fun getControllerInput(): Pair<Double, Double> {
-        // Bloqueia o movimento do jogador se não for o turno dele
         if (!combatManager.isPlayerTurn()) {
-            return Pair(0.0, 0.0)  // Retorna zero para impedir o movimento
+            return Pair(0.0, 0.0)
         }
         return Pair(virtualController.lx.toDouble(), virtualController.ly.toDouble())
     }

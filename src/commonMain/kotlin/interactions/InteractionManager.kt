@@ -40,11 +40,23 @@ class InteractionManager(
         }
     }
 
-    suspend fun handleAnyButton() {
-        val view = getInteractiveView() ?: return
-        val entityView = view as? LDTKEntityView ?: return
-        val doBlock = entityView.fieldsByName["Items"] ?: return
+    suspend fun handleAnyButton(){
+        val item = getItem();
+        if(!item){
+            combatManager.handlePlayerShoot();
+        }
+
+    }
+
+
+    suspend fun getItem(): Boolean {
+        val view = getInteractiveView() ?: return false
+        val entityView = view as? LDTKEntityView ?: return false
+        val doBlock = entityView.fieldsByName["Items"] ?: return false
         val items = doBlock.valueDyn.list.map { it.str }
+
+
+        if (items.isEmpty()) return false
 
         items.forEach { item ->
             playerInventory.addItem(item)
@@ -53,12 +65,15 @@ class InteractionManager(
                     combatManager.updateAmmoUI(newAmmo)
                 }
             }
+            if (item == "Gun") {
+                playerInventory.addItem("Gun")
+            }
         }
 
         entityView.replaceView(
             Image(entityView.tileset?.unextrudedTileSet?.base?.sliceWithSize(
                 openChestTile.x, openChestTile.y, openChestTile.w, openChestTile.h
-            ) ?: return).also {
+            ) ?: return false).also {
                 it.smoothing = false
                 it.anchor(entityView.anchor)
             }
@@ -66,6 +81,7 @@ class InteractionManager(
 
         gameWindow.alert("Found $items")
         Logger.debug("Found items: $items")
+        return true
     }
 
     fun handleWestButton() {
@@ -84,7 +100,6 @@ class InteractionManager(
         val playerView = (player.view as ImageDataView2)
         playerView.animation = "attack"
         playerState = "attack"
-        combatManager.handlePlayerShoot()
     }
 
     fun handleNorthButton() {

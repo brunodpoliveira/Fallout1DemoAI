@@ -1,6 +1,7 @@
 package combat
 
 import enum.*
+import interactions.*
 import korlibs.event.*
 import korlibs.image.format.*
 import korlibs.io.async.*
@@ -13,9 +14,7 @@ import scenes.*
 import ui.*
 import utils.*
 import korlibs.time.seconds
-import kotlinx.coroutines.delay
-
-
+import kotlinx.coroutines.*
 
 class CombatManager(
     private val enemies: MutableList<LDTKEntityView>,
@@ -30,42 +29,34 @@ class CombatManager(
     private var currentTargetIndex: Int = 0
     private val entityStatsMap = mutableMapOf<String, EntityStats>()
     private var currentTurnIndex: Int = 0
-    private var playerMovedSteps = 0
     private var playerActionTaken = false
+    private var playerTurnJob: Job? = null
 
-    // Define o modo inicial como EXPLORATION
     private var gameMode: GameModeEnum = GameModeEnum.EXPLORATION
 
     suspend fun initialize() {
-        // Carregar retículo de mira
         targetingReticule = container.image(texture = resourcesVfs["cross.png"].readBitmapSlice()) {
-            visible = false
+            visible = true
         }
 
-        // Inicializar status para inimigos
         enemies.forEach { enemy ->
             val enemyId = enemy.entity.identifier + enemy.pos.toString()
             entityStatsMap[enemyId] = readEntityStats(enemy)
         }
 
-        // Configurar eventos de tecla para ações do jogador (mover ou atirar)
         container.keys {
-            down(Key.SPACE) { handlePlayerShoot() }
             down(Key.LEFT) { handlePlayerMove(-1, 0) }
             down(Key.RIGHT) { handlePlayerMove(1, 0) }
             down(Key.UP) { handlePlayerMove(0, -1) }
             down(Key.DOWN) { handlePlayerMove(0, 1) }
         }
-
         startTurn()
     }
 
     private suspend fun startTurn() {
         if (gameMode == GameModeEnum.COMBAT) {
             playerActionTaken = false
-            playerMovedSteps = 0
 
-            // Verifica de quem é o turno
             if (isPlayerTurn()) {
                 println("Player's turn!")
             } else {
@@ -76,6 +67,7 @@ class CombatManager(
     }
 
     private suspend fun endTurn() {
+        playerTurnJob?.cancel()
         if (gameMode == GameModeEnum.COMBAT) {
             currentTurnIndex = (currentTurnIndex + 1) % (enemies.size + 1)
             delay(5.seconds)
@@ -85,7 +77,7 @@ class CombatManager(
 
     private suspend fun handleEnemyTurn() {
         if (gameMode == GameModeEnum.COMBAT) {
-            val enemy = enemies[currentTurnIndex - 1] // O índice 0 é o jogador
+            val enemy = enemies[currentTurnIndex - 1]
             println("Enemy ${enemy.fieldsByName["Name"]?.value} is attacking!")
 
             if (Math.random() < 0.5) {
@@ -105,67 +97,66 @@ class CombatManager(
         return currentTurnIndex == 0
     }
 
-    suspend fun handlePlayerShoot() {
-        // Verificar munição antes de mudar para o modo combate
-        if (!playerInventory.getItems().contains("GUN") || playerStats.ammo <= 0) {
-            println("Cannot shoot! Ensure player has both gun and ammo.")
+
+   suspend fun handlePlayerShoot() {
+        if (!isPlayerTurn() || playerActionTaken) {
+            println("It's not your turn or action already taken!")
             return
         }
 
-        // Se o modo é EXPLORATION e tem munição, inicia o modo COMBAT
-        if (gameMode == GameModeEnum.EXPLORATION) {
-            gameMode = GameModeEnum.COMBAT
-            println("Entering combat mode!")
-            currentTurnIndex = 0 // O jogador começa no primeiro turno
+        if (!playerInventory.getItems().contains("Gun")) {
+            println("Cannot shoot! Player does not have a gun.")
+            return
         }
 
+        if (playerStats.ammo <= 0) {
+            println("Cannot shoot! Out of ammo.")
+            return
+        }
+
+        if (!playerInventory.useAmmo(playerStats) { updateAmmoUI(it) }) {
+            println("Out of ammo!")
+            return
+        }
+
+        playerActionTaken = true
+        playerTurnJob?.cancel()
+
+        val target = enemies[currentTargetIndex]
+        val enemyId = target.entity.identifier + target.pos.toString()
+        val targetStats = entityStatsMap[enemyId] ?: readEntityStats(target)
+
+            if (gameMode == GameModeEnum.EXPLORATION) {
+                gameMode = GameModeEnum.COMBAT
+                println("Entering combat mode!")
+                currentTurnIndex = 0
+            }
+
+            targetStats.hp -= 20
+            println("Hit! ${target.fieldsByName["Name"]?.value} HP: ${targetStats.hp}")
+
+            if (targetStats.hp <= 0) {
+                target.removeFromParent()
+                enemies.remove(target)
+                entityStatsMap.remove(enemyId)
+                println("Target has been killed and removed from the scene")
+                if (enemies.isEmpty()) exitCombatMode()
+            } else {
+                entityStatsMap[enemyId] = targetStats
+            }
+
+
+        playerStatsUI?.update(playerStats.hp, playerStats.ammo)
+        endTurn()
+    }
+
+    private  fun handlePlayerMove(dx: Int, dy: Int) {
         if (gameMode == GameModeEnum.COMBAT && !isPlayerTurn()) {
             println("It's not your turn!")
             return
         }
 
         if (playerActionTaken) {
-            println("You have already taken an action this turn.")
-            return
-        }
-
-        val target = enemies[currentTargetIndex]
-        val enemyId = target.entity.identifier + target.pos.toString()
-        val targetStats = entityStatsMap[enemyId] ?: readEntityStats(target)
-
-        val ammoConsumed = playerInventory.useAmmo(playerStats) { newAmmo -> updateAmmoUI(newAmmo) }
-        if (ammoConsumed) {
-            val hitChance = 0.8 // 80% de chance de acerto
-            if (Math.random() < hitChance) {
-                targetStats.hp -= 20
-                println("Hit! ${target.fieldsByName["Name"]?.value} HP: ${targetStats.hp}")
-                if (targetStats.hp <= 0) {
-                    target.removeFromParent()
-                    enemies.remove(target)
-                    entityStatsMap.remove(enemyId)
-                    println("Target has been killed and removed from the scene")
-                    if (enemies.isEmpty()) exitCombatMode()
-                } else {
-                    entityStatsMap[enemyId] = targetStats
-                }
-            } else {
-                println("Missed!")
-            }
-            playerStatsUI?.update(playerStats.hp, playerStats.ammo)
-            playerActionTaken = true
-            endTurn()
-        } else {
-            println("Out of ammo!")
-        }
-    }
-
-    private suspend fun handlePlayerMove(dx: Int, dy: Int) {
-        if (gameMode == GameModeEnum.COMBAT && !isPlayerTurn()) {
-            println("It's not your turn!")
-            return
-        }
-
-        if (gameMode == GameModeEnum.COMBAT && (playerMovedSteps >= 2 || playerActionTaken)) {
             println("You can't move anymore this turn.")
             return
         }
@@ -181,14 +172,6 @@ class CombatManager(
         )
 
         println("Player moved $dx, $dy")
-
-        if (gameMode == GameModeEnum.COMBAT) {
-            playerMovedSteps++
-            if (playerMovedSteps >= 2) {
-                playerActionTaken = true
-                endTurn()
-            }
-        }
     }
 
     private fun canPlayerMove(dx: Int, dy: Int): Boolean {

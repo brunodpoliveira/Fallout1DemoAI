@@ -196,7 +196,11 @@ class SceneLoader(
             uiManager = uiManager
         )
 
-        inputManager = InputManager(VirtualControllerManager(combatManager), interactionManager, scene)
+        inputManager = InputManager(
+            controllerManager = VirtualControllerManager(combatManager),
+            interactionManager = interactionManager,
+            coroutineScope = scene
+        )
         inputManager.setupInput(container)
 
         playerMovementController = PlayerMovementController(
