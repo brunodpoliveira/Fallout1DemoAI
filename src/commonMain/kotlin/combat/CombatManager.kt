@@ -29,8 +29,10 @@ class CombatManager(
     private var currentTargetIndex: Int = 0
     private val entityStatsMap = mutableMapOf<String, EntityStats>()
     private var currentTurnIndex: Int = 0
-    private var playerActionTaken = false
     private var playerTurnJob: Job? = null
+    private var playerActionTaken = false
+    private var playerMoved = false
+
 
     private var gameMode: GameModeEnum = GameModeEnum.EXPLORATION
 
@@ -57,8 +59,11 @@ class CombatManager(
         if (gameMode == GameModeEnum.COMBAT) {
             playerActionTaken = false
 
+
             if (isPlayerTurn()) {
-                println("Player's turn!")
+                    delay(3.seconds)
+                    endTurn()
+
             } else {
                 println("Enemy's turn!")
                 handleEnemyTurn()
@@ -68,6 +73,7 @@ class CombatManager(
 
     private suspend fun endTurn() {
         playerTurnJob?.cancel()
+        playerMoved = false
         if (gameMode == GameModeEnum.COMBAT) {
             currentTurnIndex = (currentTurnIndex + 1) % (enemies.size + 1)
             delay(5.seconds)
@@ -99,10 +105,15 @@ class CombatManager(
 
 
    suspend fun handlePlayerShoot() {
-        if (!isPlayerTurn() || playerActionTaken) {
+        if (!isPlayerTurn() || playerActionTaken ) {
             println("It's not your turn or action already taken!")
             return
         }
+
+       if(gameMode == GameModeEnum.COMBAT && playerMoved ){
+           println("Cannot shoot, you're moved this turn")
+           return
+       }
 
         if (!playerInventory.getItems().contains("Gun")) {
             println("Cannot shoot! Player does not have a gun.")
@@ -156,14 +167,14 @@ class CombatManager(
             return
         }
 
-        if (playerActionTaken) {
-            println("You can't move anymore this turn.")
-            return
-        }
-
         if (!canPlayerMove(dx, dy)) {
             println("Player can't move to this position.")
             return
+        }
+
+        if((dx != 0 || dy != 0) && gameMode == GameModeEnum.COMBAT ){
+           playerMoved = true
+            println("player moved")
         }
 
         playerStats.position = playerStats.position.copy(
