@@ -7,14 +7,19 @@ import korlibs.image.format.*
 import korlibs.io.async.*
 import korlibs.io.file.std.*
 import korlibs.korge.input.*
+import korlibs.korge.ldtk.*
 import korlibs.korge.ldtk.view.*
 import korlibs.korge.scene.*
 import korlibs.korge.view.*
+import korlibs.korge.view.Container
+import korlibs.korge.view.Image
+import korlibs.math.geom.Point
 import scenes.*
 import ui.*
 import utils.*
 import korlibs.time.seconds
 import kotlinx.coroutines.*
+import kotlin.math.*
 
 class CombatManager(
     private val enemies: MutableList<LDTKEntityView>,
@@ -23,7 +28,8 @@ class CombatManager(
     private val playerStatsUI: PlayerStatsUI?,
     private val container: Container,
     private val scene: Scene,
-    private val sceneView: View
+    private val sceneView: View,
+    private val mapScale: Int = 2
 ) {
     private var targetingReticule: Image? = null
     private var currentTargetIndex: Int = 0
@@ -32,8 +38,6 @@ class CombatManager(
     private var playerTurnJob: Job? = null
     private var playerActionTaken = false
     private var playerMoved = false
-
-
     private var gameMode: GameModeEnum = GameModeEnum.EXPLORATION
 
     suspend fun initialize() {
@@ -55,17 +59,28 @@ class CombatManager(
         startTurn()
     }
 
+    private fun scaleEntityPosition(point: Point): Point {
+        return Point((point.x * mapScale) - 10, (point.y * mapScale) - 45)
+    }
+
+    private fun updateTargetingReticule() {
+        val closestEnemy = findClosestEnemy()
+        closestEnemy?.let {
+            currentTargetIndex = enemies.indexOf(it)
+            val scaledPosition = scaleEntityPosition(Point(it.x, it.y))
+            targetingReticule?.xy(scaledPosition.x, scaledPosition.y)
+        } ?: run {
+            targetingReticule?.visible = false
+        }
+    }
+
     private suspend fun startTurn() {
         if (gameMode == GameModeEnum.COMBAT) {
             playerActionTaken = false
-
-
             if (isPlayerTurn()) {
-                    delay(3.seconds)
-                    endTurn()
-
+                delay(3.seconds)
+                endTurn()
             } else {
-                println("Enemy's turn!")
                 handleEnemyTurn()
             }
         }
@@ -84,51 +99,21 @@ class CombatManager(
     private suspend fun handleEnemyTurn() {
         if (gameMode == GameModeEnum.COMBAT) {
             val enemy = enemies[currentTurnIndex - 1]
-            println("Enemy ${enemy.fieldsByName["Name"]?.value} is attacking!")
-
             if (Math.random() < 0.5) {
-                println("Enemy attacked the player!")
                 playerStats.hp -= 1
                 playerStatsUI?.update(playerStats.hp, playerStats.ammo)
                 checkPlayerHealth()
-            } else {
-                println("Enemy moved closer.")
             }
-
             endTurn()
         }
     }
 
-    fun isPlayerTurn(): Boolean {
-        return currentTurnIndex == 0
-    }
+    fun isPlayerTurn(): Boolean = currentTurnIndex == 0
 
-
-   suspend fun handlePlayerShoot() {
-        if (!isPlayerTurn() || playerActionTaken ) {
-            println("It's not your turn or action already taken!")
-            return
-        }
-
-       if(gameMode == GameModeEnum.COMBAT && playerMoved ){
-           println("Cannot shoot, you're moved this turn")
-           return
-       }
-
-        if (!playerInventory.getItems().contains("Gun")) {
-            println("Cannot shoot! Player does not have a gun.")
-            return
-        }
-
-        if (playerStats.ammo <= 0) {
-            println("Cannot shoot! Out of ammo.")
-            return
-        }
-
-        if (!playerInventory.useAmmo(playerStats) { updateAmmoUI(it) }) {
-            println("Out of ammo!")
-            return
-        }
+    suspend fun handlePlayerShoot() {
+        if (!isPlayerTurn() || playerActionTaken || (gameMode == GameModeEnum.COMBAT && playerMoved)) return
+        if (!playerInventory.getItems().contains("Gun") || playerStats.ammo <= 0) return
+        if (!playerInventory.useAmmo(playerStats) { updateAmmoUI(it) }) return
 
         playerActionTaken = true
         playerTurnJob?.cancel()
@@ -137,52 +122,65 @@ class CombatManager(
         val enemyId = target.entity.identifier + target.pos.toString()
         val targetStats = entityStatsMap[enemyId] ?: readEntityStats(target)
 
-            if (gameMode == GameModeEnum.EXPLORATION) {
-                gameMode = GameModeEnum.COMBAT
-                println("Entering combat mode!")
-                currentTurnIndex = 0
-            }
+        if (gameMode == GameModeEnum.EXPLORATION) {
+            gameMode = GameModeEnum.COMBAT
+            currentTurnIndex = 0
+        }
 
-            targetStats.hp -= 20
-            println("Hit! ${target.fieldsByName["Name"]?.value} HP: ${targetStats.hp}")
+        targetStats.hp -= 20
 
-            if (targetStats.hp <= 0) {
-                target.removeFromParent()
-                enemies.remove(target)
-                entityStatsMap.remove(enemyId)
-                println("Target has been killed and removed from the scene")
-                if (enemies.isEmpty()) exitCombatMode()
-            } else {
-                entityStatsMap[enemyId] = targetStats
-            }
-
+        if (targetStats.hp <= 0) {
+            target.removeFromParent()
+            enemies.remove(target)
+            entityStatsMap.remove(enemyId)
+            updateTargetingReticule()
+            if (enemies.isEmpty()) exitCombatMode()
+        } else {
+            entityStatsMap[enemyId] = targetStats
+        }
 
         playerStatsUI?.update(playerStats.hp, playerStats.ammo)
         endTurn()
     }
 
-    private  fun handlePlayerMove(dx: Int, dy: Int) {
-        if (gameMode == GameModeEnum.COMBAT && !isPlayerTurn()) {
-            println("It's not your turn!")
-            return
-        }
-
-        if (!canPlayerMove(dx, dy)) {
-            println("Player can't move to this position.")
-            return
-        }
-
-        if((dx != 0 || dy != 0) && gameMode == GameModeEnum.COMBAT ){
-           playerMoved = true
-            println("player moved")
-        }
+    private fun handlePlayerMove(dx: Int, dy: Int) {
+        if (gameMode == GameModeEnum.COMBAT && !isPlayerTurn()) return
+        if (!canPlayerMove(dx, dy)) return
 
         playerStats.position = playerStats.position.copy(
             x = playerStats.position.x + dx,
             y = playerStats.position.y + dy
         )
 
-        println("Player moved $dx, $dy")
+        updateTargetingReticule()
+
+        if (gameMode == GameModeEnum.COMBAT) {
+            playerMoved = true
+        }
+    }
+
+    private fun findClosestEnemy(): LDTKEntityView? {
+        var closestEnemy: LDTKEntityView? = null
+        var minDistance = Double.MAX_VALUE
+
+        for (enemy in enemies) {
+            val enemyPosition = Point(enemy.x, enemy.y)
+            val playerPosition = Point(playerStats.position.x, playerStats.position.y)
+            val distance = calculateDistance(playerPosition, enemyPosition)
+
+            if (distance < minDistance) {
+                minDistance = distance
+                closestEnemy = enemy
+            }
+        }
+
+        return closestEnemy
+    }
+
+    private fun calculateDistance(pos1: Point, pos2: Point): Double {
+        val dx = pos1.x - pos2.x
+        val dy = pos1.y - pos2.y
+        return sqrt(dx * dx + dy * dy)
     }
 
     private fun canPlayerMove(dx: Int, dy: Int): Boolean {
@@ -193,7 +191,6 @@ class CombatManager(
 
     private fun exitCombatMode() {
         gameMode = GameModeEnum.EXPLORATION
-        println("Combat ended. Returning to exploration mode.")
     }
 
     fun updateAmmoUI(newAmmo: Int) {
@@ -207,7 +204,6 @@ class CombatManager(
     }
 
     private fun triggerGameOver() {
-        println("Game Over! Player has been defeated.")
         scene.launchImmediately {
             scene.sceneContainer.changeTo<GameOverScene>("GameOver", scene)
         }
