@@ -11,7 +11,6 @@ import korlibs.render.*
 import kotlinx.coroutines.*
 import llm.*
 import utils.*
-import java.awt.*
 import java.io.*
 import java.net.*
 
@@ -75,9 +74,35 @@ class OptionsScene : Scene() {
                 }
             }
 
-            uiButton("Download OLLAMA") {
+            uiButton("One-Click Install for Local Play (Windows)") {
                 onClick {
-                    openOllamaDownloadPage()
+                    sceneContainer.launch {
+                        runOllamaScript("install_ollama.bat")
+                    }
+                }
+            }
+
+            uiButton("One-Click Install for Local Play (Linux/Mac)") {
+                onClick {
+                    sceneContainer.launch {
+                        runOllamaScript("install_ollama.sh")
+                    }
+                }
+            }
+
+            uiButton("One-Click Uninstall (Windows)") {
+                onClick {
+                    sceneContainer.launch {
+                        runOllamaScript("uninstall_ollama.bat")
+                    }
+                }
+            }
+
+            uiButton("One-Click Uninstall (Linux/Mac)") {
+                onClick {
+                    sceneContainer.launch {
+                        runOllamaScript("uninstall_ollama.sh")
+                    }
                 }
             }
 
@@ -106,6 +131,63 @@ class OptionsScene : Scene() {
         }
     }
 
+    private suspend fun runOllamaScript(scriptName: String) {
+        try {
+            val isWindows = System.getProperty("os.name").lowercase().contains("windows")
+            val setupDir = File("setup")
+            val scriptFile = File(setupDir, scriptName)
+
+            if (!scriptFile.exists()) {
+                views.gameWindow.alert("Setup script not found: $scriptName")
+                return
+            }
+
+            Logger.debug("Running script: ${scriptFile.absolutePath}")
+
+            val process = withContext(Dispatchers.IO) {
+                if (isWindows) {
+                    ProcessBuilder("cmd", "/c", scriptFile.absolutePath)
+                } else {
+                    // Make script executable
+                    withContext(Dispatchers.IO) {
+                        withContext(Dispatchers.IO) {
+                            ProcessBuilder("chmod", "+x", scriptFile.absolutePath).start()
+                        }.waitFor()
+                    }
+                    ProcessBuilder("bash", scriptFile.absolutePath)
+                }
+                    .redirectErrorStream(true)
+                    .directory(setupDir)
+                    .start()
+            }
+
+            // Show progress dialog
+            views.gameWindow.alert("Installing OLLAMA and required models. This may take several minutes. Check the terminal/command prompt for progress.")
+
+            // Read output
+            val reader = BufferedReader(InputStreamReader(process.inputStream))
+            var line: String?
+            while (withContext(Dispatchers.IO) {
+                    reader.readLine()
+                }.also { line = it } != null) {
+                Logger.debug("Script output: $line")
+            }
+
+            val exitCode = withContext(Dispatchers.IO) {
+                process.waitFor()
+            }
+            if (exitCode == 0) {
+                views.gameWindow.alert("Setup completed successfully!")
+            } else {
+                views.gameWindow.alert("Setup failed with exit code: $exitCode\nCheck logs for details.")
+            }
+
+        } catch (e: Exception) {
+            Logger.error("Failed to run script: ${e.message}")
+            views.gameWindow.alert("Failed to run setup script: ${e.message}")
+        }
+    }
+
     private fun isOllamaInstalled(): Boolean {
         return try {
             val ollamaHost = System.getProperty("ollama.host", "http://localhost:11434")
@@ -120,27 +202,18 @@ class OptionsScene : Scene() {
     private suspend fun showOllamaInstallPrompt() {
         views.gameWindow.confirm(
             """
-            OLLAMA needs to be installed and running on your system for local play. 
+            OLLAMA needs to be installed and running with the correct LLM models on your system for local play. 
 
-            After installation:
-            1. Run the OLLAMA application
-            2. Download and install the llama3 model (open terminal and run "ollama run llama3" command)
-            3. Return to the game
-            4. Select LLaMA (Local) again
+            To install them:
+            1. Download and install OLLAMA and the models 
+            (run the below script for the appropriate OS for automatic download and setup; 
+            read and follow SETUP_TUTORIAL.md if it fails for a step-by-step manual download tutorial)
+            
+            After Installation:
+            1. Return to the game
+            2. Select LLaMA (Local) again
             """.trimIndent()
         )
-    }
-
-    private fun openOllamaDownloadPage() {
-        try {
-            val url = "https://ollama.com/download"
-            if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
-                Desktop.getDesktop().browse(URI(url))
-                Logger.debug("Opened OLLAMA download page")
-            }
-        } catch (e: Exception) {
-            Logger.error("Failed to open OLLAMA download page: ${e.message}")
-        }
     }
 
     private suspend fun showLocalModeWarning() {
