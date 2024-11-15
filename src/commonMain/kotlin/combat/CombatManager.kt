@@ -1,18 +1,17 @@
 package combat
 
 import enum.*
-import interactions.*
 import korlibs.event.*
 import korlibs.image.format.*
 import korlibs.io.async.*
 import korlibs.io.file.std.*
 import korlibs.korge.input.*
-import korlibs.korge.ldtk.*
 import korlibs.korge.ldtk.view.*
 import korlibs.korge.scene.*
 import korlibs.korge.view.*
 import korlibs.korge.view.Container
 import korlibs.korge.view.Image
+import korlibs.korge.virtualcontroller.*
 import korlibs.math.geom.Point
 import scenes.*
 import ui.*
@@ -25,11 +24,12 @@ class CombatManager(
     private val enemies: MutableList<LDTKEntityView>,
     private val playerInventory: Inventory,
     private val playerStats: EntityStats,
+    private val player: LDTKEntityView,
     private val playerStatsUI: PlayerStatsUI?,
     private val container: Container,
     private val scene: Scene,
     private val sceneView: View,
-    private val mapScale: Int = 2
+    private val mapScale: Int = 2,
 ) {
     private var targetingReticule: Image? = null
     private var currentTargetIndex: Int = 0
@@ -45,19 +45,15 @@ class CombatManager(
             visible = true
         }
 
-        enemies.forEach { enemy ->
-            val enemyId = enemy.entity.identifier + enemy.pos.toString()
-            entityStatsMap[enemyId] = readEntityStats(enemy)
-        }
-
         container.keys {
-            down(Key.LEFT) { handlePlayerMove(-1, 0) }
-            down(Key.RIGHT) { handlePlayerMove(1, 0) }
-            down(Key.UP) { handlePlayerMove(0, -1) }
-            down(Key.DOWN) { handlePlayerMove(0, 1) }
+            down(Key.LEFT) { handlePlayerMove() }
+            down(Key.RIGHT) { handlePlayerMove() }
+            down(Key.UP) { handlePlayerMove() }
+            down(Key.DOWN) { handlePlayerMove() }
         }
         startTurn()
     }
+
 
     private fun scaleEntityPosition(point: Point): Point {
         return Point((point.x * mapScale) - 10, (point.y * mapScale) - 45)
@@ -95,7 +91,7 @@ class CombatManager(
             startTurn()
         }
     }
-
+    //@TODO: Implement enemy AI
     private suspend fun handleEnemyTurn() {
         if (gameMode == GameModeEnum.COMBAT) {
             val enemy = enemies[currentTurnIndex - 1]
@@ -143,14 +139,15 @@ class CombatManager(
         endTurn()
     }
 
-    private fun handlePlayerMove(dx: Int, dy: Int) {
+    private fun handlePlayerMove() {
         if (gameMode == GameModeEnum.COMBAT && !isPlayerTurn()) return
-        if (!canPlayerMove(dx, dy)) return
+        val currentPosition = player.pos
+        println(currentPosition)
+        val newPosition = Point(currentPosition.x , currentPosition.y )
+        if (!canPlayerMove(newPosition)) return
 
-        playerStats.position = playerStats.position.copy(
-            x = playerStats.position.x + dx,
-            y = playerStats.position.y + dy
-        )
+        playerStats.position = newPosition
+
 
         updateTargetingReticule()
 
@@ -183,10 +180,8 @@ class CombatManager(
         return sqrt(dx * dx + dy * dy)
     }
 
-    private fun canPlayerMove(dx: Int, dy: Int): Boolean {
-        val newX = playerStats.position.x + dx
-        val newY = playerStats.position.y + dy
-        return newX in 0.0..sceneView.width && newY in 0.0..sceneView.height
+    private fun canPlayerMove(newPosition: Point): Boolean {
+        return newPosition.x in 0.0..sceneView.width && newPosition.y in 0.0..sceneView.height
     }
 
     private fun exitCombatMode() {

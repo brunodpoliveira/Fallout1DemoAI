@@ -20,6 +20,7 @@ import korlibs.korge.scene.*
 import korlibs.korge.view.*
 import korlibs.korge.view.filter.*
 import korlibs.korge.view.mask.*
+import korlibs.korge.virtualcontroller.*
 import korlibs.math.geom.*
 import korlibs.math.geom.PointInt
 import maps.*
@@ -60,6 +61,9 @@ class SceneLoader(
     lateinit var dialogManager: DialogManager
     lateinit var interactionManager: InteractionManager
     lateinit var playerMovementController: PlayerMovementController
+
+
+
 
     suspend fun loadScene(): SceneLoader {
         loadResources()
@@ -121,7 +125,9 @@ class SceneLoader(
     }
 
     private suspend fun initializeCommonComponents() {
+
         mapManager = MapManager(ldtk, gridSize)
+
         val obstacleMap = mapManager.generateMap(levelView)
 
         npcManager = NPCManager(
@@ -162,6 +168,7 @@ class SceneLoader(
             enemies = entities.filter { it.entity.identifier == "Enemy" }.toMutableList(),
             playerInventory = playerInventory,
             playerStats = playerStats,
+            player = player,
             playerStatsUI = uiManager.playerStatsUI,
             container = container,
             scene = scene,

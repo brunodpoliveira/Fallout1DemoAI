@@ -15,7 +15,6 @@ fun readEntityStats(entityView: LDTKEntityView): EntityStats {
         return EntityStats(0, 0, Point.ZERO)
     }
 
-    // Pega a posição do player
     val playerPosition = entityView.pos
 
     val hpEntity = entityView.fieldsByName.values.firstOrNull { it.identifier == "HP" }
