@@ -1,6 +1,7 @@
 package ui
 
 import ai.*
+import dialog.*
 import korlibs.image.font.*
 import korlibs.korge.input.*
 import korlibs.korge.ldtk.view.*
@@ -18,10 +19,16 @@ class UIManager(
     val levelView: LDTKLevelView,
     val playerManager: PlayerManager,
     private val defaultFont: Font,
-    getPlayerPosition: PointInt
+    getPlayerPosition: PointInt,
+    private val interrogationManager: InterrogationManager,
+    private val dialogManager: DialogManager
 ) {
-    private val pauseMenu = PauseMenu(mapManager, levelView, getPlayerPosition, this)
-    private val interrogationWindow = InterrogationWindow()
+    private val pauseMenu = PauseMenu(mapManager, levelView, getPlayerPosition, this, dialogManager)
+    private val interrogationWindow = InterrogationWindow(
+        onAskQuestion = { npcName, question ->
+            interrogationManager.handleQuestion(npcName, question)
+        }
+    )
     var playerStatsUI: PlayerStatsUI? = null
     private var inventoryContainer: Container? = null
 

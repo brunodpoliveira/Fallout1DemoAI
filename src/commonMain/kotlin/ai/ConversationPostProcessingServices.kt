@@ -1,14 +1,13 @@
 package ai
 
-import ai.OpenAIService.createChatCompletionRequest
-import ai.OpenAIService.sendMessage
-import com.theokanning.openai.completion.chat.*
 import img.*
 import kotlinx.coroutines.*
 import utils.*
 
-class ConversationPostProcessingServices (private val actionModel: ActionModel) {
-
+class ConversationPostProcessingServices(
+    private val actionModel: ActionModel,
+    private val llmService: llm.LLMService
+) {
     private suspend fun npcSelfReflect(conversation: String): String = withContext(Dispatchers.Default) {
         val prompt = """
             Have the character below self-reflect and gauge their opinions and thoughts
@@ -20,16 +19,12 @@ class ConversationPostProcessingServices (private val actionModel: ActionModel) 
         """.trimIndent()
 
         val messages = listOf(
-            SystemMessage("You are an AI assistant helping with character self-reflection."),
-            UserMessage(prompt)
+            llm.SystemMessage("You are an AI assistant helping with character self-reflection."),
+            llm.UserMessage(prompt)
         )
 
-        val chatCompletionRequest = createChatCompletionRequest(messages, 1024)
-
         try {
-            val response = sendMessage(chatCompletionRequest)
-            response.choices.firstOrNull()?.message?.content
-                ?: "Unable to generate self-reflection."
+            llmService.chat(messages)
         } catch (e: Exception) {
             Logger.debug("Error in npcSelfReflect: ${e.message}")
             "Error occurred during self-reflection."
@@ -52,15 +47,11 @@ class ConversationPostProcessingServices (private val actionModel: ActionModel) 
         """.trimIndent()
 
         val messages = listOf(
-            SystemMessage("You are an AI assistant helping to determine a character's next actions."),
-            UserMessage(prompt)
+            llm.SystemMessage("You are an AI assistant helping to determine a character's next actions."),
+            llm.UserMessage(prompt)
         )
 
-        val chatCompletionRequest = createChatCompletionRequest(messages, 1024)
-
-        val response = sendMessage(chatCompletionRequest)
-        return response.choices.firstOrNull()?.message?.content
-            ?: selfReflection
+        return llmService.chat(messages)
     }
 
     private suspend fun summarizeConversation(conversation: String): String {
@@ -75,15 +66,11 @@ class ConversationPostProcessingServices (private val actionModel: ActionModel) 
         """.trimIndent()
 
         val messages = listOf(
-            SystemMessage("You are an AI assistant tasked with summarizing conversations."),
-            UserMessage(prompt)
+            llm.SystemMessage("You are an AI assistant tasked with summarizing conversations."),
+            llm.UserMessage(prompt)
         )
 
-        val chatCompletionRequest = createChatCompletionRequest(messages, 1024)
-
-        val response = sendMessage(chatCompletionRequest)
-        return response.choices.firstOrNull()?.message?.content
-            ?: conversation
+        return llmService.chat(messages)
     }
 
     private fun checkForSecretsOrConspiracy(metadata: String): Result<MetadataInfo> {
@@ -118,15 +105,12 @@ class ConversationPostProcessingServices (private val actionModel: ActionModel) 
         """.trimIndent()
 
         val messages = listOf(
-            SystemMessage("You are an AI assistant responsible for updating character biographies."),
-            UserMessage(prompt)
+            llm.SystemMessage("You are an AI assistant responsible for updating character biographies."),
+            llm.UserMessage(prompt)
         )
 
-        val chatCompletionRequest = createChatCompletionRequest(messages, 1024)
-
         return try {
-            val response = sendMessage(chatCompletionRequest)
-            response.choices.firstOrNull()?.message?.content ?: npcBio
+            llmService.chat(messages)
         } catch (e: Exception) {
             Logger.error("Error in editNPCBio: ${e.message}")
             npcBio // Return the original bio if there's an error
@@ -158,12 +142,14 @@ class ConversationPostProcessingServices (private val actionModel: ActionModel) 
 
         val (actionModels, _, _) = actionModel.processNPCReflection(actions, npcName)
 
+        // Update Director context
         Director.updateContext(summary)
         Logger.debug("Summary: $summary")
         Logger.debug("Self-Reflection: $selfReflection")
         Logger.debug("Next Steps: $actions")
         Logger.debug("Metadata Info: $metadataInfo")
 
+        // Update Director UI if in easy mode
         if (Director.getDifficulty() == "easy") {
             TextDisplayManager.directorText?.text = "Director:\n${Director.getContext()}"
             TextDisplayManager.selfReflectionText?.text = "Self-Reflection:\n$selfReflection"

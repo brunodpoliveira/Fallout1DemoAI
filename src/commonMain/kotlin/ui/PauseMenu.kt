@@ -3,6 +3,7 @@ package ui
 import KR
 import img.TextDisplayManager
 import ai.*
+import dialog.*
 import korlibs.datastructure.*
 import korlibs.image.color.*
 import korlibs.image.font.*
@@ -16,16 +17,17 @@ import korlibs.korge.view.align.*
 import korlibs.math.geom.*
 import maps.*
 import scenes.*
-import ui.DialogWindow.Companion.isInDialog
 import utils.*
 
 class PauseMenu(private val mapManager: MapManager,
                 private  val levelView: LDTKLevelView,
                 private val getPlayerPosition: PointInt,
-                private val uiManager: UIManager) : Container() {
+                private val uiManager: UIManager,
+                private val dialogManager: DialogManager
+) : Container() {
 
     init {
-        if (!isInDialog) {
+        if (!dialogManager.isInDialog) {
             setupPauseMenu()
         }
     }

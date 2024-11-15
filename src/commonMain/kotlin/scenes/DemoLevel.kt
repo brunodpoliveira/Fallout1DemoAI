@@ -5,8 +5,10 @@ import utils.*
 
 class DemoLevel : BaseLevelScene("scrapheap") {
     override suspend fun initializeLevelSpecifics() {
-       // debugTestActionModel()
-        debugTestNPCInteractions()
+        //debugTestActionModel()
+        //debugTestNPCInteractions()
+        debugTestItemExchange()
+        //debugTestGiveAndTakeCommands()
     }
 
     private fun debugTestNPCInteractions() {
@@ -87,5 +89,108 @@ class DemoLevel : BaseLevelScene("scrapheap") {
         Logger.debug(Director.getNPCContext("Robot"))
 
         Logger.debug("Debug test of action model completed.")
+    }
+
+    private fun debugTestItemExchange() {
+        Logger.debug("Starting debug test of item exchange...")
+
+        sceneLoader.npcManager.getNPCInventory("Rayze")?.addItem("RED_POTION")
+
+        Logger.debug("\nInitial Inventories:")
+        logNPCInventories()
+
+        // Simulate Rayze's reflection
+        val rayzeReflection = """
+    # Self-Reflection:
+    I have acquired a valuable Red Potion that could be useful for Baka. As a gesture of goodwill, I should give it to them. This might help improve our relationship and potentially lead to future cooperation.
+
+    # Next Steps:
+    1. I'll move towards Baka's location to find her.
+    2. I'll give RED_POTION to Baka.
+    3. After giving the potion, I'll explain its properties and potential uses.
+
+    # Metadata:
+    """
+
+        Logger.debug("Processing Rayze's reflection...")
+        val (rayzeActions, rayzeIsSecret, rayzeConspirators) = sceneLoader.actionModel.processNPCReflection(rayzeReflection, "Rayze")
+
+        Logger.debug("Rayze's Actions:")
+        rayzeActions.forEach { Logger.debug(it) }
+        Logger.debug("Is Secret: $rayzeIsSecret")
+        Logger.debug("Conspirators: $rayzeConspirators")
+
+        // Log inventories after processing Rayze's reflection
+        Logger.debug("\nInventories after processing Rayze's reflection:")
+        logNPCInventories()
+
+        // Simulate Baka's reflection
+        val bakaReflection = """
+    # Self-Reflection:
+    Rayze has just given me a Red Potion. This is an unexpected but welcome gift. I should consider how best to use it and whether this changes my perception of Rayze and the Crypts.
+
+    # Next Steps:
+    1. I'll examine the RED_POTION to understand its properties.
+    2. I should thank Rayze for the gift to maintain good relations.
+    3. I'll consider how this potion might be used to benefit the Fools' cause.
+
+    # Metadata:
+    """
+
+        Logger.debug("\nProcessing Baka's reflection...")
+        val (bakaActions, bakaIsSecret, bakaConspirators) = sceneLoader.actionModel.processNPCReflection(bakaReflection, "Baka")
+
+        Logger.debug("Baka's Actions:")
+        bakaActions.forEach { Logger.debug(it) }
+        Logger.debug("Is Secret: $bakaIsSecret")
+        Logger.debug("Conspirators: $bakaConspirators")
+
+        // Log final inventories
+        Logger.debug("\nFinal Inventories:")
+        logNPCInventories()
+
+        // Additional debug information
+        Logger.debug("\nCurrent Director Context:")
+        Logger.debug(Director.getContext())
+        Logger.debug("\nRayze NPC Context:")
+        Logger.debug(Director.getNPCContext("Rayze"))
+        Logger.debug("\nBaka NPC Context:")
+        Logger.debug(Director.getNPCContext("Baka"))
+
+        Logger.debug("Debug test of item exchange completed.")
+    }
+
+    private fun debugTestGiveAndTakeCommands() {
+        Logger.debug("Starting debug test of GIVE and TAKE commands...")
+
+        // Setup initial inventories
+        sceneLoader.npcManager.getNPCInventory("Rayze")?.addItem("RED_POTION")
+        sceneLoader.npcManager.getNPCInventory("Baka")?.addItem("BLUE_POTION")
+
+        Logger.debug("Initial Inventories:")
+        logNPCInventories()
+
+        val giveAction = "GIVE,Rayze,Baka,RED_POTION"
+        Logger.debug("Executing GIVE action: $giveAction")
+        sceneLoader.actionModel.executeAction("GIVE", "Rayze", "Baka", null, "RED_POTION")
+
+        Logger.debug("Inventories after GIVE:")
+        logNPCInventories()
+
+        val takeAction = "TAKE,Rayze,Baka,BLUE_POTION"
+        Logger.debug("Executing TAKE action: $takeAction")
+        sceneLoader.actionModel.executeAction("TAKE", "Rayze", "Baka", null, "BLUE_POTION")
+
+        Logger.debug("Final Inventories:")
+        logNPCInventories()
+
+        Logger.debug("Debug test of GIVE and TAKE commands completed.")
+    }
+
+    private fun logNPCInventories() {
+        sceneLoader.npcManager.npcs.keys.forEach { npcName ->
+            val inventory = sceneLoader.npcManager.getNPCInventory(npcName)
+            Logger.debug("$npcName's inventory: ${inventory?.getItems()}")
+        }
     }
 }

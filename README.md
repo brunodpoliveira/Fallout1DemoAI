@@ -238,135 +238,56 @@ go to config.properties and set korge.env to development. You can also activate 
 
 ## TODO 
 ------------
-Doing:
-- augment action model in order to allow NPCs to find and collide with one another so they may converse,interact,etc
-- (allow them to interact w each other and do planning a la AI Town, having separate daily routines or
-conversations among themselves; zero-player games should be possible after this feature is put in place)
-allow dialog not triggered by the player, find a way for each NPC to send a beacon with their coordinates so that another NPC can lock onto it, and find a way for them to switch items between one another
-Plan:
-  You're right to approach this thoughtfully before diving into implementation. Let's break down the requirements and consider the components we'd need to make NPCs interact autonomously:
+1. Project Overview
+    - Augment action model for NPC-to-NPC interactions
+    - Enable autonomous NPC behavior (conversations, routines, interactions)
+    - Allow for zero-player game scenarios
 
-NPC Awareness:
+2. Key Components to Modify/Extend
+    - NPCManager: Handle NPC-NPC interactions and awareness
+    - ActionModel: Incorporate NPC-NPC actions and planning
+    - DialogManager: Handle NPC-NPC conversations
+    - Director: Orchestrate overall NPC behaviors and events
 
-NPCs need a way to be aware of other NPCs in their vicinity.
-This could be implemented through a "perception" system or by querying nearby entities periodically.
+3. Required Systems/Features
+   3.1 NPC Awareness
+   3.2 Decision-Making
+   3.3 Pathfinding
+   3.4 Interaction System
+   3.5 AI Planning
+   3.6 Event Broadcasting
+   3.7 Item Exchange
+   3.8 Scheduling
+   3.9 State Management
+   3.10 Conflict Resolution
 
-Decision-Making:
+4. Performance Considerations
+    - Optimize for multiple autonomous NPCs
 
-NPCs need logic to decide when to initiate interactions with other NPCs.
-This could be based on factors like proximity, relationship status, current goals, etc.
+5. Next Steps for Development
+    - Implement complex NPC-to-NPC interactions
+    - Develop NPC-to-NPC dialogue system
+    - Create scheduling system for NPC actions
+    - Implement item exchange mechanics (doing) --> Implement TAKE command testing
+    - Develop goal-driven NPC behavior
 
-Pathfinding:
+6. Key Files to Focus On
+    - ActionModel.kt
+    - NPCManager.kt
+    - Movement.kt
+    - NPC behavior and AI decision-making files
 
-NPCs need to be able to navigate to other NPCs they wish to interact with.
-The existing pathfinding system might need to be updated to handle NPC-to-NPC movement.
+7. Challenges to Address
+    - Dynamic event response and action interruption
+    - Managing multiple simultaneous NPC actions
+    - Balancing autonomy and performance
 
-Interaction System:
+8. Integration Points
+    - NPC interactions affecting game state and player experience
+    - Integrating with existing dialogue system
 
-A system to manage NPC-NPC dialogues and interactions.
-This would likely be similar to the player-NPC dialogue system, but without player input.
+9. Future Goals
+    - Implement advanced AI behavior (e.g., behavior trees, utility AI)
+    - Create NPC relationship and alliance system
 
-AI Planning:
-
-NPCs need goals and the ability to plan actions to achieve those goals.
-This could involve creating daily routines or responding to dynamic events in the game world.
-
-Event Broadcasting:
-
-A system for NPCs to broadcast their location or status to other NPCs.
-This could be implemented as a "beacon" system as suggested.
-
-Item Exchange:
-
-A mechanism for NPCs to transfer items between each other.
-This would involve updating the inventory systems to work with NPC-NPC interactions.
-
-Scheduling:
-
-A system to manage when NPCs should perform certain actions or interactions.
-This could be time-based or event-driven.
-
-State Management:
-
-NPCs need to keep track of their current state (e.g., idle, moving, interacting) and transition between states.
-
-Conflict Resolution:
-
-A system to handle cases where multiple NPCs want to interact with the same NPC simultaneously.
-
-Performance Considerations:
-
-Optimize the system to handle multiple NPCs acting autonomously without significant performance impact.
-
-To implement this, we'd likely need to modify or extend several existing components:
-
-NPCManager: To handle NPC-NPC interactions and awareness.
-Movement: To allow NPCs to move towards each other. (Done)
-ActionModel: To incorporate NPC-NPC actions and planning.
-DialogManager: To handle NPC-NPC conversations.
-Director: To orchestrate overall NPC behaviors and events.
 -----------
-- Add a zero-player mode
-- Add capabilities to the Director so that it may dynamically alter events, item placement, etc a la the
-  director in Left 4 Dead
-- Implement a simple combat system:
-- Finally, code the Turn-based system: you can move, or you can shoot, NPCs move and shoot first, that's it.
-  if an NPC and player are in range and no walls or obstacles are in between, that's a hit.
-  A state machine would allow you to manage different states, like exploration and combat, and define
-  transitions between them based on specific conditions or events. For example, when the debug combat
-  trigger is activated, it would signal the state machine to transition from the exploration state to the
-  combat state, and vice versa when combat ends. Suggestion of a state machine. For a state machine to 
-  manage that, you'd essentially need states for "normal" and "combat", and transitions between them 
-  based on conditions like enemy presence and intent. The rules for movement and shooting during combat 
-  can be defined within the combat state, keeping things relatively straightforward
-- turn on collision for NPCs in order for them to interact with one another, and collide w walls, obstacles, etc
-- Design an actual UI that has to solve the UI bugs, esp in Dialog Window (ex: player can click the other btns of the controls,add timeout warning to the user,update automap constantly, etc)
-- Second round of optimization/ SOLID Clean Code refactor
-- Create a custom level in the latest version of LDTK, if possible, w custom graphics (that includes custom sprites)
-- Add sound effects to the demo
-- Add music to the demo
-- Add voice input for player interactions, allowing speech-to-text functionality.
-- Agnostic re LLM: the user can pick from a local OLLAMA or an online OpenAI
-- Web deployment, so that it can be played in the itch.io webpage w/out needing a download
-- Train a custom LLM following the template below (this will be another project)
-
-TODO: Optimize our AI for RPG:
-The defensible business comes from optimizing the LLM for on-device performance.
-To do that, you need to know (1) the specs of the device’s RAM and
-(2) what other processes the device will be running.
-This would determine the hyperparameters for model dimensions.
-Like do you use a few 1024x1024 matrices or a bunch of 64x64 matrices.
-
-Then you would (3) filter a large dataset for data that’s relevant to the NPC dialogue.
-Train Fallout NPC dialogue on WWII documentaries.
-Train Elden Ring dialogue on high fantasy novels and mythology. Etc.
-You can use Llama 3.1 to filter a dataset like this, but you would have to call
-Llama 3.1 for every single piece of data in your dataset.
-Which means it would require a lot of GPU, but it wouldn’t be that expensive to run.
-Train a GPT-2 sized LLM on this data.
-
-Optional (4): hire authors to write extra dialogue and decision paths for your characters.
-Do what George RR Martin did for Elden Ring and write a bunch of lore to flesh out the universe.
-
-(5) Then you would take the dialogue written and give it to Llama 3.1 405B. You would say to Llama:
-“you are this NPC. I want you to generate more conversations for this NPC.”
-
-(6) Then you take all of that synthetic NPC dialogue and use it fine-tune your small, GPT-2 sized LLM.
-P.S: you can use a specialized in story-telling model for the director, another specialized in dialogue for the NPCs
-
-which premise?
-(Off-Broadway)
-A management simulation where you run a theater troupe, guiding actors and staff through rehearsals,
-performances, and interpersonal conflicts, with the ultimate goal of producing a hit show.
-It would require careful time management, resource allocation, and relationship-building.
-Definitely a recipe for drama and chaos. You'd have to navigate egos, conflicting personalities,
-and artistic visions. It could lead to some fascinating storylines and character conflicts.
-
-Illegal Possesion
-westworld, but the park is this theme. so have workers, ceo, etc. too
-satanism/mystic themed. modern day setting. 
-AI Town, but edgy. navigating supernatural phenomena in small town/demonic stuff 
-a la Alan Wake, The Faculty impostor stuff too?
-social simulation game where you play as a person staying a week in small town to relax, weird shit happens.
-have undercover agents as characters too, to increase tension and justify walling off the player to single setting
-
