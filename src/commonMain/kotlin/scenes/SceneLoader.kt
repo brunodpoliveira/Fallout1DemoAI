@@ -22,6 +22,8 @@ import korlibs.korge.view.filter.*
 import korlibs.korge.view.mask.*
 import korlibs.math.geom.*
 import korlibs.math.geom.PointInt
+import llm.*
+import llm.impl.*
 import maps.*
 import movement.*
 import npc.*
@@ -60,6 +62,8 @@ class SceneLoader(
     private lateinit var dialogManager: DialogManager
     lateinit var interactionManager: InteractionManager
     lateinit var playerMovementController: PlayerMovementController
+    private lateinit var llmService: LLMService
+    private lateinit var interrogationManager: InterrogationManager
 
     suspend fun loadScene(): SceneLoader {
         loadResources()
@@ -112,15 +116,12 @@ class SceneLoader(
 
         playerStats = readEntityStats(player)
         playerInventory = Inventory("Player")
-        playerManager = PlayerManager(
-            scene = scene,
-            playerInventory = playerInventory,
-            playerStats = playerStats,
-            playerStatsUI = null // PlayerStatsUI will be initialized in UIManager
-        )
+        val llmConfig = LLMSelector.selectProvider()
+        llmService = LLMServiceFactory.create(llmConfig)
     }
 
     private suspend fun initializeCommonComponents() {
+        // Initialize basic managers and systems first
         mapManager = MapManager(ldtk, gridSize)
         val obstacleMap = mapManager.generateMap(levelView)
 
@@ -137,17 +138,12 @@ class SceneLoader(
         )
         npcManager.initializeNPCs()
 
-        uiManager = UIManager(
-            container = container,
+        playerManager = PlayerManager(
+            scene = scene,
             playerInventory = playerInventory,
-            mapManager = mapManager,
-            levelView = levelView,
-            playerManager = playerManager,
-            defaultFont = defaultFont,
-            getPlayerPosition = PointInt(player.x.toInt(), player.y.toInt())
+            playerStats = playerStats,
+            playerStatsUI = null
         )
-        uiManager.initializeUI()
-        playerManager.playerStatsUI = uiManager.playerStatsUI
 
         raycaster = Raycaster(
             grid = grid,
@@ -158,6 +154,46 @@ class SceneLoader(
             highlight = highlight
         )
 
+        // Initialize ActionModel before DialogManager
+        actionModel = ActionModel(
+            ldtk = ldtk,
+            grid = grid,
+            npcManager = npcManager,
+            playerInventory = playerInventory,
+            coroutineScope = scene
+        )
+
+        // Initialize DialogManager before UIManager and InteractionManager
+        dialogManager = DialogManager(
+            coroutineScope = scene,
+            container = container,
+            actionModel = actionModel,
+            llmService = llmService
+        )
+
+        // Initialize InterrogationManager
+        interrogationManager = InterrogationManager(
+            coroutineScope = scene,
+            container = container,
+            llmService = llmService
+        )
+
+        // Initialize UIManager after DialogManager
+        uiManager = UIManager(
+            container = container,
+            playerInventory = playerInventory,
+            mapManager = mapManager,
+            levelView = levelView,
+            playerManager = playerManager,
+            defaultFont = defaultFont,
+            getPlayerPosition = PointInt(player.x.toInt(), player.y.toInt()),
+            interrogationManager = interrogationManager,
+            dialogManager = dialogManager
+        )
+        uiManager.initializeUI()
+        playerManager.playerStatsUI = uiManager.playerStatsUI
+
+        // Initialize combat system
         combatManager = CombatManager(
             enemies = entities.filter { it.entity.identifier == "Enemy" }.toMutableList(),
             playerInventory = playerInventory,
@@ -167,20 +203,7 @@ class SceneLoader(
         )
         combatManager.initialize()
 
-        actionModel = ActionModel(
-            ldtk = ldtk,
-            grid = grid,
-            npcManager = npcManager,
-            playerInventory = playerInventory,
-            coroutineScope = scene
-        )
-
-        dialogManager = DialogManager(
-            coroutineScope = scene,
-            container = container,
-            actionModel = actionModel
-        )
-
+        // Initialize interaction and movement systems last
         interactionManager = InteractionManager(
             player = player,
             raycaster = raycaster,

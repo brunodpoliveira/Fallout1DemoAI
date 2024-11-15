@@ -11,6 +11,7 @@ korge.keystore
 local.properties
 config.properties
 gradle.properties
+FUTURE_PLANS.md
 src/main/*
 .DS_Store
 
