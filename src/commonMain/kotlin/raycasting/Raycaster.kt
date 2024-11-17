@@ -17,7 +17,7 @@ import korlibs.time.*
 import utils.*
 
 class Raycaster(
-    private val grid: IntIArray2,
+    val grid: IntIArray2,
     private val gridSize: Size,
     private val entitiesBvh: BvhWorld,
     private val entities: List<LDTKEntityView>,

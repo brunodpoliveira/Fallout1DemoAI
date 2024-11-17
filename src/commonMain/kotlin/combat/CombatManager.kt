@@ -18,7 +18,12 @@ import ui.*
 import utils.*
 import korlibs.time.seconds
 import kotlinx.coroutines.*
+import raycasting.*
 import kotlin.math.*
+import korlibs.math.geom.Vector2D
+
+
+
 
 class CombatManager(
     private val enemies: MutableList<LDTKEntityView>,
@@ -30,6 +35,7 @@ class CombatManager(
     private val scene: Scene,
     private val sceneView: View,
     private val mapScale: Int = 2,
+    private val raycaster: Raycaster
 ) {
     private var targetingReticule: Image? = null
     private var currentTargetIndex: Int = 0
@@ -54,7 +60,6 @@ class CombatManager(
         startTurn()
     }
 
-
     private fun scaleEntityPosition(point: Point): Point {
         return Point((point.x * mapScale) - 10, (point.y * mapScale) - 45)
     }
@@ -64,7 +69,10 @@ class CombatManager(
         closestEnemy?.let {
             currentTargetIndex = enemies.indexOf(it)
             val scaledPosition = scaleEntityPosition(Point(it.x, it.y))
-            targetingReticule?.xy(scaledPosition.x, scaledPosition.y)
+            targetingReticule?.apply {
+                xy(scaledPosition.x, scaledPosition.y)
+                visible = true
+            }
         } ?: run {
             targetingReticule?.visible = false
         }
@@ -142,13 +150,10 @@ class CombatManager(
     private fun handlePlayerMove() {
         if (gameMode == GameModeEnum.COMBAT && !isPlayerTurn()) return
         val currentPosition = player.pos
-        println(currentPosition)
-        val newPosition = Point(currentPosition.x , currentPosition.y )
+        val newPosition = Point(currentPosition.x, currentPosition.y)
         if (!canPlayerMove(newPosition)) return
 
         playerStats.position = newPosition
-
-
         updateTargetingReticule()
 
         if (gameMode == GameModeEnum.COMBAT) {
@@ -163,8 +168,10 @@ class CombatManager(
         for (enemy in enemies) {
             val enemyPosition = Point(enemy.x, enemy.y)
             val playerPosition = Point(playerStats.position.x, playerStats.position.y)
-            val distance = calculateDistance(playerPosition, enemyPosition)
 
+            if (!checkLineOfSight(playerPosition, enemyPosition)) continue
+
+            val distance = calculateDistance(playerPosition, enemyPosition)
             if (distance < minDistance) {
                 minDistance = distance
                 closestEnemy = enemy
@@ -173,6 +180,16 @@ class CombatManager(
 
         return closestEnemy
     }
+
+    private fun checkLineOfSight(playerPos: Vector2D, enemyPos: Vector2D): Boolean {
+        val direction = (enemyPos.normalized - playerPos.normalized).normalized
+        val rayResult = raycaster.doRay(playerPos, direction, "Collides")
+
+        val resul = (rayResult == null || rayResult.point.distanceTo(playerPos) >= playerPos.distanceTo(enemyPos))
+        println("resul: $resul")
+        return resul;
+    }
+
 
     private fun calculateDistance(pos1: Point, pos2: Point): Double {
         val dx = pos1.x - pos2.x

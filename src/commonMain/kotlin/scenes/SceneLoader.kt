@@ -207,7 +207,8 @@ class SceneLoader(
             playerStatsUI = uiManager.playerStatsUI,
             container = container,
             scene = scene,
-            sceneView = levelView
+            sceneView = levelView,
+            raycaster = raycaster
         )
         combatManager.initialize()
 
