@@ -51,39 +51,26 @@ class CombatManager(
         targetingReticule = container.image(texture = resourcesVfs["cross.png"].readBitmapSlice()) {
             visible = true
         }
+        startGame()
+    }
 
+    private fun startGame(){
+        updateTargetingReticule()
         container.keys {
             down(Key.LEFT) { handlePlayerMove() }
             down(Key.RIGHT) { handlePlayerMove() }
             down(Key.UP) { handlePlayerMove() }
             down(Key.DOWN) { handlePlayerMove() }
         }
-        startTurn()
     }
 
-    private fun scaleEntityPosition(point: Point): Point {
-        return Point((point.x * mapScale) - 10, (point.y * mapScale) - 45)
-    }
 
-    private fun updateTargetingReticule() {
-        val closestEnemy = findClosestEnemy()
-        closestEnemy?.let {
-            currentTargetIndex = enemies.indexOf(it)
-            val scaledPosition = scaleEntityPosition(Point(it.x, it.y))
-            targetingReticule?.apply {
-                xy(scaledPosition.x, scaledPosition.y)
-                visible = true
-            }
-        } ?: run {
-            targetingReticule?.visible = false
-        }
-    }
 
     private suspend fun startTurn() {
         if (gameMode == GameModeEnum.COMBAT) {
             playerActionTaken = false
             if (isPlayerTurn()) {
-                showTurnMessage("Seu turno!")
+                showTurnMessage("your turn!")
                 delay(3.seconds)
                 endTurn()
             } else {
@@ -102,7 +89,7 @@ class CombatManager(
             turnMessage.tween(
                 turnMessage::alpha[1.0],
                 time = 0.5.seconds,
-                easing = Easing.EASE_IN_OUT
+                easing = Easing.EASE_IN
             )
 
             turnMessage.tween(
@@ -120,17 +107,16 @@ class CombatManager(
         playerMoved = false
         if (gameMode == GameModeEnum.COMBAT) {
             currentTurnIndex = (currentTurnIndex + 1) % (enemies.size + 1)
-            delay(5.seconds)
+            delay(3.seconds)
             startTurn()
         }
     }
-
 
     //@TODO: Implement enemy AI
     private suspend fun handleEnemyTurn() {
         if (gameMode == GameModeEnum.COMBAT) {
             val enemy = enemies[currentTurnIndex - 1]
-            showTurnMessage(enemy.fieldsByName["Name"]?.valueString + "'s turn!")
+            showTurnMessage(getPlayerName(enemy)+"'s turn!")
             if (Math.random() < 0.5) {
                 playerStats.hp -= 1
 
@@ -160,14 +146,12 @@ class CombatManager(
             currentTurnIndex = 0
         }
 
-        val damage = 20
+        val damage = 100
         targetStats.hp -= damage
         showDamageText("-$damage", Point(target.x, target.y))
 
         if (targetStats.hp <= 0) {
-            target.removeFromParent()
-            enemies.remove(target)
-            entityStatsMap.remove(enemyId)
+            removePlayerFromGame(target, enemyId);
             updateTargetingReticule()
             if (enemies.isEmpty()) exitCombatMode()
         } else {
@@ -178,8 +162,19 @@ class CombatManager(
         endTurn()
     }
 
+    private fun getPlayerName(enemy: LDTKEntityView):String{
+        return enemy.fieldsByName["Name"]?.valueString ?: "Unknown"
+    }
+
+    private fun removePlayerFromGame(target: LDTKEntityView, enemyId: String) {
+        target.removeFromParent()
+        enemies.remove(target)
+        entityStatsMap.remove(enemyId)
+    }
+
     private fun handlePlayerMove() {
         if (gameMode == GameModeEnum.COMBAT && !isPlayerTurn()) return
+
         val currentPosition = player.pos
         val newPosition = Point(currentPosition.x, currentPosition.y)
         if (!canPlayerMove(newPosition)) return
@@ -211,7 +206,7 @@ class CombatManager(
                 easing = Easing.EASE_IN_OUT
             )
 
-            delay(2.seconds)
+            delay(1.5.seconds)
 
             messageText.tween(
                 messageText::alpha[0.0],
@@ -231,9 +226,9 @@ class CombatManager(
             val enemyPosition = Point(enemy.x, enemy.y)
             val playerPosition = Point(playerStats.position.x, playerStats.position.y)
 
-            if (!checkLineOfSight(playerPosition, enemyPosition)) continue
+            if (raycaster.isInShadow(playerPosition, enemyPosition)) continue
 
-            val distance = calculateDistance(playerPosition, enemyPosition)
+            val distance = playerPosition.distanceTo(enemyPosition)
             if (distance < minDistance) {
                 minDistance = distance
                 closestEnemy = enemy
@@ -243,6 +238,19 @@ class CombatManager(
         return closestEnemy
     }
 
+    private fun updateTargetingReticule() {
+        val closestEnemy = findClosestEnemy()
+        closestEnemy?.let {
+            currentTargetIndex = enemies.indexOf(it)
+            val scaledPosition = scaleEntityPosition(Point(it.x, it.y))
+            targetingReticule?.apply {
+                xy(scaledPosition.x, scaledPosition.y)
+                visible = true
+            }
+        } ?: run {
+            targetingReticule?.visible = false
+        }
+    }
     private fun showDamageText(text: String, position: Point) {
         val scaledPosition = scaleEntityPosition(position)
 
@@ -261,19 +269,9 @@ class CombatManager(
         }
     }
 
-    private fun checkLineOfSight(playerPos: Vector2D, enemyPos: Vector2D): Boolean {
-        val direction = (enemyPos.normalized - playerPos.normalized).normalized
-        val rayResult = raycaster.doRay(playerPos, direction, "Collides")
 
-        val resul = (rayResult == null || rayResult.point.distanceTo(playerPos) >= playerPos.distanceTo(enemyPos))
-        return resul;
-    }
-
-
-    private fun calculateDistance(pos1: Point, pos2: Point): Double {
-        val dx = pos1.x - pos2.x
-        val dy = pos1.y - pos2.y
-        return sqrt(dx * dx + dy * dy)
+    private fun scaleEntityPosition(point: Point): Point {
+        return Point((point.x * mapScale) - 10, (point.y * mapScale) - 45)
     }
 
     private fun canPlayerMove(newPosition: Point): Boolean {
