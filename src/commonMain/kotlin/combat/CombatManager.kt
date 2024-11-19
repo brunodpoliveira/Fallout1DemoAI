@@ -2,16 +2,18 @@ package combat
 
 import enum.*
 import korlibs.event.*
+import korlibs.image.color.*
 import korlibs.image.format.*
 import korlibs.io.async.*
 import korlibs.io.file.std.*
 import korlibs.korge.input.*
 import korlibs.korge.ldtk.view.*
 import korlibs.korge.scene.*
+import korlibs.korge.tween.*
 import korlibs.korge.view.*
 import korlibs.korge.view.Container
 import korlibs.korge.view.Image
-import korlibs.korge.virtualcontroller.*
+import korlibs.korge.view.align.*
 import korlibs.math.geom.Point
 import scenes.*
 import ui.*
@@ -21,8 +23,7 @@ import kotlinx.coroutines.*
 import raycasting.*
 import kotlin.math.*
 import korlibs.math.geom.Vector2D
-
-
+import korlibs.math.interpolation.*
 
 
 class CombatManager(
@@ -82,11 +83,35 @@ class CombatManager(
         if (gameMode == GameModeEnum.COMBAT) {
             playerActionTaken = false
             if (isPlayerTurn()) {
+                showTurnMessage("Seu turno!")
                 delay(3.seconds)
                 endTurn()
             } else {
                 handleEnemyTurn()
             }
+        }
+    }
+
+    private fun showTurnMessage(message: String) {
+        val turnMessage = container.text(message, textSize = 28.0, color = Colors.YELLOW) {
+            centerOnStage()
+            alpha = 0.0
+        }
+
+        scene.launchImmediately {
+            turnMessage.tween(
+                turnMessage::alpha[1.0],
+                time = 0.5.seconds,
+                easing = Easing.EASE_IN_OUT
+            )
+
+            turnMessage.tween(
+                turnMessage::alpha[0.0],
+                time = 0.5.seconds,
+                easing = Easing.EASE_IN_OUT
+            )
+
+            turnMessage.removeFromParent()
         }
     }
 
@@ -99,12 +124,16 @@ class CombatManager(
             startTurn()
         }
     }
+
+
     //@TODO: Implement enemy AI
     private suspend fun handleEnemyTurn() {
         if (gameMode == GameModeEnum.COMBAT) {
             val enemy = enemies[currentTurnIndex - 1]
+            showTurnMessage(enemy.fieldsByName["Name"]?.valueString + "'s turn!")
             if (Math.random() < 0.5) {
                 playerStats.hp -= 1
+
                 playerStatsUI?.update(playerStats.hp, playerStats.ammo)
                 checkPlayerHealth()
             }
@@ -127,11 +156,13 @@ class CombatManager(
         val targetStats = entityStatsMap[enemyId] ?: readEntityStats(target)
 
         if (gameMode == GameModeEnum.EXPLORATION) {
-            gameMode = GameModeEnum.COMBAT
+            startCombatMode()
             currentTurnIndex = 0
         }
 
-        targetStats.hp -= 20
+        val damage = 20
+        targetStats.hp -= damage
+        showDamageText("-$damage", Point(target.x, target.y))
 
         if (targetStats.hp <= 0) {
             target.removeFromParent()
@@ -161,6 +192,37 @@ class CombatManager(
         }
     }
 
+    private suspend fun startCombatMode() {
+        gameMode = GameModeEnum.COMBAT
+        showCombatMessage("The player started a war.\nCombat mode started!")
+        startTurn()
+    }
+
+    private fun showCombatMessage(message: String) {
+        val messageText = container.text(message, textSize = 26.0, color = Colors.WHITE) {
+            centerOnStage()
+            alpha = 0.0
+        }
+
+        scene.launchImmediately {
+            messageText.tween(
+                messageText::alpha[1.0],
+                time = 0.5.seconds,
+                easing = Easing.EASE_IN_OUT
+            )
+
+            delay(2.seconds)
+
+            messageText.tween(
+                messageText::alpha[0.0],
+                time = 0.5.seconds,
+                easing = Easing.EASE_IN_OUT
+            )
+
+            messageText.removeFromParent()
+        }
+    }
+
     private fun findClosestEnemy(): LDTKEntityView? {
         var closestEnemy: LDTKEntityView? = null
         var minDistance = Double.MAX_VALUE
@@ -181,12 +243,29 @@ class CombatManager(
         return closestEnemy
     }
 
+    private fun showDamageText(text: String, position: Point) {
+        val scaledPosition = scaleEntityPosition(position)
+
+        val damageText = container.text(text, textSize = 24.0, color = Colors.RED) {
+            xy(scaledPosition.x , scaledPosition.y - 70)
+        }
+
+        scene.launchImmediately {
+            damageText.tween(
+                damageText::alpha[0.0],
+                damageText::y[damageText.y],
+                time = 1.seconds,
+                easing = Easing.EASE_IN_OUT
+            )
+            damageText.removeFromParent()
+        }
+    }
+
     private fun checkLineOfSight(playerPos: Vector2D, enemyPos: Vector2D): Boolean {
         val direction = (enemyPos.normalized - playerPos.normalized).normalized
         val rayResult = raycaster.doRay(playerPos, direction, "Collides")
 
         val resul = (rayResult == null || rayResult.point.distanceTo(playerPos) >= playerPos.distanceTo(enemyPos))
-        println("resul: $resul")
         return resul;
     }
 
