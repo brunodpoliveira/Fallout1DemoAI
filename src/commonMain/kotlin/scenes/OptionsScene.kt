@@ -78,55 +78,67 @@ class OptionsScene : Scene() {
 
             when {
                 Platform.isWindows -> {
-                    uiButton("One-Click Install (Windows)").also {
-                        it.width = 210.0
-                        onClick {
-                            sceneContainer.launch {
-                                installOllama("windows")
+                    uiVerticalStack {
+                        uiButton("One-Click Install (Windows)").also {
+                            it.width = 210.0
+                            onClick {
+                                sceneContainer.launch {
+                                    installOllama("windows")
+                                }
                             }
                         }
                     }
-                    uiButton("Uninstall (Windows)").also {
-                        it.width = 210.0
-                        onClick {
-                            sceneContainer.launch {
-                                uninstallOllama("windows")
+                    uiVerticalStack {
+                        uiButton("Uninstall (Windows)").also {
+                            it.width = 210.0
+                            onClick {
+                                sceneContainer.launch {
+                                    uninstallOllama("windows")
+                                }
                             }
                         }
                     }
                 }
                 Platform.isMac -> {
-                    uiButton("One-Click Install (macOS)").also {
-                        it.width = 210.0
-                        onClick {
-                            sceneContainer.launch {
-                                installOllama("mac")
+                    uiVerticalStack {
+                        uiButton("One-Click Install (macOS)").also {
+                            it.width = 210.0
+                            onClick {
+                                sceneContainer.launch {
+                                    installOllama("mac")
+                                }
                             }
                         }
                     }
-                    uiButton("Uninstall (macOS)").also {
-                        it.width = 210.0
-                        onClick {
-                            sceneContainer.launch {
-                                uninstallOllama("mac")
+                    uiVerticalStack {
+                        uiButton("Uninstall (macOS)").also {
+                            it.width = 210.0
+                            onClick {
+                                sceneContainer.launch {
+                                    uninstallOllama("mac")
+                                }
                             }
                         }
                     }
                 }
                 Platform.isLinux -> {
-                    uiButton("One-Click Install (Linux)").also {
-                        it.width = 210.0
-                        onClick {
-                            sceneContainer.launch {
-                                installOllama("linux")
+                    uiVerticalStack {
+                        uiButton("One-Click Install (Linux)").also {
+                            it.width = 210.0
+                            onClick {
+                                sceneContainer.launch {
+                                    installOllama("linux")
+                                }
                             }
                         }
                     }
-                    uiButton("Uninstall (Linux)").also {
-                        it.width = 210.0
-                        onClick {
-                            sceneContainer.launch {
-                                uninstallOllama("linux")
+                    uiVerticalStack {
+                        uiButton("Uninstall (Linux)").also {
+                            it.width = 210.0
+                            onClick {
+                                sceneContainer.launch {
+                                    uninstallOllama("linux")
+                                }
                             }
                         }
                     }
@@ -169,9 +181,9 @@ class OptionsScene : Scene() {
             val setupDir = File("setup").apply { mkdirs() }
 
             val scriptName = when (platform) {
-                "windows" -> "install_ollama.bat"
-                "mac" -> "install_ollama_alt.sh"
-                "linux" -> "install_ollama.sh"
+                "windows" -> "install_ollama_win.bat"
+                "mac" -> "install_ollama_mac.sh"
+                "linux" -> "install_ollama_unix.sh"
                 else -> throw IllegalArgumentException("Unknown platform: $platform")
             }
 
@@ -281,17 +293,17 @@ class OptionsScene : Scene() {
             val setupDir = File("setup").apply { mkdirs() }
 
             val scriptName = when (platform) {
-                "windows" -> "uninstall_ollama.bat"
+                "windows" -> "uninstall_ollama_win.bat"
                 "mac" -> "uninstall_ollama_alt.sh"
-                else -> "uninstall_ollama.sh"
+                else -> "uninstall_ollama_unix.sh"
             }
 
             val scriptFile = File(setupDir, scriptName)
             if (!scriptFile.exists()) {
                 val scriptContent = when (platform) {
-                    "windows" -> resourcesVfs["setup/uninstall_ollama.bat"].readString()
+                    "windows" -> resourcesVfs["setup/uninstall_ollama_win.bat"].readString()
                     "mac" -> resourcesVfs["setup/uninstall_ollama_alt.sh"].readString()
-                    else -> resourcesVfs["setup/uninstall_ollama.sh"].readString()
+                    else -> resourcesVfs["setup/uninstall_ollama_unix.sh"].readString()
                 }
                 scriptFile.writeText(scriptContent)
 
@@ -303,23 +315,11 @@ class OptionsScene : Scene() {
                 }
             }
 
-            views.gameWindow.alert("Starting Ollama uninstallation. Please wait...")
-
-            // Execute the script with elevated privileges if needed
             val process = withContext(Dispatchers.IO) {
                 when (platform) {
                     "windows" -> {
-                        // For Windows, try to run with elevated privileges
                         ProcessBuilder(
-                            "powershell",
-                            "Start-Process",
-                            "cmd",
-                            "/c",
-                            scriptFile.absolutePath,
-                            "-Verb",
-                            "RunAs",
-                            "-Wait"
-                        )
+                            "cmd", "/c", "start", "cmd", "/c", scriptFile.absolutePath)
                     }
                     else -> {
                         // For Unix systems, use sudo if available

@@ -16,7 +16,7 @@ echo Starting OLLAMA service. Please wait...
 start "" ollama serve
 
 :: Wait for service to start
-timeout /t 10 /nobreak
+timeout /t 5 /nobreak
 
 :: Download models
 echo Downloading model (llama3)...
