@@ -1,6 +1,6 @@
 # Fallout1DemoAI
 This project is a proof-of-concept demonstration of the Fallout 1 demo town, Scrapheap,
-built using Korge and Kotlin. The main highlight of the project is the use of GPT-3.5 Turbo to
+built using Korge and Kotlin. The main highlight of the project is the use of GPT to
 power the NPC interactions, making them dynamic and conversational.
 
 ## Collaborating

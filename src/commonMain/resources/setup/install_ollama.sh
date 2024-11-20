@@ -1,6 +1,4 @@
 #!/bin/bash
-# install_ollama.sh (Linux/Mac)
-
 echo "Installing OLLAMA and required models..."
 
 # Check OS
@@ -8,13 +6,13 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     # macOS
     if ! command -v ollama &> /dev/null; then
         echo "Installing OLLAMA for macOS..."
-        curl -fsSL https://ollama.ai/install.sh | sh
+        curl -fsSL https://ollama.com/download/Ollama-darwin.zip | sh
     fi
 elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
     # Linux
     if ! command -v ollama &> /dev/null; then
         echo "Installing OLLAMA for Linux..."
-        curl -fsSL https://ollama.ai/install.sh | sh
+        curl -fsSL https://ollama.com/install.sh | sh
     fi
 fi
 
