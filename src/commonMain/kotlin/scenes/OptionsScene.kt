@@ -1,7 +1,6 @@
 package scenes
 
 import ai.*
-import korlibs.io.file.std.*
 import korlibs.korge.input.*
 import korlibs.korge.scene.*
 import korlibs.korge.ui.*
@@ -179,44 +178,37 @@ class OptionsScene : Scene() {
     private suspend fun installOllama(platform: String) {
         try {
             val setupDir = File("setup").apply { mkdirs() }
-
-            val scriptName = when (platform) {
+            val scriptFile = File(setupDir, when (platform) {
                 "windows" -> "install_ollama_win.bat"
                 "mac" -> "install_ollama_mac.sh"
-                "linux" -> "install_ollama_unix.sh"
-                else -> throw IllegalArgumentException("Unknown platform: $platform")
-            }
+                else -> "install_ollama_unix.sh"
+            })
 
-            // Extract script from resources to setup dir
-            val scriptFile = File(setupDir, scriptName)
-            if (!scriptFile.exists()) {
-                val scriptContent = resourcesVfs["setup/$scriptName"].readString()
-                scriptFile.writeText(scriptContent)
-
-                // Make script executable on Unix systems
-                if (platform != "windows") {
-                    withContext(Dispatchers.IO) {
-                        ProcessBuilder("chmod", "+x", scriptFile.absolutePath).start().waitFor()
-                    }
+            // Make script executable on Unix systems
+            if (platform != "windows") {
+                withContext(Dispatchers.IO) {
+                    ProcessBuilder("chmod", "+x", scriptFile.absolutePath)
+                        .directory(setupDir)
+                        .start()
+                        .waitFor()
                 }
             }
 
             views.gameWindow.alert(
                 """
-                Starting Ollama installation. This may take several minutes.
-                A command window will open to show installation progress.
-                
-                Required steps:
-                1. Download and install Ollama
-                2. Download required AI models
-                3. Configure the service
-                """.trimIndent()
+            Starting Ollama installation. This may take several minutes.
+            A new terminal window will open to show installation progress.
+            
+            Required steps:
+            1. Download and install Ollama
+            2. Download required AI models
+            3. Configure the service
+            """.trimIndent()
             )
 
-            val process = withContext(Dispatchers.IO) {
+            withContext(Dispatchers.IO) {
                 when (platform) {
                     "windows" -> {
-                        // Use cmd /k to keep the window open
                         ProcessBuilder(
                             "cmd",
                             "/c",
@@ -224,50 +216,67 @@ class OptionsScene : Scene() {
                             "cmd",
                             "/k",
                             scriptFile.absolutePath
-                        )
+                        ).directory(setupDir).start()
                     }
-                    else -> ProcessBuilder("bash", scriptFile.absolutePath)
-                }.apply {
-                    redirectErrorStream(true)
-                    directory(setupDir)
-                }.start()
+                    "mac" -> {
+                        ProcessBuilder(
+                            "open",
+                            "-a",
+                            "Terminal",
+                            scriptFile.absolutePath
+                        ).directory(setupDir).start()
+                    }
+                    else -> {
+                        // Try different terminal emulators in order of commonality
+                        val terminals = listOf(
+                            arrayOf("gnome-terminal", "--", "bash", scriptFile.absolutePath),  // Standard Ubuntu/GNOME
+                            arrayOf("x-terminal-emulator", "-e", "bash ${scriptFile.absolutePath}"),  // Debian-based systems
+                            arrayOf("xfce4-terminal", "--command", "bash ${scriptFile.absolutePath}"), // XFCE
+                            arrayOf("konsole", "--e", "bash ${scriptFile.absolutePath}"),  // KDE
+                            arrayOf("mate-terminal", "--command", "bash ${scriptFile.absolutePath}"),  // MATE
+                            arrayOf("xterm", "-e", "bash ${scriptFile.absolutePath}")  // Basic fallback
+                        )
+
+                        var success = false
+                        var lastException: Exception? = null
+
+                        for (terminal in terminals) {
+                            try {
+                                ProcessBuilder(*terminal)
+                                    .directory(setupDir)
+                                    .start()
+                                success = true
+                                break
+                            } catch (e: Exception) {
+                                lastException = e
+                            }
+                        }
+
+                        if (success) {
+                            Unit
+                        } else {
+                            throw lastException ?: Exception("No suitable terminal emulator found")
+                        }
+                    }
+                }
             }
 
-            // Wait for process to complete
-            val exitCode = withContext(Dispatchers.IO) { process.waitFor() }
-
-            if (exitCode == 0) {
-                views.gameWindow.alert(
-                    """
-                    Installation completed successfully!
-                    You can now select "Local LLaMA" as your AI provider.
-                    """.trimIndent()
-                )
-                LLMSelector.setProvider(LLMProvider.OLLAMA)
-                saveProviderSelection(LLMProvider.OLLAMA)
-            } else {
-                views.gameWindow.alert(
-                    """
-                    Installation failed with error code: $exitCode
-                    Please check the command window for details or try manual installation.
-                    """.trimIndent()
-                )
-            }
         } catch (e: Exception) {
             Logger.error("Installation failed: ${e.message}")
             Logger.error("Stack trace: ${e.stackTraceToString()}")
 
             views.gameWindow.alert(
                 """
-                Installation failed: ${e.message}
-                
-                Please try:
-                1. Running the game as administrator
-                2. Checking your internet connection
-                3. Following manual installation steps in SETUP_TUTORIAL.md
-                
-                Error details have been written to the log file.
-                """.trimIndent()
+            Installation failed: ${e.message}
+            
+            Please try:
+            1. Opening a terminal manually
+            2. Navigating to the game's 'setup' directory
+            3. Running: chmod +x install_ollama_unix.sh
+            4. Running: sudo ./install_ollama_unix.sh
+            
+            Error details have been written to the log file.
+            """.trimIndent()
             )
         }
     }
@@ -276,98 +285,102 @@ class OptionsScene : Scene() {
         try {
             val confirmed = views.gameWindow.confirm(
                 """
-                Are you sure you want to uninstall Ollama?
-                
-                This will:
-                1. Remove all downloaded AI models
-                2. Stop the Ollama service
-                3. Remove the Ollama application
-                4. Delete all related data
-                
-                This action cannot be undone.
-                """.trimIndent()
+            Are you sure you want to uninstall Ollama?
+            
+            This will:
+            1. Remove all downloaded AI models
+            2. Stop the Ollama service
+            3. Remove the Ollama application
+            4. Delete all related data
+            
+            This action cannot be undone.
+            """.trimIndent()
             )
 
             if (!confirmed) return
 
             val setupDir = File("setup").apply { mkdirs() }
-
-            val scriptName = when (platform) {
+            val scriptFile = File(setupDir, when (platform) {
                 "windows" -> "uninstall_ollama_win.bat"
                 "mac" -> "uninstall_ollama_alt.sh"
                 else -> "uninstall_ollama_unix.sh"
-            }
+            })
 
-            val scriptFile = File(setupDir, scriptName)
-            if (!scriptFile.exists()) {
-                val scriptContent = when (platform) {
-                    "windows" -> resourcesVfs["setup/uninstall_ollama_win.bat"].readString()
-                    "mac" -> resourcesVfs["setup/uninstall_ollama_alt.sh"].readString()
-                    else -> resourcesVfs["setup/uninstall_ollama_unix.sh"].readString()
-                }
-                scriptFile.writeText(scriptContent)
-
-                // Make script executable on Unix systems
-                if (platform != "windows") {
-                    withContext(Dispatchers.IO) {
-                        ProcessBuilder("chmod", "+x", scriptFile.absolutePath).start().waitFor()
-                    }
+            if (platform != "windows") {
+                withContext(Dispatchers.IO) {
+                    ProcessBuilder("chmod", "+x", scriptFile.absolutePath)
+                        .directory(setupDir)
+                        .start()
+                        .waitFor()
                 }
             }
 
-            val process = withContext(Dispatchers.IO) {
+            withContext(Dispatchers.IO) {
                 when (platform) {
                     "windows" -> {
                         ProcessBuilder(
-                            "cmd", "/c", "start", "cmd", "/c", scriptFile.absolutePath)
+                            "cmd",
+                            "/c",
+                            "start",
+                            "cmd",
+                            "/k",
+                            scriptFile.absolutePath
+                        ).directory(setupDir).start()
+                    }
+                    "mac" -> {
+                        ProcessBuilder(
+                            "open",
+                            "-a",
+                            "Terminal",
+                            scriptFile.absolutePath
+                        ).directory(setupDir).start()
                     }
                     else -> {
-                        // For Unix systems, use sudo if available
-                        if (File("/usr/bin/sudo").exists()) {
-                            ProcessBuilder("sudo", "bash", scriptFile.absolutePath)
+                        val terminals = listOf(
+                            arrayOf("gnome-terminal", "--", "bash", scriptFile.absolutePath),  // Standard Ubuntu/GNOME
+                            arrayOf("x-terminal-emulator", "-e", "bash ${scriptFile.absolutePath}"),  // Debian-based systems
+                            arrayOf("xfce4-terminal", "--command", "bash ${scriptFile.absolutePath}"), // XFCE
+                            arrayOf("konsole", "--e", "bash ${scriptFile.absolutePath}"),  // KDE
+                            arrayOf("mate-terminal", "--command", "bash ${scriptFile.absolutePath}"),  // MATE
+                            arrayOf("xterm", "-e", "bash ${scriptFile.absolutePath}")  // Basic fallback
+                        )
+
+                        var success = false
+                        var lastException: Exception? = null
+
+                        for (terminal in terminals) {
+                            try {
+                                ProcessBuilder(*terminal)
+                                    .directory(setupDir)
+                                    .start()
+                                success = true
+                                break
+                            } catch (e: Exception) {
+                                lastException = e
+                            }
+                        }
+
+                        if (success) {
+                            Unit
                         } else {
-                            ProcessBuilder("bash", scriptFile.absolutePath)
+                            throw lastException ?: Exception("No suitable terminal emulator found")
                         }
                     }
-                }.apply {
-                    redirectErrorStream(true)
-                    directory(setupDir)
-                }.start()
+                }
             }
 
-            val reader = BufferedReader(InputStreamReader(process.inputStream))
-            var line: String?
-            while (withContext(Dispatchers.IO) { reader.readLine() }.also { line = it } != null) {
-                Logger.debug("Uninstallation output: $line")
-            }
+            views.gameWindow.alert(
+                """
+            Uninstallation process has started in a new terminal window.
+            Please follow the prompts in that window.
+            
+            The game will reset to using OpenAI after the uninstallation is complete.
+            """.trimIndent()
+            )
 
-            val exitCode = withContext(Dispatchers.IO) { process.waitFor() }
-
-            if (exitCode == 0) {
-                views.gameWindow.alert(
-                    """
-                    Uninstallation completed successfully!
-                    
-                    Ollama has been removed from your system.
-                    The AI provider has been reset to OpenAI.
-                    """.trimIndent()
-                )
-
-                // Reset to OpenAI provider
-                LLMSelector.setProvider(LLMProvider.OPENAI)
-                saveProviderSelection(LLMProvider.OPENAI)
-            } else {
-                views.gameWindow.alert(
-                    """
-                    Uninstallation encountered some issues (error code: $exitCode)
-                    
-                    Please check the logs for details or try manual uninstallation:
-                    1. Stop any running Ollama processes
-                    2. Remove the Ollama application
-                    3. Delete the .ollama folder in your home directory
-                    """.trimIndent()
-                )
-            }
+            // Reset to OpenAI provider
+            LLMSelector.setProvider(LLMProvider.OPENAI)
+            saveProviderSelection(LLMProvider.OPENAI)
 
         } catch (e: Exception) {
             Logger.error("Uninstallation failed: ${e.message}")
@@ -375,15 +388,16 @@ class OptionsScene : Scene() {
 
             views.gameWindow.alert(
                 """
-                Uninstallation failed: ${e.message}
-                
-                Please try:
-                1. Running the game as administrator
-                2. Manually stopping Ollama services
-                3. Using your system's built-in uninstaller
-                
-                Error details have been written to the log file.
-                """.trimIndent()
+            Failed to start uninstallation: ${e.message}
+            
+            Please try:
+            1. Opening a terminal manually
+            2. Navigating to the game's 'setup' directory
+            3. Running: chmod +x uninstall_ollama_unix.sh
+            4. Running: sudo ./uninstall_ollama_unix.sh
+            
+            Error details have been written to the log file.
+            """.trimIndent()
             )
         }
     }
@@ -422,8 +436,8 @@ class OptionsScene : Scene() {
             Warning: If you choose the local Llama model for text generation, please ensure your computer meets the following specs:
             
             * Memory (RAM): At least 16GB
-            * Graphics Card (GPU): NVIDIA with CUDA support, 8GB or more VRAM (RTX 3000 series and better)
-            * Storage: At least 8GB free space
+            * Graphics Card (GPU): NVIDIA with CUDA support or AMD Radeon, 8GB or more of VRAM (NVIDIA RTX 3000 series or better)
+            * Storage: At least 8GB of free space
             
             Without these specs, the game may lag significantly when generating text, which can disrupt gameplay. 
             
