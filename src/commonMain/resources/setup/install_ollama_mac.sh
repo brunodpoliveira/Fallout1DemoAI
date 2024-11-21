@@ -8,6 +8,19 @@ if ! sudo -v; then
     exit 1
 fi
 
+# Check architecture (Intel or Apple Silicon)
+ARCH=$(uname -m)
+if [[ "$ARCH" == "x86_64" ]]; then
+    OLLAMA_URL="https://ollama.com/download/Ollama-darwin-intel.zip"
+    echo "Detected Intel processor. Using Intel version of Ollama."
+elif [[ "$ARCH" == "arm64" ]]; then
+    OLLAMA_URL="https://ollama.com/download/Ollama-darwin.zip"
+    echo "Detected Apple Silicon processor. Using Apple Silicon version of Ollama."
+else
+    echo "Unsupported architecture: $ARCH"
+    exit 1
+fi
+
 # Check OS
 if [[ "$OSTYPE" == "darwin"* ]]; then
     # macOS
@@ -19,7 +32,7 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
 
         # Download and extract
         echo "Downloading Ollama..."
-        if ! curl -L -o Ollama.zip "https://ollama.com/download/Ollama-darwin.zip"; then
+        if ! curl -L -o Ollama.zip "$OLLAMA_URL"; then
             echo "Error: Failed to download Ollama.zip"
             exit 1
         fi

@@ -9,6 +9,17 @@ if ! sudo -v; then
     exit 1
 fi
 
+# Check architecture (Intel or Apple Silicon)
+ARCH=$(uname -m)
+if [[ "$ARCH" == "x86_64" ]]; then
+    echo "Detected Intel processor. Proceeding with Intel-specific uninstallation."
+elif [[ "$ARCH" == "arm64" ]]; then
+    echo "Detected Apple Silicon processor. Proceeding with Apple Silicon-specific uninstallation."
+else
+    echo "Unsupported architecture: $ARCH"
+    exit 1
+fi
+
 # Function to stop all Ollama processes
 stop_ollama() {
     echo "Stopping OLLAMA processes..."
@@ -122,7 +133,7 @@ finalize_stop
 echo "OLLAMA has been uninstalled successfully."
 echo "Closing terminal in 10 seconds..."
 for i in {10..1}; do
-    echo " Uninstalled successfully. Closing terminal in $i..."
+    echo "Uninstalled successfully. Closing terminal in $i..."
     sleep 1
 done
 osascript -e 'tell application "Terminal" to close first window' & exit
