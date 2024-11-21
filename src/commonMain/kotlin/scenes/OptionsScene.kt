@@ -1,12 +1,14 @@
 package scenes
 
 import ai.*
+import korlibs.io.file.std.*
 import korlibs.korge.input.*
 import korlibs.korge.scene.*
 import korlibs.korge.ui.*
 import korlibs.korge.view.*
 import korlibs.korge.view.align.*
 import korlibs.math.geom.*
+import korlibs.platform.*
 import korlibs.render.*
 import kotlinx.coroutines.*
 import llm.*
@@ -74,34 +76,76 @@ class OptionsScene : Scene() {
                 }
             }
 
-            uiButton("One-Click Install for Local Play (Windows)") {
-                onClick {
-                    sceneContainer.launch {
-                        runOllamaScript("install_ollama.bat")
+            when {
+                Platform.isWindows -> {
+                    uiVerticalStack {
+                        uiButton("One-Click Install (Windows)").also {
+                            it.width = 210.0
+                            onClick {
+                                sceneContainer.launch {
+                                    installOllama("windows")
+                                }
+                            }
+                        }
+                    }
+                    uiVerticalStack {
+                        uiButton("Uninstall (Windows)").also {
+                            it.width = 210.0
+                            onClick {
+                                sceneContainer.launch {
+                                    uninstallOllama("windows")
+                                }
+                            }
+                        }
                     }
                 }
-            }
-
-            uiButton("One-Click Install for Local Play (Linux/Mac)") {
-                onClick {
-                    sceneContainer.launch {
-                        runOllamaScript("install_ollama.sh")
+                Platform.isMac -> {
+                    uiVerticalStack {
+                        uiButton("One-Click Install (macOS)").also {
+                            it.width = 210.0
+                            onClick {
+                                sceneContainer.launch {
+                                    installOllama("mac")
+                                }
+                            }
+                        }
+                    }
+                    uiVerticalStack {
+                        uiButton("Uninstall (macOS)").also {
+                            it.width = 210.0
+                            onClick {
+                                sceneContainer.launch {
+                                    uninstallOllama("mac")
+                                }
+                            }
+                        }
                     }
                 }
-            }
-
-            uiButton("One-Click Uninstall (Windows)") {
-                onClick {
-                    sceneContainer.launch {
-                        runOllamaScript("uninstall_ollama.bat")
+                Platform.isLinux -> {
+                    uiVerticalStack {
+                        uiButton("One-Click Install (Linux)").also {
+                            it.width = 210.0
+                            onClick {
+                                sceneContainer.launch {
+                                    installOllama("linux")
+                                }
+                            }
+                        }
+                    }
+                    uiVerticalStack {
+                        uiButton("Uninstall (Linux)").also {
+                            it.width = 210.0
+                            onClick {
+                                sceneContainer.launch {
+                                    uninstallOllama("linux")
+                                }
+                            }
+                        }
                     }
                 }
-            }
-
-            uiButton("One-Click Uninstall (Linux/Mac)") {
-                onClick {
-                    sceneContainer.launch {
-                        runOllamaScript("uninstall_ollama.sh")
+                else -> {
+                    uiText("Unsupported operating system").also {
+                        it.width = 210.0
                     }
                 }
             }
@@ -122,7 +166,8 @@ class OptionsScene : Scene() {
                 }
             }
 
-            uiButton("Back to Main Menu") {
+            uiButton("Back to Main Menu") .also {
+                it.width = 190.0
                 centerXOnStage()
                 onClick {
                     sceneContainer.changeTo<MainMenuScene>()
@@ -131,60 +176,215 @@ class OptionsScene : Scene() {
         }
     }
 
-    private suspend fun runOllamaScript(scriptName: String) {
+    private suspend fun installOllama(platform: String) {
         try {
-            val isWindows = System.getProperty("os.name").lowercase().contains("windows")
-            val setupDir = File("setup")
-            val scriptFile = File(setupDir, scriptName)
+            val setupDir = File("setup").apply { mkdirs() }
 
-            if (!scriptFile.exists()) {
-                views.gameWindow.alert("Setup script not found: $scriptName")
-                return
+            val scriptName = when (platform) {
+                "windows" -> "install_ollama_win.bat"
+                "mac" -> "install_ollama_mac.sh"
+                "linux" -> "install_ollama_unix.sh"
+                else -> throw IllegalArgumentException("Unknown platform: $platform")
             }
 
-            Logger.debug("Running script: ${scriptFile.absolutePath}")
+            // Extract script from resources to setup dir
+            val scriptFile = File(setupDir, scriptName)
+            if (!scriptFile.exists()) {
+                val scriptContent = resourcesVfs["setup/$scriptName"].readString()
+                scriptFile.writeText(scriptContent)
+
+                // Make script executable on Unix systems
+                if (platform != "windows") {
+                    withContext(Dispatchers.IO) {
+                        ProcessBuilder("chmod", "+x", scriptFile.absolutePath).start().waitFor()
+                    }
+                }
+            }
+
+            views.gameWindow.alert(
+                """
+                Starting Ollama installation. This may take several minutes.
+                A command window will open to show installation progress.
+                
+                Required steps:
+                1. Download and install Ollama
+                2. Download required AI models
+                3. Configure the service
+                """.trimIndent()
+            )
 
             val process = withContext(Dispatchers.IO) {
-                if (isWindows) {
-                    ProcessBuilder("cmd", "/c", scriptFile.absolutePath)
-                } else {
-                    // Make script executable
-                    withContext(Dispatchers.IO) {
-                        withContext(Dispatchers.IO) {
-                            ProcessBuilder("chmod", "+x", scriptFile.absolutePath).start()
-                        }.waitFor()
+                when (platform) {
+                    "windows" -> {
+                        // Use cmd /k to keep the window open
+                        ProcessBuilder(
+                            "cmd",
+                            "/c",
+                            "start",
+                            "cmd",
+                            "/k",
+                            scriptFile.absolutePath
+                        )
                     }
-                    ProcessBuilder("bash", scriptFile.absolutePath)
-                }
-                    .redirectErrorStream(true)
-                    .directory(setupDir)
-                    .start()
+                    else -> ProcessBuilder("bash", scriptFile.absolutePath)
+                }.apply {
+                    redirectErrorStream(true)
+                    directory(setupDir)
+                }.start()
             }
 
-            // Show progress dialog
-            views.gameWindow.alert("Installing OLLAMA and required models. This may take several minutes. Check the terminal/command prompt for progress.")
+            // Wait for process to complete
+            val exitCode = withContext(Dispatchers.IO) { process.waitFor() }
 
-            // Read output
+            if (exitCode == 0) {
+                views.gameWindow.alert(
+                    """
+                    Installation completed successfully!
+                    You can now select "Local LLaMA" as your AI provider.
+                    """.trimIndent()
+                )
+                LLMSelector.setProvider(LLMProvider.OLLAMA)
+                saveProviderSelection(LLMProvider.OLLAMA)
+            } else {
+                views.gameWindow.alert(
+                    """
+                    Installation failed with error code: $exitCode
+                    Please check the command window for details or try manual installation.
+                    """.trimIndent()
+                )
+            }
+        } catch (e: Exception) {
+            Logger.error("Installation failed: ${e.message}")
+            Logger.error("Stack trace: ${e.stackTraceToString()}")
+
+            views.gameWindow.alert(
+                """
+                Installation failed: ${e.message}
+                
+                Please try:
+                1. Running the game as administrator
+                2. Checking your internet connection
+                3. Following manual installation steps in SETUP_TUTORIAL.md
+                
+                Error details have been written to the log file.
+                """.trimIndent()
+            )
+        }
+    }
+
+    private suspend fun uninstallOllama(platform: String) {
+        try {
+            val confirmed = views.gameWindow.confirm(
+                """
+                Are you sure you want to uninstall Ollama?
+                
+                This will:
+                1. Remove all downloaded AI models
+                2. Stop the Ollama service
+                3. Remove the Ollama application
+                4. Delete all related data
+                
+                This action cannot be undone.
+                """.trimIndent()
+            )
+
+            if (!confirmed) return
+
+            val setupDir = File("setup").apply { mkdirs() }
+
+            val scriptName = when (platform) {
+                "windows" -> "uninstall_ollama_win.bat"
+                "mac" -> "uninstall_ollama_alt.sh"
+                else -> "uninstall_ollama_unix.sh"
+            }
+
+            val scriptFile = File(setupDir, scriptName)
+            if (!scriptFile.exists()) {
+                val scriptContent = when (platform) {
+                    "windows" -> resourcesVfs["setup/uninstall_ollama_win.bat"].readString()
+                    "mac" -> resourcesVfs["setup/uninstall_ollama_alt.sh"].readString()
+                    else -> resourcesVfs["setup/uninstall_ollama_unix.sh"].readString()
+                }
+                scriptFile.writeText(scriptContent)
+
+                // Make script executable on Unix systems
+                if (platform != "windows") {
+                    withContext(Dispatchers.IO) {
+                        ProcessBuilder("chmod", "+x", scriptFile.absolutePath).start().waitFor()
+                    }
+                }
+            }
+
+            val process = withContext(Dispatchers.IO) {
+                when (platform) {
+                    "windows" -> {
+                        ProcessBuilder(
+                            "cmd", "/c", "start", "cmd", "/c", scriptFile.absolutePath)
+                    }
+                    else -> {
+                        // For Unix systems, use sudo if available
+                        if (File("/usr/bin/sudo").exists()) {
+                            ProcessBuilder("sudo", "bash", scriptFile.absolutePath)
+                        } else {
+                            ProcessBuilder("bash", scriptFile.absolutePath)
+                        }
+                    }
+                }.apply {
+                    redirectErrorStream(true)
+                    directory(setupDir)
+                }.start()
+            }
+
             val reader = BufferedReader(InputStreamReader(process.inputStream))
             var line: String?
-            while (withContext(Dispatchers.IO) {
-                    reader.readLine()
-                }.also { line = it } != null) {
-                Logger.debug("Script output: $line")
+            while (withContext(Dispatchers.IO) { reader.readLine() }.also { line = it } != null) {
+                Logger.debug("Uninstallation output: $line")
             }
 
-            val exitCode = withContext(Dispatchers.IO) {
-                process.waitFor()
-            }
+            val exitCode = withContext(Dispatchers.IO) { process.waitFor() }
+
             if (exitCode == 0) {
-                views.gameWindow.alert("Setup completed successfully!")
+                views.gameWindow.alert(
+                    """
+                    Uninstallation completed successfully!
+                    
+                    Ollama has been removed from your system.
+                    The AI provider has been reset to OpenAI.
+                    """.trimIndent()
+                )
+
+                // Reset to OpenAI provider
+                LLMSelector.setProvider(LLMProvider.OPENAI)
+                saveProviderSelection(LLMProvider.OPENAI)
             } else {
-                views.gameWindow.alert("Setup failed with exit code: $exitCode\nCheck logs for details.")
+                views.gameWindow.alert(
+                    """
+                    Uninstallation encountered some issues (error code: $exitCode)
+                    
+                    Please check the logs for details or try manual uninstallation:
+                    1. Stop any running Ollama processes
+                    2. Remove the Ollama application
+                    3. Delete the .ollama folder in your home directory
+                    """.trimIndent()
+                )
             }
 
         } catch (e: Exception) {
-            Logger.error("Failed to run script: ${e.message}")
-            views.gameWindow.alert("Failed to run setup script: ${e.message}")
+            Logger.error("Uninstallation failed: ${e.message}")
+            Logger.error("Stack trace: ${e.stackTraceToString()}")
+
+            views.gameWindow.alert(
+                """
+                Uninstallation failed: ${e.message}
+                
+                Please try:
+                1. Running the game as administrator
+                2. Manually stopping Ollama services
+                3. Using your system's built-in uninstaller
+                
+                Error details have been written to the log file.
+                """.trimIndent()
+            )
         }
     }
 

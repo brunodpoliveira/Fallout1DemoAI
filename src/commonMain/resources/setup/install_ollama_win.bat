@@ -1,19 +1,18 @@
 @echo off
 echo Installing OLLAMA and required models...
-# install_ollama.bat (Windows)
 
 :: Check if OLLAMA is installed
 where ollama >nul 2>nul
 if %errorlevel% neq 0 (
     echo OLLAMA not found. Downloading installer...
-    curl -L -o ollama-installer.exe https://ollama.ai/download/windows
+    curl -L -o OllamaSetup.exe https://ollama.com/download/OllamaSetup.exe
     echo Running installer...
-    start /wait ollama-installer.exe
-    del ollama-installer.exe
+    start /wait OllamaSetup.exe
+    del OllamaSetup.exe
 )
 
 :: Start OLLAMA service
-echo Starting OLLAMA service...
+echo Starting OLLAMA service. Please wait...
 start "" ollama serve
 
 :: Wait for service to start
