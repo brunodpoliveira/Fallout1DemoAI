@@ -40,11 +40,23 @@ class InteractionManager(
         }
     }
 
-    suspend fun handleAnyButton() {
-        val view = getInteractiveView() ?: return
-        val entityView = view as? LDTKEntityView ?: return
-        val doBlock = entityView.fieldsByName["Items"] ?: return
+    suspend fun handleAnyButton(){
+        val item = getItem();
+        if(!item){
+            combatManager.handlePlayerShoot();
+        }
+
+    }
+
+
+    suspend fun getItem(): Boolean {
+        val view = getInteractiveView() ?: return false
+        val entityView = view as? LDTKEntityView ?: return false
+        val doBlock = entityView.fieldsByName["Items"] ?: return false
         val items = doBlock.valueDyn.list.map { it.str }
+
+
+        if (items.isEmpty()) return false
 
         items.forEach { item ->
             playerInventory.addItem(item)
@@ -53,21 +65,23 @@ class InteractionManager(
                     combatManager.updateAmmoUI(newAmmo)
                 }
             }
+            if (item == "Gun") {
+                playerInventory.addItem("Gun")
+            }
         }
 
-        // Replace the chest's view to show it as opened
         entityView.replaceView(
-            Image(entityView.tileset!!.unextrudedTileSet!!.base.sliceWithSize(
+            Image(entityView.tileset?.unextrudedTileSet?.base?.sliceWithSize(
                 openChestTile.x, openChestTile.y, openChestTile.w, openChestTile.h
-            )).also {
+            ) ?: return false).also {
                 it.smoothing = false
                 it.anchor(entityView.anchor)
             }
         )
 
-        // Display a message to the player
         gameWindow.alert("Found $items")
         Logger.debug("Found items: $items")
+        return true
     }
 
     fun handleWestButton() {
@@ -82,14 +96,10 @@ class InteractionManager(
         }
     }
 
-    fun handleSouthButton() {
+    suspend fun handleSouthButton() {
         val playerView = (player.view as ImageDataView2)
         playerView.animation = "attack"
         playerState = "attack"
-        val target = combatManager.chooseTarget()
-        if (target != null) {
-            combatManager.handlePlayerShoot()
-        }
     }
 
     fun handleNorthButton() {

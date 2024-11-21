@@ -20,6 +20,7 @@ import korlibs.korge.scene.*
 import korlibs.korge.view.*
 import korlibs.korge.view.filter.*
 import korlibs.korge.view.mask.*
+import korlibs.korge.virtualcontroller.*
 import korlibs.math.geom.*
 import korlibs.math.geom.PointInt
 import llm.*
@@ -64,6 +65,9 @@ class SceneLoader(
     lateinit var playerMovementController: PlayerMovementController
     private lateinit var llmService: LLMService
     private lateinit var interrogationManager: InterrogationManager
+
+
+
 
     suspend fun loadScene(): SceneLoader {
         loadResources()
@@ -123,6 +127,7 @@ class SceneLoader(
     private suspend fun initializeCommonComponents() {
         // Initialize basic managers and systems first
         mapManager = MapManager(ldtk, gridSize)
+
         val obstacleMap = mapManager.generateMap(levelView)
 
         npcManager = NPCManager(
@@ -198,8 +203,12 @@ class SceneLoader(
             enemies = entities.filter { it.entity.identifier == "Enemy" }.toMutableList(),
             playerInventory = playerInventory,
             playerStats = playerStats,
+            player = player,
             playerStatsUI = uiManager.playerStatsUI,
-            container = container
+            container = container,
+            scene = scene,
+            sceneView = levelView,
+            raycaster = raycaster
         )
         combatManager.initialize()
 
@@ -217,7 +226,11 @@ class SceneLoader(
             uiManager = uiManager
         )
 
-        inputManager = InputManager(VirtualControllerManager(), interactionManager, scene)
+        inputManager = InputManager(
+            controllerManager = VirtualControllerManager(combatManager),
+            interactionManager = interactionManager,
+            coroutineScope = scene
+        )
         inputManager.setupInput(container)
 
         playerMovementController = PlayerMovementController(

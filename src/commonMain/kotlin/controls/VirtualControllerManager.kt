@@ -1,12 +1,14 @@
 package controls
 
+import combat.*
 import korlibs.event.*
 import korlibs.korge.view.*
 import korlibs.korge.virtualcontroller.*
 import korlibs.math.geom.*
-import utils.*
 
-class VirtualControllerManager {
+class VirtualControllerManager(
+    val combatManager: CombatManager
+) {
     private lateinit var virtualController: VirtualController
 
     fun Container.setupVirtualController() {
@@ -46,17 +48,31 @@ class VirtualControllerManager {
 
     fun setupButtonActions(onAnyButton: () -> Unit, onWestButton: () -> Unit, onSouthButton: () -> Unit, onNorthButton: () -> Unit) {
         virtualController.apply {
-            down(GameButton.BUTTON_WEST) { onAnyButton(); onWestButton() }
-            down(GameButton.BUTTON_SOUTH) { onAnyButton(); onSouthButton() }
-            down(GameButton.BUTTON_NORTH) { onAnyButton(); onNorthButton() }
+            down(GameButton.BUTTON_WEST) {
+                if (combatManager.isPlayerTurn()) {
+                    onAnyButton()
+                    onWestButton()
+                }
+            }
+            down(GameButton.BUTTON_SOUTH) {
+                if (combatManager.isPlayerTurn()) {
+                    onAnyButton()
+                    onSouthButton()
+                }
+            }
+            down(GameButton.BUTTON_NORTH) {
+                if (combatManager.isPlayerTurn()) {
+                    onAnyButton()
+                    onNorthButton()
+                }
+            }
         }
     }
 
     fun getControllerInput(): Pair<Double, Double> {
-        return if (GameState.isDialogOpen) {
-            Pair(0.0, 0.0)
-        } else {
-            Pair(virtualController.lx.toDouble(), virtualController.ly.toDouble())
+        if (!combatManager.isPlayerTurn()) {
+            return Pair(0.0, 0.0)
         }
+        return Pair(virtualController.lx.toDouble(), virtualController.ly.toDouble())
     }
 }
