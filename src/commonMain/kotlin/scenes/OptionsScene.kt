@@ -178,13 +178,14 @@ class OptionsScene : Scene() {
     private suspend fun installOllama(platform: String) {
         try {
             val setupDir = File("setup").apply { mkdirs() }
-            val scriptFile = File(setupDir, when (platform) {
-                "windows" -> "install_ollama_win.bat"
-                "mac" -> "install_ollama_mac.sh"
-                else -> "install_ollama_unix.sh"
-            })
+            val setupDirMacOs = File("src/commonMain/resources/setup").canonicalFile
 
-            // Make script executable on Unix systems
+            val scriptFile = when (platform) {
+                "windows" -> File(setupDir, "install_ollama_win.bat")
+                "mac" -> File(setupDirMacOs, "install_ollama_mac.sh")
+                else -> File(setupDir, "install_ollama_unix.sh")
+            }
+
             if (platform != "windows") {
                 withContext(Dispatchers.IO) {
                     ProcessBuilder("chmod", "+x", scriptFile.absolutePath)
@@ -220,10 +221,8 @@ class OptionsScene : Scene() {
                     }
                     "mac" -> {
                         ProcessBuilder(
-                            "open",
-                            "-a",
-                            "Terminal",
-                            scriptFile.absolutePath
+                            "/bin/bash", "-c",
+                            "osascript -e 'tell application \"Terminal\" to do script \"cd ${setupDirMacOs.canonicalPath} && ./install_ollama_mac.sh\"'"
                         ).directory(setupDir).start()
                     }
                     else -> {
@@ -260,6 +259,7 @@ class OptionsScene : Scene() {
                     }
                 }
             }
+
 
         } catch (e: Exception) {
             Logger.error("Installation failed: ${e.message}")
@@ -300,11 +300,14 @@ class OptionsScene : Scene() {
             if (!confirmed) return
 
             val setupDir = File("setup").apply { mkdirs() }
-            val scriptFile = File(setupDir, when (platform) {
-                "windows" -> "uninstall_ollama_win.bat"
-                "mac" -> "uninstall_ollama_alt.sh"
-                else -> "uninstall_ollama_unix.sh"
-            })
+            val setupDirMacOs = File("src/commonMain/resources/setup").canonicalFile
+
+            val scriptFile = when (platform) {
+                "windows" -> File(setupDir, "uninstall_ollama_win.bat")
+                "mac" -> File(setupDirMacOs, "uninstall_ollama_mac.sh")
+                else -> File(setupDir, "uninstall_ollama_unix.sh")
+            }
+
 
             if (platform != "windows") {
                 withContext(Dispatchers.IO) {
@@ -329,10 +332,8 @@ class OptionsScene : Scene() {
                     }
                     "mac" -> {
                         ProcessBuilder(
-                            "open",
-                            "-a",
-                            "Terminal",
-                            scriptFile.absolutePath
+                            "/bin/bash", "-c",
+                            "osascript -e 'tell application \"Terminal\" to do script \"cd ${setupDirMacOs.canonicalPath} && ./uninstall_ollama_mac.sh\"'"
                         ).directory(setupDir).start()
                     }
                     else -> {
