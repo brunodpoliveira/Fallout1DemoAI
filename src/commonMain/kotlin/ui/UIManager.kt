@@ -1,5 +1,7 @@
 package ui
 
+import ai.*
+import dialog.*
 import korlibs.image.font.*
 import korlibs.korge.input.*
 import korlibs.korge.ldtk.view.*
@@ -8,7 +10,6 @@ import korlibs.korge.view.*
 import korlibs.math.geom.*
 import maps.*
 import player.*
-import scenes.*
 import utils.*
 
 class UIManager(
@@ -18,9 +19,16 @@ class UIManager(
     val levelView: LDTKLevelView,
     val playerManager: PlayerManager,
     private val defaultFont: Font,
-    getPlayerPosition: PointInt
+    getPlayerPosition: PointInt,
+    private val interrogationManager: InterrogationManager,
+    private val dialogManager: DialogManager
 ) {
-    private val pauseMenu = PauseMenu(mapManager, levelView, getPlayerPosition, this)
+    private val pauseMenu = PauseMenu(mapManager, levelView, getPlayerPosition, this, dialogManager)
+    private val interrogationWindow = InterrogationWindow(
+        onAskQuestion = { npcName, question ->
+            interrogationManager.handleQuestion(npcName, question)
+        }
+    )
     var playerStatsUI: PlayerStatsUI? = null
     private var inventoryContainer: Container? = null
 
@@ -29,7 +37,7 @@ class UIManager(
         playerStatsUI?.let { container.addChild(it) }
         updatePlayerStatsUI(playerManager.playerStats)
 
-        addDebugReduceHealthButton()
+        addDebugButtons()
     }
 
     private fun updatePlayerStatsUI(playerStats: EntityStats) {
@@ -37,7 +45,7 @@ class UIManager(
     }
 
     fun showPauseMenu() {
-        if (JunkDemoScene.isPaused) {
+        if (GameState.isPaused) {
             pauseMenu.resumeGame()
         } else {
             pauseMenu.show(container)
@@ -77,7 +85,7 @@ class UIManager(
         playerStatsUI?.update(playerManager.playerStats.hp, playerManager.playerStats.ammo)
     }
 
-    private fun addDebugReduceHealthButton() {
+    private fun addDebugButtons() {
         container.fixedSizeContainer(Size(200, 500), false) {
             position(700, 20)
             uiButton("Debug Reduce Health") {
@@ -85,6 +93,17 @@ class UIManager(
                     playerManager.debugReduceHealth(20)
                 }
             }
+            uiButton("Open Interrogation") {
+                position(0, 40)
+                onClick {
+                    showInterrogationWindow()
+                }
+            }
         }
+    }
+
+    private fun showInterrogationWindow() {
+        val npcs = NPCBio.getAllNPCNames()
+        interrogationWindow.show(container, npcs)
     }
 }

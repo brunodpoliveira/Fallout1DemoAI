@@ -6,7 +6,7 @@ import korlibs.korge.ldtk.view.*
 import korlibs.math.*
 import korlibs.math.geom.*
 import raycasting.*
-import scenes.*
+import utils.*
 import kotlin.math.*
 
 class PlayerMovementController(
@@ -18,7 +18,7 @@ class PlayerMovementController(
     private var playerState: String = ""
 
     fun update() {
-        if (!JunkDemoScene.dialogIsOpen) {
+        if (!GameState.isDialogOpen) {
             val (dx, dy) = inputManager?.getControllerInput() ?: Pair(0.0, 0.0)
             val playerView = (player.view as ImageDataView2)
             if (!dx.isAlmostZero() || !dy.isAlmostZero()) {

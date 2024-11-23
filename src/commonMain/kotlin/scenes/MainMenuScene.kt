@@ -21,7 +21,7 @@ class MainMenuScene : Scene() {
             uiButton("Start Game") {
                 onClick {
                     showLoadingScreen {
-                        sceneContainer.changeTo { JunkDemoScene() }
+                        sceneContainer.changeTo { DemoLevel() }
                     }
                 }
             }

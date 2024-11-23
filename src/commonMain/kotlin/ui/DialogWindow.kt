@@ -1,6 +1,5 @@
 package ui
 
-import ai.*
 import korlibs.image.color.*
 import korlibs.image.text.*
 import korlibs.io.async.launch
@@ -10,25 +9,24 @@ import korlibs.korge.ui.*
 import korlibs.korge.view.*
 import korlibs.math.geom.*
 import kotlinx.coroutines.*
-import scenes.*
 
 @OptIn(KorgeExperimental::class)
 class DialogWindow : Container() {
     private var userMessageInput: UITextInput
     private var npcMessageDisplay: TextBlock
-    private lateinit var currentNpcBio: String
-    private lateinit var npcName: String
-    private lateinit var factionName: String
     private var sendMessageButton: UIButton
     private var closeButton: UIButton
-    private var loadingProgressBar: UIProgressBar = uiProgressBar(size = Size(256, 8), current = 0f, maximum = 100f) {
+
+    private var loadingProgressBar: UIProgressBar =
+        uiProgressBar(size = Size(256, 8), current = 0f, maximum = 100f) {
         position(128.0, 240.0)
         visible = false
     }
-    private var loadingJob: Job? = null
-    private var cooldownActive = false
 
-    var onConversationEnd: ((String) -> Unit)? = null
+    private var loadingJob: Job? = null
+
+    var onMessageSend: ((String) -> Unit)? = null
+    var onClose: (() -> Unit)? = null
 
     init {
         addChild(loadingProgressBar)
@@ -70,96 +68,41 @@ class DialogWindow : Container() {
         addChild(closeButton)
 
         sendMessageButton.onClick {
-            if (isInDialog) {
-                sendMessage()
+            val message = userMessageInput.text
+            if (message.isNotBlank()) {
+                onMessageSend?.invoke(message)
+                userMessageInput.text = ""
             }
         }
 
         closeButton.onClick {
-            if (isInDialog) {
-                handleCloseConversation()
-                OpenAIService.resetConversation()
-                disableButtons()
-                showLoadingScreen(reversing = true)
-            }
+            onClose?.invoke()
         }
     }
 
-    fun show(container: Container, npcBio: String, npcName: String, factionName: String) {
-        if (cooldownActive || isInDialog) return
-        isInDialog = true
-
-        this.npcName = npcName
-        this.currentNpcBio = npcBio
-        this.factionName = factionName
-
-        println("Showing dialog for $npcName with bio: $currentNpcBio")
-        container.addChild(this)
-        showLoadingScreen(reversing = false)
-    }
-
     @OptIn(DelicateCoroutinesApi::class)
-    private fun showLoadingScreen(reversing: Boolean) {
+    fun showLoading() {
         loadingProgressBar.visible = true
         loadingProgressBar.current = 0.0
-        JunkDemoScene.dialogIsOpen = true
+        disableButtons()
 
         loadingJob = GlobalScope.launch {
             while (loadingProgressBar.current < loadingProgressBar.maximum) {
                 loadingProgressBar.current += 1
                 delay(30)
             }
-
             loadingProgressBar.visible = false
-
-            if (reversing) {
-                finishCloseDialog()
-            } else {
-                startDialog()
-            }
         }
     }
 
-    private fun startDialog() {
-        val initialResponse = OpenAIService.getCharacterResponse(npcName, factionName, currentNpcBio, "Hi")
-        npcMessageDisplay.text = RichTextData("${npcName}: $initialResponse")
-    }
-
-    private fun handleCloseConversation() {
-        val conversation = getCurrentConversation()
-        onConversationEnd?.invoke(conversation)
-        OpenAIService.resetConversation()
-        disableButtons()
-        showLoadingScreen(reversing = true)
-    }
-
-    @OptIn(DelicateCoroutinesApi::class)
-    private fun finishCloseDialog() {
-        this.removeFromParent()
+    fun hideLoading() {
         loadingJob?.cancel()
-        JunkDemoScene.dialogIsOpen = false
-        isInDialog = false
-
-        // Start cooldown
-        GlobalScope.launch {
-            cooldownActive = true
-            delay(5000)  // 5-second cooldown
-            cooldownActive = false
-        }
+        loadingProgressBar.visible = false
+        enableButtons()
     }
 
-    private fun sendMessage() {
-        val playerInput = userMessageInput.text
-        if (playerInput.isNotBlank()) {
-            val npcResponse = OpenAIService.getCharacterResponse(npcName, factionName, currentNpcBio, playerInput)
-            val existingText = npcMessageDisplay.plainText
-            npcMessageDisplay.text = RichTextData("$existingText\nPlayer: $playerInput\n$npcName: $npcResponse")
-            userMessageInput.text = ""
-        }
-    }
-
-    private fun getCurrentConversation(): String {
-        return OpenAIService.msgs.joinToString { it.content }
+    fun updateConversation(text: String) {
+        npcMessageDisplay.text = RichTextData(text)
     }
 
     private fun disableButtons() {
@@ -167,7 +110,13 @@ class DialogWindow : Container() {
         closeButton.disable()
     }
 
-    companion object {
-        var isInDialog: Boolean = false  // Shared flag for dialog state
+    private fun enableButtons() {
+        sendMessageButton.enable()
+        closeButton.enable()
+    }
+
+    fun clear() {
+        userMessageInput.text = ""
+        npcMessageDisplay.text = RichTextData("")
     }
 }

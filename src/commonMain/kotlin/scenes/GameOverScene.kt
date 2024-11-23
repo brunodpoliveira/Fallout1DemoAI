@@ -6,6 +6,7 @@ import korlibs.korge.scene.*
 import korlibs.korge.ui.*
 import korlibs.korge.view.*
 import korlibs.korge.view.align.*
+import utils.*
 
 class GameOverScene : Scene() {
     override suspend fun SContainer.sceneMain() {
@@ -20,15 +21,25 @@ class GameOverScene : Scene() {
 
             uiButton("Restart") {
                 onClick {
-                    sceneContainer.run { changeTo<JunkDemoScene>()
+                    restartLevel()
                     }
                 }
-            }
 
             uiButton("Return to Main Menu") {
                 onClick {
                     sceneContainer.run { changeTo<MainMenuScene>() }
                 }
+            }
+        }
+    }
+    private suspend fun restartLevel() {
+        when (GameState.currentLevel) {
+            "scrapheap" -> sceneContainer.changeTo<DemoLevel>()
+            "interrogation" -> sceneContainer.changeTo<OtherDemoLevel>()
+            // Add more levels as needed
+            else -> {
+                Logger.warn("Unknown level: ${GameState.currentLevel}. Defaulting to scrapheap.")
+                sceneContainer.changeTo<DemoLevel>()
             }
         }
     }

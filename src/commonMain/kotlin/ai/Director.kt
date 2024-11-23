@@ -1,38 +1,51 @@
 package ai
 
-object Director {
-    private val initialStoryContext = """
-        The town of Scrapheap is in turmoil. 
-        Two rival gangs, the Crypts and the Fools, 
-        are vying for control over the town's power generator.
-        While the Crypts have the upper hand in numbers, the Fools are more determined. 
-        The non-gang residents fear for their safety and hope for a savior to liberate them.
-    """.trimIndent()
+import kotlinx.coroutines.*
+import utils.*
 
-    private var storyContext = initialStoryContext
+object Director {
+    private lateinit var gameData: GameData
+    private lateinit var currentLevelData: LevelData
+    private var currentLevelId: String = "level_0"
+    private var storyContext = ""
     private var npcContexts: MutableMap<String, String> = mutableMapOf()
     private var factionContexts: MutableMap<String, String> = mutableMapOf()
     private var gameDifficulty: String = "normal"
 
-    private val npcFactions = mapOf(
-        "Rayze" to "Crypts",
-        "Baka" to "Fools",
-        "Lex" to "Non-Gang"
-    )
+    fun initialize(levelId: String = "level_0") {
+        runBlocking {
+            gameData = JsonLoader.loadGameData()
+        }
+        loadLevel(levelId)
+    }
+
+    fun loadLevel(levelId: String) {
+        currentLevelId = levelId
+        currentLevelData = gameData.levels[levelId] ?: throw IllegalArgumentException("Level $levelId not found")
+        storyContext = currentLevelData.context
+        npcContexts.clear()
+        factionContexts.clear()
+
+        currentLevelData.npcData.forEach { (npcName, npcData) ->
+            npcContexts[npcName] = npcData.initialPlan
+            val faction = npcData.faction.takeIf { it.isNotEmpty() } ?: "Civilian"
+            if (!factionContexts.containsKey(faction)) {
+                factionContexts[faction] = ""
+            }
+        }
+    }
 
     fun updateContext(newContext: String) {
-        println("Updating context with new information: $newContext")
+        Logger.debug("Updating context with new information: $newContext")
         storyContext += "\n$newContext"
     }
 
     fun updateNPCContext(npcName: String, newContext: String, isSecretPlan: Boolean = false, conspirators: List<String> = emptyList()) {
-        println("Updating context for $npcName with new information: $newContext")
+        Logger.debug("Updating context for $npcName with new information: $newContext")
         npcContexts[npcName] = npcContexts.getOrDefault(npcName, "") + "\n" + newContext
 
-        val factionName = npcFactions[npcName]
-        if (factionName != null) {
-            updateFactionContext(factionName, newContext)
-        }
+        val factionName = getNPCFaction(npcName)
+        updateFactionContext(factionName, newContext)
 
         if (isSecretPlan) {
             updateSecretPlan(conspirators, newContext)
@@ -40,41 +53,49 @@ object Director {
     }
 
     private fun updateFactionContext(factionName: String, newContext: String) {
-        println("Updating faction context for $factionName with new information: $newContext")
-        factionContexts[factionName] =
-            factionContexts.getOrDefault(factionName, "") + "\n" + newContext
+        Logger.debug("Updating faction context for $factionName with new information: $newContext")
+        factionContexts[factionName] = factionContexts.getOrDefault(factionName, "") + "\n" + newContext
     }
 
     private fun updateSecretPlan(conspirators: List<String>, newContext: String) {
         conspirators.forEach { npcName ->
-            println("Updating secret plan context for $npcName with new information: $newContext")
+            Logger.debug("Updating secret plan context for $npcName with new information: $newContext")
             updateNPCContext(npcName, newContext)
         }
     }
 
     fun getContext(): String {
-        println("Current context: $storyContext")
+        Logger.debug("Current context: $storyContext")
         return storyContext
     }
 
     fun getNPCContext(npcName: String): String {
-        println("Current context for $npcName: ${npcContexts[npcName]}")
         return npcContexts[npcName] ?: ""
     }
 
+    fun getNPCBio(npcName: String): String {
+        return currentLevelData.npcData[npcName]?.bio ?: ""
+    }
+
+    fun getAllNPCNames(): List<String> {
+        return currentLevelData.npcData.keys.toList()
+    }
+
+    fun getNPCFaction(npcName: String): String {
+        return currentLevelData.npcData[npcName]?.faction?.takeIf { it.isNotEmpty() } ?: "Civilian"
+    }
+
     fun getFactionContext(factionName: String): String {
-        println("Current context for faction $factionName: ${factionContexts[factionName]}")
+        Logger.debug("Current context for faction $factionName: ${factionContexts[factionName]}")
         return factionContexts[factionName] ?: ""
     }
 
     fun resetContext() {
-        storyContext = initialStoryContext
-        npcContexts.clear()
-        factionContexts.clear()
+        loadLevel(currentLevelId)
     }
 
     fun setDifficulty(difficulty: String) {
-        println("Setting game difficulty to: $difficulty")
+        Logger.debug("Setting game difficulty to: $difficulty")
         gameDifficulty = difficulty
     }
 

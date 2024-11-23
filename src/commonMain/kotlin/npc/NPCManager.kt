@@ -25,8 +25,15 @@ class NPCManager(
 ) {
 
     val npcs = mutableMapOf<String, LDTKEntityView>()
+    private val npcPositions = mutableMapOf<String, Point>()
     private val npcStats: MutableMap<String, EntityStats> = mutableMapOf()
     var pathfinding: Pathfinding = Pathfinding(mapManager.generateMap(levelView))
+    private val npcInventories = mutableMapOf<String, Inventory>()
+
+    private fun broadcastLocation(npcName: String, position: Point) {
+        npcPositions[npcName] = position
+        Logger.debug("[$npcName], (${position.x.toInt()}, ${position.y.toInt()})")
+    }
 
     suspend fun initializeNPCs() {
         val atlas = MutableAtlasUnit()
@@ -45,16 +52,19 @@ class NPCManager(
         }.forEach { entity ->
             val npcName = entity.fieldsByName["Name"]!!.valueString
             val npcSprite = npcSprites[npcName]
+            npcInventories[npcName.toString()] = npcName?.let { Inventory(it) }!!
             if (npcSprite != null) {
                 initializeNPC(entity, npcSprite)
             } else {
-                println("Sprite for NPC '$npcName' not found.")
+                Logger.debug("Sprite for NPC '$npcName' not found.")
             }
         }
 
         initNPCMovements()
         startUpdatingBVH()
     }
+
+    fun getNPCInventory(npcName: String): Inventory? = npcInventories[npcName]
 
     private fun initializeNPC(entity: LDTKEntityView, npcSprite: ImageDataContainer) {
         val npcName = entity.fieldsByName["Name"]!!.valueString.toString()
@@ -73,8 +83,8 @@ class NPCManager(
         }
 
         npcs[npcName] = npcView
-        println("$npcName initial position: ${entity.pos}")
-        println("$npcName HP: ${stats.hp}")
+        Logger.debug("$npcName initial position: ${entity.pos}")
+        Logger.debug("$npcName HP: ${stats.hp}")
     }
 
     private fun startUpdatingBVH() {
@@ -98,34 +108,20 @@ class NPCManager(
     }
 
     private fun initNPCMovements() {
-        val movementScope = coroutineScope
         updateNPCCollisionBoxes()
 
-        npcs["Rayze"]?.let { npc ->
-            MovementRegistry.addMovementForNPC("Rayze", Movement(npc, pathfinding))
-            coroutineScope.launch {
-                MovementRegistry.getMovementForNPC("Rayze")?.moveToPoint(253.0, 69.0)
-            }
-        }
-
-        npcs["Baka"]?.let { npc ->
-            val patrolPoints = listOf(
-                Point(100.0, 100.0),
-                Point(200.0, 100.0),
-                Point(200.0, 200.0),
-                Point(100.0, 200.0)
+        npcs.forEach { (npcName, npc) ->
+            MovementRegistry.addMovementForNPC(
+                npcName,
+                Movement(npc, pathfinding, npcName) { name, pos -> broadcastLocation(name, pos) }
             )
-            MovementRegistry.addMovementForNPC("Baka", Movement(npc, pathfinding))
-            movementScope.launch {
-                MovementRegistry.getMovementForNPC("Baka")?.patrol(patrolPoints)
-            }
         }
+    }
 
-        npcs["Robot"]?.let { npc ->
-            MovementRegistry.addMovementForNPC("Robot", Movement(npc, pathfinding))
-            movementScope.launch {
-                MovementRegistry.getMovementForNPC("Robot")?.moveToSector(ldtk, "STATUE", grid)
-            }
-        }
+    fun getNearbyNPCs(npcName: String, radius: Double): List<Pair<String, Point>> {
+        val npcPosition = npcPositions[npcName] ?: return emptyList()
+        return npcPositions.filter { (name, position) ->
+            name != npcName && position.distanceTo(npcPosition) <= radius
+        }.toList()
     }
 }

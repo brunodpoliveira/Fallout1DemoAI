@@ -1,6 +1,6 @@
 package interactions
 
-import ai.NPCBio
+import ai.*
 import combat.CombatManager
 import dialog.DialogManager
 import img.*
@@ -40,11 +40,23 @@ class InteractionManager(
         }
     }
 
-    suspend fun handleAnyButton() {
-        val view = getInteractiveView() ?: return
-        val entityView = view as? LDTKEntityView ?: return
-        val doBlock = entityView.fieldsByName["Items"] ?: return
+    suspend fun handleAnyButton(){
+        val item = getItem();
+        if(!item){
+            combatManager.handlePlayerShoot();
+        }
+
+    }
+
+
+    suspend fun getItem(): Boolean {
+        val view = getInteractiveView() ?: return false
+        val entityView = view as? LDTKEntityView ?: return false
+        val doBlock = entityView.fieldsByName["Items"] ?: return false
         val items = doBlock.valueDyn.list.map { it.str }
+
+
+        if (items.isEmpty()) return false
 
         items.forEach { item ->
             playerInventory.addItem(item)
@@ -53,53 +65,45 @@ class InteractionManager(
                     combatManager.updateAmmoUI(newAmmo)
                 }
             }
+            if (item == "Gun") {
+                playerInventory.addItem("Gun")
+            }
         }
 
-        // Replace the chest's view to show it as opened
         entityView.replaceView(
-            Image(entityView.tileset!!.unextrudedTileSet!!.base.sliceWithSize(
+            Image(entityView.tileset?.unextrudedTileSet?.base?.sliceWithSize(
                 openChestTile.x, openChestTile.y, openChestTile.w, openChestTile.h
-            )).also {
+            ) ?: return false).also {
                 it.smoothing = false
                 it.anchor(entityView.anchor)
             }
         )
 
-        // Display a message to the player
         gameWindow.alert("Found $items")
-        println("Found items: $items")
+        Logger.debug("Found items: $items")
+        return true
     }
 
     fun handleWestButton() {
         val view = getInteractiveView() ?: return
         if (view is LDTKEntityView && view.fieldsByName["Name"] != null) {
             val npcName = view.fieldsByName["Name"]!!.valueString
-            val npcFactions = mapOf(
-                "Rayze" to "Crypts",
-                "Baka" to "Fools",
-                "Lex" to "Non-Gang",
-                "Robot" to "Non-Gang"
-            )
-            val factionName = npcFactions[npcName] ?: "Unknown"
+            val factionName = npcName?.let { Director.getNPCFaction(it) }
             val npcBio = npcName?.let { NPCBio.getBioForNPC(it) }
-            if (npcBio != null) {
+            if (npcName != null && npcBio != null && factionName != null) {
                 dialogManager.showDialog(npcName, npcBio, factionName)
             }
         }
     }
 
-    fun handleSouthButton() {
+    suspend fun handleSouthButton() {
         val playerView = (player.view as ImageDataView2)
         playerView.animation = "attack"
         playerState = "attack"
-        val target = combatManager.chooseTarget()
-        if (target != null) {
-            combatManager.handlePlayerShoot()
-        }
     }
 
     fun handleNorthButton() {
-        println("InteractionManager: North button pressed, showing pause menu")
+        Logger.debug("InteractionManager: North button pressed, showing pause menu")
         uiManager.showPauseMenu()
     }
 
