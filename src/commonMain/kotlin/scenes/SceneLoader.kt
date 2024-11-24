@@ -120,6 +120,7 @@ class SceneLoader(
 
         playerStats = readEntityStats(player)
         playerInventory = Inventory("Player")
+        LLMSelector.setProvider(OptionsScene.getCurrentProvider())
         val llmConfig = LLMSelector.selectProvider()
         llmService = LLMServiceFactory.create(llmConfig)
     }

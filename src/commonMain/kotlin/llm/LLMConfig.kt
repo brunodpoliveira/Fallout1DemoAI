@@ -11,7 +11,6 @@ data class LLMConfig(
     companion object {
         private const val OLLAMA_HOST = "http://127.0.0.1:11434"
 
-        // Default OpenAI configuration
         fun default() = openAI()
 
         fun openAI() = LLMConfig(
@@ -21,10 +20,9 @@ data class LLMConfig(
             embeddingDimension = 1536,
             stopWords = emptyList(),
             apiKey = {
-                // Try multiple methods to get the API key
                 System.getProperty("open.api.key")
-                    ?: loadFromConfigFile()
                     ?: System.getenv("OPENAI_API_KEY")
+                    ?: loadFromConfigFile()
             }
         )
 
@@ -43,10 +41,8 @@ data class LLMConfig(
         private fun loadFromConfigFile(): String? {
             return try {
                 val properties = java.util.Properties()
-                // Try loading from classpath first
                 val inputStream = LLMConfig::class.java.getResourceAsStream("/config.properties")
-                    ?: // If not found in classpath, try loading from current directory
-                    java.io.FileInputStream("config.properties")
+                    ?: java.io.FileInputStream("config.properties")
 
                 properties.load(inputStream)
                 inputStream.close()
@@ -63,12 +59,11 @@ data class LLMConfig(
             LLMProvider.OPENAI -> {
                 requireNotNull(apiKey()) {
                     "OpenAI API key is required. Set 'open.api.key' in config.properties, " +
-                        "system properties, or OPENAI_API_KEY environment variable"
+                        "system properties, or OPENAI_API_KEY environment variable."
                 }
             }
             LLMProvider.OLLAMA -> {
-                // Ensure Ollama is running and accessible
-                val ollamaHost = System.getProperty("ollama.host", "http://localhost:11434")
+                val ollamaHost = System.getProperty("ollama.host", OLLAMA_HOST)
                 require(isOllamaAccessible(ollamaHost)) {
                     "Ollama is not accessible at $ollamaHost. Ensure Ollama is running."
                 }
@@ -78,9 +73,14 @@ data class LLMConfig(
 
     private fun isOllamaAccessible(host: String): Boolean {
         return try {
-            java.net.URL("$host/").readText()
-            true
+            val url = java.net.URL("$host/")
+            val connection = url.openConnection() as java.net.HttpURLConnection
+            connection.requestMethod = "HEAD"
+            connection.connectTimeout = 5000
+            connection.readTimeout = 5000
+            connection.responseCode == 200
         } catch (e: Exception) {
+            println("Warning: Could not connect to Ollama at $host: ${e.message}")
             false
         }
     }
