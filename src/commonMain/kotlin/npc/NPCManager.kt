@@ -30,7 +30,7 @@ class NPCManager(
     var pathfinding: Pathfinding = Pathfinding(mapManager.generateMap(levelView))
     private val npcInventories = mutableMapOf<String, Inventory>()
 
-    private fun broadcastLocation(npcName: String, position: Point) {
+    fun broadcastLocation(npcName: String, position: Point) {
         npcPositions[npcName] = position
         Logger.debug("[$npcName], (${position.x.toInt()}, ${position.y.toInt()})")
     }
