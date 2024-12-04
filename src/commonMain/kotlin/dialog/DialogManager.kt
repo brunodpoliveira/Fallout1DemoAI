@@ -73,7 +73,7 @@ class DialogManager(
             message: Hello, how can I help you?
             action: move to sector A
         Ps: action should have a pattern equals "move to SECTOR xxxx" or "move to COORDINATE [1.0,2.0] or shoot to player xxxx"
-        If have no action, just ignore it, put blank or put a message like "action: none"
+        If have no action, just ignore it, put a message "action: none"
         DO NOT talk about non-existent characters, items, or locations.
     """.trimIndent()
 
@@ -123,33 +123,25 @@ class DialogManager(
     }
 
     private fun processAction(action: String) {
-        // Define patterns for the supported actions
         val moveToSectorPattern = """(?i)move to sector ([\w\s]+)""".toRegex()
         val moveToCoordinatePattern = """(?i)move to coordinate \[(\d+(\.\d+)?),\s*(\d+(\.\d+)?)\]""".toRegex() // Accepts integers and doubles
-        //val shootToPlayerPattern = """(?i)shoot to player \[(\d+\.\d+),(\d+\.\d+)\]""".toRegex()
-        // Match and process actions
+
+        Logger.debug("sector pattern: " + moveToSectorPattern.toString())
         when {
             moveToSectorPattern.matches(action) -> {
                 val match = moveToSectorPattern.find(action)!!
                 val sector = match.groupValues[1]
-                Logger.debug("Detected movement command to sector: $sector")
-                // Pass sector as subject
+
                 actionModel.executeAction("MOVE", currentNpcName, sector, null, null)
             }
             moveToCoordinatePattern.matches(action) -> {
                 val match = moveToCoordinatePattern.find(action)!!
                 val x = match.groupValues[1].toDouble()
                 val y = match.groupValues[3].toDouble()
-                Logger.debug("Detected movement command to coordinates: x=$x, y=$y")
-                actionModel.executeAction("MOVE", currentNpcName, "COORDINATE", "[$x,$y]", null)
+
+                actionModel.executeAction("MOVE", currentNpcName, "COORDINATE", null, "[$x,$y]")
             }
-//            shootToPlayerPattern.matches(action) -> {
-//                val match = shootToPlayerPattern.find(action)!!
-//                val x = match.groupValues[1]
-//                val y = match.groupValues[2]
-//                Logger.debug("Detected shooting command to player: $player")
-//                actionModel.executeAction("SHOOT", currentNpcName, "player", "[$x,$y]", null)
-//            }
+
             action.equals("none", ignoreCase = true) -> {
                 Logger.debug("No action required, 'action: none' detected.")
             }
@@ -200,7 +192,7 @@ class DialogManager(
                     metadataInfo.hasSecret,
                     metadataInfo.conspirators
                 )
-                Logger.debug("Actions: $actions")
+         
 
                 actionModel.processNPCReflection(actions.joinToString("\n"), currentNpcName)
             } catch (e: Exception) {
