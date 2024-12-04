@@ -62,12 +62,20 @@ class DialogManager(
     private suspend fun startConversation() {
         // Initialize conversation with system context
         val systemContext = """
-            Bio: $currentNpcBio
-            General Context: ${Director.getContext()}
-            Faction Context: ${Director.getFactionContext(currentFactionName)}
-            NPC Context: ${Director.getNPCContext(currentNpcName)}
-            DO NOT talk about non-existent characters, items, and locations
-        """.trimIndent()
+        Bio: $currentNpcBio
+        General Context: ${Director.getContext()}
+        Faction Context: ${Director.getFactionContext(currentFactionName)}
+        NPC Context: ${Director.getNPCContext(currentNpcName)}
+        
+        Response Guidelines:
+        use two fields to respond: "message" and "action"
+        Example: 
+            message: Hello, how can I help you?
+            action: move to sector A
+        Ps: action should have a pattern equals "move to SECTOR xxxx" or "move to COORDINATE [1.0,2.0] or shoot to player xxxx"
+        If have no action, just ignore it, put blank or put a message like "action: none"
+        DO NOT talk about non-existent characters, items, or locations.
+    """.trimIndent()
 
         conversationMessages.clear()
         conversationText.clear()
@@ -79,14 +87,77 @@ class DialogManager(
             val response = llmService.chat(conversationMessages)
             conversationMessages.add(AssistantMessage(response))
 
-            conversationText.append("${currentNpcName}: $response")
-            dialogWindow?.updateConversation(conversationText.toString())
+            processResponse(response)
+
+            dialogWindow?.hideLoading()
         } catch (e: Exception) {
             Logger.error("Error starting conversation: ${e.message}")
             handleError("Failed to start conversation")
         }
+    }
 
-        dialogWindow?.hideLoading()
+    private fun processResponse(response: String) {
+        // Use regex patterns to extract "message" and "action" fields
+        val messagePattern = """(?i)message\s*:\s*(.+)""".toRegex()
+        val actionPattern = """(?i)action\s*:\s*(.+)""".toRegex()
+
+        val messageMatch = messagePattern.find(response)
+        val actionMatch = actionPattern.find(response)
+
+        // Process and display the message
+        if (messageMatch != null) {
+            val message = messageMatch.groupValues[1].trim()
+            conversationText.append("\n$currentNpcName: $message")
+            dialogWindow?.updateConversation(conversationText.toString())
+        } else {
+            Logger.debug("No message found in response: $response")
+        }
+
+        // Process the action, if present
+        if (actionMatch != null) {
+            val action = actionMatch.groupValues[1].trim()
+            processAction(action)
+        } else {
+            Logger.debug("No action found in response: $response")
+        }
+    }
+
+    private fun processAction(action: String) {
+        // Define patterns for the supported actions
+        val moveToSectorPattern = """(?i)move to sector ([\w\s]+)""".toRegex()
+        val moveToCoordinatePattern = """(?i)move to coordinate \[(\d+(\.\d+)?),\s*(\d+(\.\d+)?)\]""".toRegex() // Accepts integers and doubles
+        //val shootToPlayerPattern = """(?i)shoot to player \[(\d+\.\d+),(\d+\.\d+)\]""".toRegex()
+        // Match and process actions
+        when {
+            moveToSectorPattern.matches(action) -> {
+                val match = moveToSectorPattern.find(action)!!
+                val sector = match.groupValues[1]
+                Logger.debug("Detected movement command to sector: $sector")
+                // Pass sector as subject
+                actionModel.executeAction("MOVE", currentNpcName, sector, null, null)
+            }
+            moveToCoordinatePattern.matches(action) -> {
+                val match = moveToCoordinatePattern.find(action)!!
+                val x = match.groupValues[1].toDouble()
+                val y = match.groupValues[3].toDouble()
+                Logger.debug("Detected movement command to coordinates: x=$x, y=$y")
+                actionModel.executeAction("MOVE", currentNpcName, "COORDINATE", "[$x,$y]", null)
+            }
+//            shootToPlayerPattern.matches(action) -> {
+//                val match = shootToPlayerPattern.find(action)!!
+//                val x = match.groupValues[1]
+//                val y = match.groupValues[2]
+//                Logger.debug("Detected shooting command to player: $player")
+//                actionModel.executeAction("SHOOT", currentNpcName, "player", "[$x,$y]", null)
+//            }
+            action.equals("none", ignoreCase = true) -> {
+                Logger.debug("No action required, 'action: none' detected.")
+            }
+            else -> {
+                // Log unrecognized action formats
+                Logger.debug("Unrecognized action format: $action")
+            }
+        }
     }
 
     private fun handleMessage(message: String) {
@@ -100,8 +171,7 @@ class DialogManager(
                 val response = llmService.chat(conversationMessages)
                 conversationMessages.add(AssistantMessage(response))
 
-                conversationText.append("\n$currentNpcName: $response")
-                dialogWindow?.updateConversation(conversationText.toString())
+                processResponse(response)
             } catch (e: Exception) {
                 Logger.error("Error in conversation: ${e.message}")
                 handleError("Failed to get response")
@@ -130,6 +200,7 @@ class DialogManager(
                     metadataInfo.hasSecret,
                     metadataInfo.conspirators
                 )
+                Logger.debug("Actions: $actions")
 
                 actionModel.processNPCReflection(actions.joinToString("\n"), currentNpcName)
             } catch (e: Exception) {
