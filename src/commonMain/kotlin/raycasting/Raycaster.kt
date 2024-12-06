@@ -154,12 +154,12 @@ class Raycaster(
             val playerToEnemy = playerPos.distanceTo(enemyPos)
 
             if (playerToHit < playerToEnemy) {
-                println("Enemy at $enemyPos is in shadow. Blocked at $hitPoint")
+                //println("Enemy at $enemyPos is in shadow. Blocked at $hitPoint")
                 return true
             }
         }
 
-        println("Enemy at $enemyPos is NOT in shadow")
+        //println("Enemy at $enemyPos is NOT in shadow")
         return false
     }
 }

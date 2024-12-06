@@ -5,6 +5,7 @@ import korlibs.korge.ldtk.view.*
 import kotlinx.coroutines.*
 import npc.*
 import utils.*
+import javax.xml.stream.Location
 
 class ActionModel(
     private val ldtk: LDTKWorld,
@@ -39,10 +40,13 @@ class ActionModel(
     ) {
         Logger.debug("Executing action: type=$actionType, actor=$actor, subject=$subject, item=$item, target=$target")
         when (actionType) {
+
             "MOVE" -> {
-                if (subject == "NPC") {
-                    handleMoveAction(actor, null, item)  // Use 'item' as the target NPC
-                } else {
+                if (subject == "NPC" ) {
+                    handleMoveAction(actor, null, item) // Use 'item' as the target NPC
+                } else if (subject == "COORDINATE") {
+                    handleMoveAction(actor, target, null)
+                }else {
                     handleMoveAction(actor, subject, null)
                 }
             }
@@ -81,8 +85,17 @@ class ActionModel(
                     }
                 }
                 location != null -> {
-                    Logger.debug("$actor is moving to sector $location")
-                    movement.moveToSector(ldtk, location, grid)
+                    val coordinatePattern = """\[(\d+\.\d+),(\d+\.\d+)\]""".toRegex()
+                    val matchResult = coordinatePattern.find(location)
+                    if (matchResult != null) {
+                        val targetX = matchResult.groupValues[1].toDouble()
+                        val targetY = matchResult.groupValues[2].toDouble()
+
+                        movement.moveToPoint(targetX, targetY)
+                    } else {
+                        movement.moveToSector(ldtk, location, grid)
+
+                    }
                 }
                 else -> {
                     Logger.debug("Unable to move $actor: No valid destination provided")
