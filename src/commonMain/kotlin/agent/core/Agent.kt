@@ -19,4 +19,5 @@ interface Agent {
     // Basic actions
     suspend fun moveTo(target: Point)
     suspend fun speak(message: String)
+    fun update()
 }

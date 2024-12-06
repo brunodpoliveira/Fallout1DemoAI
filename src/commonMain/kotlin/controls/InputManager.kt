@@ -1,12 +1,12 @@
 package controls
 
-import interactions.*
 import korlibs.korge.view.*
 import kotlinx.coroutines.*
+import interactions.PlayerInteractionHandler
 
 class InputManager(
     private val controllerManager: VirtualControllerManager,
-    private val interactionManager: InteractionManager,
+    private val playerInteractionHandler: PlayerInteractionHandler,
     private val coroutineScope: CoroutineScope
 ) {
     fun setupInput(container: Container) {
@@ -14,26 +14,27 @@ class InputManager(
             container.setupVirtualController()
             setupButtonActions(
                 onAnyButton = { coroutineScope.launch {
-                    interactionManager.handleAnyButton()
+                    playerInteractionHandler.handleAnyButton()
                 }},
                 onWestButton = {
                     if (controllerManager.combatManager.isPlayerTurn()) {
-                        coroutineScope.launch { interactionManager.handleWestButton() }
+                        coroutineScope.launch { playerInteractionHandler.handleWestButton() }
                     }
                 },
                 onSouthButton = {
                     if (controllerManager.combatManager.isPlayerTurn()) {
-                        coroutineScope.launch { interactionManager.handleSouthButton() }
+                        coroutineScope.launch { playerInteractionHandler.handleSouthButton() }
                     }
                 },
                 onNorthButton = {
                     if (controllerManager.combatManager.isPlayerTurn()) {
-                        coroutineScope.launch { interactionManager.handleNorthButton() }
+                        coroutineScope.launch { playerInteractionHandler.handleNorthButton() }
                     }
                 }
             )
         }
     }
+
     fun getControllerInput(): Pair<Double, Double> {
         return controllerManager.getControllerInput()
     }

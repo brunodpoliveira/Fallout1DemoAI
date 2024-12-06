@@ -1,6 +1,8 @@
 package scenes
 
 import KR
+import agent.impl.*
+import agent.system.*
 import ai.*
 import bvh.*
 import combat.*
@@ -20,7 +22,6 @@ import korlibs.korge.scene.*
 import korlibs.korge.view.*
 import korlibs.korge.view.filter.*
 import korlibs.korge.view.mask.*
-import korlibs.korge.virtualcontroller.*
 import korlibs.math.geom.*
 import korlibs.math.geom.PointInt
 import llm.*
@@ -57,17 +58,15 @@ class SceneLoader(
     private lateinit var playerInventory: Inventory
     private lateinit var playerManager: PlayerManager
     private lateinit var inputManager: InputManager
-
     lateinit var actionModel: ActionModel
     private lateinit var combatManager: CombatManager
     private lateinit var dialogManager: DialogManager
-    lateinit var interactionManager: InteractionManager
     lateinit var playerMovementController: PlayerMovementController
     private lateinit var llmService: LLMService
     private lateinit var interrogationManager: InterrogationManager
-
-
-
+    private lateinit var agentManager: AgentManager
+    lateinit var agentInteractionManager: AgentInteractionManager
+    private lateinit var playerInteractionHandler: PlayerInteractionHandler
 
     suspend fun loadScene(): SceneLoader {
         loadResources()
@@ -213,26 +212,10 @@ class SceneLoader(
         )
         combatManager.initialize()
 
-        // Initialize interaction and movement systems last
-        interactionManager = InteractionManager(
-            player = player,
-            raycaster = raycaster,
-            dialogManager = dialogManager,
-            playerInventory = playerInventory,
-            playerStats = playerStats,
-            combatManager = combatManager,
-            gameWindow = scene.views.gameWindow,
-            openChestTile = openChestTile,
-            playerMovementController = null,
-            uiManager = uiManager
-        )
-
-        inputManager = InputManager(
-            controllerManager = VirtualControllerManager(combatManager),
-            interactionManager = interactionManager,
-            coroutineScope = scene
-        )
-        inputManager.setupInput(container)
+        agentInteractionManager = AgentInteractionManager(dialogManager)
+        agentManager = AgentManager(npcManager, ldtk, grid,scene)
+        agentManager.initializeAgents()
+        agentInteractionManager.initializeAgentManager(agentManager)
 
         playerMovementController = PlayerMovementController(
             player = player,
@@ -240,6 +223,34 @@ class SceneLoader(
             raycaster = raycaster
         )
 
-        interactionManager.playerMovementController = playerMovementController
+        playerInteractionHandler = PlayerInteractionHandler(
+            player = player,
+            raycaster = raycaster,
+            dialogManager = dialogManager,
+            playerInventory = playerInventory,
+            playerStats = playerStats,
+            combatManager = combatManager,
+            agentInteractionManager = agentInteractionManager,
+            gameWindow = scene.views.gameWindow,
+            openChestTile = openChestTile,
+            uiManager = uiManager,
+            playerMovementController = playerMovementController,
+            agentId = player.entity.identifier
+        )
+
+        inputManager = InputManager(
+            controllerManager = VirtualControllerManager(combatManager),
+            playerInteractionHandler = playerInteractionHandler,
+            coroutineScope = scene
+        )
+        inputManager.setupInput(container)
+        val playerAgent = PlayerAgent(
+            id = player.entity.identifier,
+            inventory = playerInventory,
+            stats = playerStats
+        )
+        agentManager.registerPlayer(playerAgent)
+
+
     }
 }

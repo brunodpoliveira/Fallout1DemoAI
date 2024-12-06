@@ -1,6 +1,6 @@
 # Fallout1DemoAI
 This project is a proof-of-concept demonstration of the Fallout 1 demo town, Scrapheap,
-built using Korge and Kotlin. The main highlight of the project is the use of GPT to
+built using Korge and Kotlin. The main highlight of the project is the use of LLMs to
 power the NPC interactions, making them dynamic and conversational.
 
 ## Collaborating
@@ -54,7 +54,7 @@ restarting the application.
 
 ### Build and Run
 1. Clone the repository.
-2. Ensure the API key for GPT-3.5 turbo is set in gradle.properties and config.properties.
+2. Ensure the API key for OpenAI services is set in gradle.properties and config.properties.
 3. Run the game using: ./gradlew runJvmAutoreload
 4. Deploy using ./gradlew packageJvmFatJar. Run it using java -jar build/libs/Fallout1DemoAI-all.jar
 
@@ -140,7 +140,7 @@ adhere to the project's coding standards.
 
 ## Acknowledgements
 - The Fallout franchise by Bethesda Softworks/Interplay
-- OpenAI, theokanning, and Lambdua for providing the GPT-3.5 Turbo Tech and API
+- OpenAI, theokanning, and Lambdua for providing the GPT Tech and API
 - Korge developers for the game engine, support in their Discord server, and the Dungeon Starter Kit
 - GNUGRAF for providing critical feedback and support
 - mikiz from itch.io for their crosshair pack

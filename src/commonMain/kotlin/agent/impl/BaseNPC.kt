@@ -1,14 +1,19 @@
 package agent.impl
 
 import agent.core.*
+import agent.system.*
+import agent.system.NPCTask.Companion.DIALOG_TIMEOUT
+import agent.system.NPCTask.Companion.AUTONOMOUS_ACTION_DELAY
 import korlibs.datastructure.*
 import korlibs.korge.ldtk.view.*
 import korlibs.korge.view.*
 import korlibs.math.geom.*
+import kotlinx.coroutines.*
 import npc.*
 import utils.*
 
 class BaseNPC(
+    private val coroutineScope: CoroutineScope,
     override val id: String,
     override val name: String,
     override var faction: String,
@@ -24,6 +29,9 @@ class BaseNPC(
     private val inventory = Inventory(id)
     private var currentState: NPCState = NPCState.Idle
     private var interactionTarget: String? = null
+    private var lastActionTime = 0L
+    private var currentTask: NPCTask? = null
+
 
     private val movement = Movement(
         character = character,
@@ -98,6 +106,15 @@ class BaseNPC(
         println("$name: $message")
     }
 
+    override fun update() {
+        when (currentState) {
+            NPCState.Idle -> considerAutonomousActions()
+            NPCState.Busy -> checkTaskCompletion()
+            NPCState.InConversation -> updateDialogState()
+        }
+    }
+
+
     private fun handleConversationStart(input: AgentInput.StartConversation): AgentOutput {
         return if (isAvailableForInteraction()) {
             currentState = NPCState.InConversation
@@ -148,6 +165,61 @@ class BaseNPC(
             Decision.Accept("Continuing conversation")
         } else {
             Decision.Reject("Already in conversation")
+        }
+    }
+
+    private fun considerAutonomousActions() {
+        // Check if enough time has passed since last action
+        val currentTime = System.currentTimeMillis()
+        if (currentTime - lastActionTime < AUTONOMOUS_ACTION_DELAY) return
+
+        // Simple placeholder behavior - randomly patrol or stay idle
+        if (Math.random() < 0.3) { // 30% chance to start patrol
+            val nearbyPoints = listOf(
+                Point(position.x + 50, position.y),
+                Point(position.x - 50, position.y),
+                Point(position.x, position.y + 50),
+                Point(position.x, position.y - 50)
+            )
+            coroutineScope.launch {
+                patrol(nearbyPoints.shuffled().take(2))
+            }
+        }
+
+        lastActionTime = currentTime
+    }
+
+    private fun checkTaskCompletion(): Boolean {
+        when (currentTask) {
+            is NPCTask.Patrol -> {
+                val task = currentTask as NPCTask.Patrol
+                if (task.isComplete()) {
+                    currentTask = null
+                    setIdle()
+                    return true
+                }
+            }
+            is NPCTask.Dialog -> {
+                val task = currentTask as NPCTask.Dialog
+                if (task.isTimedOut()) {
+                    currentTask = null
+                    setIdle()
+                    return true
+                }
+            }
+            null -> return true
+        }
+        return false
+    }
+
+    private fun updateDialogState() {
+        val currentTime = System.currentTimeMillis()
+
+        // Check for conversation timeout
+        val conversationTask = currentTask as? NPCTask.Dialog ?: return
+        if (currentTime - conversationTask.startTime > DIALOG_TIMEOUT) {
+            currentTask = null
+            setIdle()
         }
     }
 

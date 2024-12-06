@@ -1,16 +1,18 @@
 package agent.system
 
 import agent.core.*
+import agent.impl.*
 import korlibs.korge.ldtk.view.*
 import npc.*
-import agent.impl.BaseNPC
 import korlibs.datastructure.*
+import kotlinx.coroutines.*
 import utils.*
 
 class AgentManager(
     private val npcManager: NPCManager,
     private val ldtk: LDTKWorld,
-    private val grid: IntIArray2
+    private val grid: IntIArray2,
+    private val coroutineScope: CoroutineScope
 ) {
     private val agents = mutableMapOf<String, Agent>()
 
@@ -37,6 +39,7 @@ class AgentManager(
             ldtk = ldtk,
             grid = grid,
             stats = stats,
+            coroutineScope = coroutineScope,
         )
     }
 
@@ -46,4 +49,9 @@ class AgentManager(
         val nearbyNPCs = npcManager.getNearbyNPCs(agentId, radius)
         return nearbyNPCs.mapNotNull { (id, _) -> agents[id] }
     }
+
+    fun registerPlayer(player: PlayerAgent) {
+        agents[player.id] = player
+    }
+
 }
