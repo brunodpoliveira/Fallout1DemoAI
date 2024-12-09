@@ -5,7 +5,6 @@ import korlibs.korge.ldtk.view.*
 import kotlinx.coroutines.*
 import npc.*
 import utils.*
-import javax.xml.stream.Location
 
 class ActionModel(
     private val ldtk: LDTKWorld,
@@ -21,18 +20,22 @@ class ActionModel(
             val parts = action.split(",")
             Logger.debug("Action parts: ${parts.joinToString(", ")}")
             if (parts.size >= 3) {
-                val actionType = parts[0]
+                val actionVerb = ActionVerb.fromString(parts[0])
                 val actor = parts[1]
                 val subject = parts[2]
                 val item = if (parts.size > 3 && parts[3].isNotEmpty()) parts[3] else null
                 val target = if (parts.size > 4 && parts[4].isNotEmpty()) parts[4] else null
-                executeAction(actionType, actor, subject, item, target)
+                if (actionVerb != null) {
+                    executeAction(actionVerb, actor, subject, item, target)
+                } else {
+                    Logger.debug("Unknown action verb: ${parts[0]}")
+                }
             }
         }
     }
 
     fun executeAction(
-        actionType: String,
+        actionType: ActionVerb,
         actor: String,
         subject: String,
         item: String?,
@@ -41,7 +44,7 @@ class ActionModel(
         Logger.debug("Executing action: type=$actionType, actor=$actor, subject=$subject, item=$item, target=$target")
         when (actionType) {
 
-            "MOVE" -> {
+            ActionVerb.MOVE  -> {
                 if (subject == "NPC" ) {
                     handleMoveAction(actor, null, item) // Use 'item' as the target NPC
                 } else if (subject == "COORDINATE") {
@@ -50,9 +53,9 @@ class ActionModel(
                     handleMoveAction(actor, subject, null)
                 }
             }
-            "GIVE" -> handleGiveAction(actor, subject, item)
-            "TAKE" -> handleTakeAction(actor, subject, item)
-            "INTERACT" -> handleInteractAction(actor, subject)
+            ActionVerb.GIVE  -> handleGiveAction(actor, subject, item)
+            ActionVerb.TAKE  -> handleTakeAction(actor, subject, item)
+            ActionVerb.INTERACT -> handleInteractAction(actor, subject)
             else -> {
                 Logger.debug("Unknown action type: $actionType")
             }

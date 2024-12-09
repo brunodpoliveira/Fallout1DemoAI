@@ -4,6 +4,7 @@ import ai.*
 import korlibs.korge.view.*
 import kotlinx.coroutines.*
 import llm.*
+import org.json.*
 import ui.*
 import utils.*
 
@@ -62,19 +63,34 @@ class DialogManager(
     private suspend fun startConversation() {
         // Initialize conversation with system context
         val systemContext = """
-        Bio: $currentNpcBio
-        General Context: ${Director.getContext()}
-        Faction Context: ${Director.getFactionContext(currentFactionName)}
-        NPC Context: ${Director.getNPCContext(currentNpcName)}
-        
-        Response Guidelines:
-        use two fields to respond: "message" and "action"
-        Example: 
-            message: Hello, how can I help you?
-            action: move to sector A
-        Ps: action should have a pattern equals "move to SECTOR xxxx" or "move to COORDINATE [1.0,2.0] or shoot to player xxxx"
-        If have no action, just ignore it, put a message "action: none"
-        DO NOT talk about non-existent characters, items, or locations.
+    Bio: $currentNpcBio
+    General Context: ${Director.getContext()}
+    Faction Context: ${Director.getFactionContext(currentFactionName)}
+    NPC Context: ${Director.getNPCContext(currentNpcName)}
+   
+    Response Guidelines:
+    - Always provide a valid JSON response.
+    - If the action involves moving or shooting, either "sector" or "coordinate" must be filled.
+    - Use "coordinate" for actions requiring specific locations (e.g., [x, y]).
+    - If have no valid coordinate detected use "sector" to move to a specific sector.
+    - If neither applies, set "sector" and "coordinate" to null.
+    Respond strictly using JSON format as described below. Ensure valid JSON syntax.
+    {
+        "message": "Provide a clear message to the player.",
+        "verb": "Specify the action verb, e.g., 'move' or 'shoot'.",
+        "sector": "Provide the sector name if applicable, or leave null.",
+        "coordinate": "[x, y] format for coordinates, or leave null."
+    }
+    Example:
+    {
+        "message": "Hello, how can I help you?",
+        "verb": "move",
+        "sector": "town",
+        "coordinate": [1.0, 2.0]
+    }
+    
+    If there is no action, set "verb", "sector", and "coordinate" to null, and provide a message only.
+    Avoid mentioning non-existent characters, items, or locations.
     """.trimIndent()
 
         conversationMessages.clear()
@@ -97,58 +113,71 @@ class DialogManager(
     }
 
     private fun processResponse(response: String) {
-        // Use regex patterns to extract "message" and "action" fields
-        val messagePattern = """(?i)message\s*:\s*(.+)""".toRegex()
-        val actionPattern = """(?i)action\s*:\s*(.+)""".toRegex()
+        try {
+            val json = JSONObject(response)
 
-        val messageMatch = messagePattern.find(response)
-        val actionMatch = actionPattern.find(response)
+            Logger.debug("Response JSON: $json")
+            // Extract fields from JSON
+            val message = json.optString("message", null)
+            val verb = json.optString("verb", null)
+            val sector = json.optString("sector", null)
+            val coordinate = json.optJSONArray("coordinate")
 
-        // Process and display the message
-        if (messageMatch != null) {
-            val message = messageMatch.groupValues[1].trim()
-            conversationText.append("\n$currentNpcName: $message")
-            dialogWindow?.updateConversation(conversationText.toString())
-        } else {
-            Logger.debug("No message found in response: $response")
-        }
+            // Display the message
+            if (!message.isNullOrEmpty()) {
+                conversationText.append("\n$currentNpcName: $message")
+                dialogWindow?.updateConversation(conversationText.toString())
+            } else {
+                Logger.debug("No message found in response: $response")
+            }
 
-        // Process the action, if present
-        if (actionMatch != null) {
-            val action = actionMatch.groupValues[1].trim()
-            processAction(action)
-        } else {
-            Logger.debug("No action found in response: $response")
+            // Process the action based on JSON fields
+            if (!verb.isNullOrEmpty()) {
+                val actionVerb = ActionVerb.fromString(verb)
+                if (actionVerb != null) {
+                    processActionVerb(actionVerb, sector, coordinate)
+                } else {
+                    Logger.debug("Unrecognized verb: $verb")
+                }
+            } else {
+                Logger.debug("No action verb found in response: $response")
+            }
+        } catch (e: JSONException) {
+            Logger.error("Failed to parse response JSON: $response")
+            Logger.error(e.stackTraceToString())
         }
     }
 
-    private fun processAction(action: String) {
-        val moveToSectorPattern = """(?i)move to sector ([\w\s]+)""".toRegex()
-        val moveToCoordinatePattern = """(?i)move to coordinate \[(\d+(\.\d+)?),\s*(\d+(\.\d+)?)\]""".toRegex() // Accepts integers and doubles
-
-        Logger.debug("sector pattern: " + moveToSectorPattern.toString())
-        when {
-            moveToSectorPattern.matches(action) -> {
-                val match = moveToSectorPattern.find(action)!!
-                val sector = match.groupValues[1]
-
-                actionModel.executeAction("MOVE", currentNpcName, sector, null, null)
-            }
-            moveToCoordinatePattern.matches(action) -> {
-                val match = moveToCoordinatePattern.find(action)!!
-                val x = match.groupValues[1].toDouble()
-                val y = match.groupValues[3].toDouble()
-
-                actionModel.executeAction("MOVE", currentNpcName, "COORDINATE", null, "[$x,$y]")
+    private fun processActionVerb(actionVerb: ActionVerb, sector: String?, coordinate: JSONArray?) {
+        when (actionVerb) {
+            ActionVerb.MOVE -> {
+                if (!sector.isNullOrEmpty()) {
+                    Logger.debug("Detected movement to sector: $sector")
+                    actionModel.executeAction(ActionVerb.MOVE, currentNpcName, sector, null, null)
+                } else if (coordinate != null && coordinate.length() == 2) {
+                    val x = coordinate.getDouble(0)
+                    val y = coordinate.getDouble(1)
+                    Logger.debug("Detected movement to coordinates: [$x, $y]")
+                    actionModel.executeAction(ActionVerb.MOVE, currentNpcName, "COORDINATE", null, "[$x,$y]")
+                } else {
+                    Logger.debug("Move action specified but no valid sector or coordinates found.")
+                }
             }
 
-            action.equals("none", ignoreCase = true) -> {
-                Logger.debug("No action required, 'action: none' detected.")
+            ActionVerb.SHOOT -> {
+                if (coordinate != null && coordinate.length() == 2) {
+                    val x = coordinate.getDouble(0)
+                    val y = coordinate.getDouble(1)
+                    Logger.debug("Detected shooting action at coordinates: [$x, $y]")
+                    actionModel.executeAction(ActionVerb.SHOOT, currentNpcName, "COORDINATE", null, "[$x,$y]")
+                } else {
+                    Logger.debug("Shoot action specified but no valid coordinates found.")
+                }
             }
-            else -> {
-                // Log unrecognized action formats
-                Logger.debug("Unrecognized action format: $action")
-            }
+
+            ActionVerb.GIVE -> TODO()
+            ActionVerb.TAKE -> TODO()
+            ActionVerb.INTERACT -> TODO()
         }
     }
 
@@ -192,7 +221,7 @@ class DialogManager(
                     metadataInfo.hasSecret,
                     metadataInfo.conspirators
                 )
-         
+
 
                 actionModel.processNPCReflection(actions.joinToString("\n"), currentNpcName)
             } catch (e: Exception) {

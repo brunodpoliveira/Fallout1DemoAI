@@ -172,14 +172,14 @@ class DemoLevel : BaseLevelScene("scrapheap") {
 
         val giveAction = "GIVE,Rayze,Baka,RED_POTION"
         Logger.debug("Executing GIVE action: $giveAction")
-        sceneLoader.actionModel.executeAction("GIVE", "Rayze", "Baka", null, "RED_POTION")
+        sceneLoader.actionModel.executeAction(ActionVerb.GIVE, "Rayze", "Baka", null, "RED_POTION")
 
         Logger.debug("Inventories after GIVE:")
         logNPCInventories()
 
         val takeAction = "TAKE,Rayze,Baka,BLUE_POTION"
         Logger.debug("Executing TAKE action: $takeAction")
-        sceneLoader.actionModel.executeAction("TAKE", "Rayze", "Baka", null, "BLUE_POTION")
+        sceneLoader.actionModel.executeAction(ActionVerb.TAKE, "Rayze", "Baka", null, "BLUE_POTION")
 
         Logger.debug("Final Inventories:")
         logNPCInventories()
