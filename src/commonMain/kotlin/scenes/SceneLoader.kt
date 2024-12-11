@@ -64,7 +64,7 @@ class SceneLoader(
     lateinit var playerMovementController: PlayerMovementController
     private lateinit var llmService: LLMService
     private lateinit var interrogationManager: InterrogationManager
-    private lateinit var agentManager: AgentManager
+    lateinit var agentManager: AgentManager
     lateinit var agentInteractionManager: AgentInteractionManager
     private lateinit var playerInteractionHandler: PlayerInteractionHandler
 
@@ -219,7 +219,7 @@ class SceneLoader(
 
         playerMovementController = PlayerMovementController(
             player = player,
-            inputManager = inputManager,
+            inputManager = null,
             raycaster = raycaster
         )
 
@@ -250,7 +250,7 @@ class SceneLoader(
             stats = playerStats
         )
         agentManager.registerPlayer(playerAgent)
-
+        playerMovementController.inputManager = inputManager
 
     }
 }
