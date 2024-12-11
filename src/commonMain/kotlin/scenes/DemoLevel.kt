@@ -90,7 +90,7 @@ class DemoLevel : BaseLevelScene("scrapheap") {
         val baka = sceneLoader.agentManager.getAgent("Baka")
 
         if (rayze != null && baka != null) {
-            sceneLoader.npcManager.getNPCInventory("Rayze")?.apply {
+            sceneLoader.agentManager.getAgentInventory("Rayze")?.apply {
                 addItem("TEST_POTION")
                 addItem("TEST_WEAPON")
             }
@@ -113,9 +113,9 @@ class DemoLevel : BaseLevelScene("scrapheap") {
 
     private fun logInventories() {
         Logger.debug("Current Inventories:")
-        sceneLoader.npcManager.npcs.keys.forEach { npcName ->
-            val inventory = sceneLoader.npcManager.getNPCInventory(npcName)
-            Logger.debug("$npcName's inventory: ${inventory?.getItems()}")
+        sceneLoader.agentManager.getAllAgents().forEach { agent ->
+            val inventory = sceneLoader.agentManager.getAgentInventory(agent.id)
+            Logger.debug("${agent.name}'s inventory: ${inventory?.getItems()}")
         }
     }
 }

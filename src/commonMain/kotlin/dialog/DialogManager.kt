@@ -1,5 +1,7 @@
 package dialog
 
+import agent.core.*
+import agent.system.*
 import ai.*
 import korlibs.korge.view.*
 import kotlinx.coroutines.*
@@ -15,35 +17,26 @@ class DialogManager(
 ) {
     private var dialogWindow: DialogWindow? = null
     private var cooldownActive = false
+    private var currentInteraction: AgentInteractionManager.Interaction? = null
 
     val isInDialog: Boolean get() = _isInDialog
     private var _isInDialog = false
 
-    // Conversation state
     private val conversationMessages = mutableListOf<LLMMessage>()
     private val conversationText = StringBuilder()
 
-    // Current conversation context
-    private lateinit var currentNpcName: String
-    private lateinit var currentNpcBio: String
-    private lateinit var currentFactionName: String
-
-    fun showDialog(npcName: String, npcBio: String, factionName: String) {
+    fun showDialog(interaction: AgentInteractionManager.Interaction) {
         if (isInDialog || cooldownActive) return
+        currentInteraction = interaction
 
-        // Store conversation context
-        currentNpcName = npcName
-        currentNpcBio = npcBio
-        currentFactionName = factionName
-
-        if (dialogWindow == null) {
-            dialogWindow = DialogWindow().apply {
-                onMessageSend = { message -> handleMessage(message) }
-                onClose = { handleClose() }
+        dialogWindow = dialogWindow ?: DialogWindow().apply {
+            onMessageSend = { message -> coroutineScope.launch {
+                handleMessage(message) }
             }
+            onClose = { handleClose() }
         }
 
-        _isInDialog  = true
+        _isInDialog = true
         GameState.isDialogOpen = true
 
         dialogWindow?.apply {
@@ -53,42 +46,35 @@ class DialogManager(
 
         container.addChild(dialogWindow!!)
 
-        // Start the conversation
         coroutineScope.launch {
             startConversation()
         }
     }
 
     private suspend fun startConversation() {
-        // Initialize conversation with system context
+        val interaction = currentInteraction ?: return
+        val target = interaction.target
+
         val systemContext = """
-        Bio: $currentNpcBio
+        Bio: ${target.id}
         General Context: ${Director.getContext()}
-        Faction Context: ${Director.getFactionContext(currentFactionName)}
-        NPC Context: ${Director.getNPCContext(currentNpcName)}
-        
-        Response Guidelines:
-        use two fields to respond: "message" and "action"
-        Example: 
-            message: Hello, how can I help you?
-            action: move to sector A
-        Ps: action should have a pattern equals "move to SECTOR xxxx" or "move to COORDINATE [1.0,2.0] or shoot to player xxxx"
-        If have no action, just ignore it, put a message "action: none"
-        DO NOT talk about non-existent characters, items, or locations.
-    """.trimIndent()
+        Faction Context: ${Director.getFactionContext(target.faction)}
+        NPC Context: ${Director.getNPCContext(target.name)}
+        """.trimIndent()
 
         conversationMessages.clear()
         conversationText.clear()
 
         conversationMessages.add(SystemMessage(systemContext))
-        conversationMessages.add(UserMessage("Hi"))
+
+        val initialInput = AgentInput.StartConversation(
+            targetId = interaction.initiator.id,
+            message = "Hello"
+        )
 
         try {
-            val response = llmService.chat(conversationMessages)
-            conversationMessages.add(AssistantMessage(response))
-
-            processResponse(response)
-
+            val output = target.processInput(initialInput)
+            processAgentOutput(output)
             dialogWindow?.hideLoading()
         } catch (e: Exception) {
             Logger.error("Error starting conversation: ${e.message}")
@@ -96,80 +82,63 @@ class DialogManager(
         }
     }
 
-    private fun processResponse(response: String) {
-        // Use regex patterns to extract "message" and "action" fields
-        val messagePattern = """(?i)message\s*:\s*(.+)""".toRegex()
-        val actionPattern = """(?i)action\s*:\s*(.+)""".toRegex()
+    private suspend fun handleMessage(message: String) {
+        val interaction = currentInteraction ?: return
 
-        val messageMatch = messagePattern.find(response)
-        val actionMatch = actionPattern.find(response)
+        dialogWindow?.showLoading()
+        conversationText.append("\nPlayer: $message")
 
-        // Process and display the message
-        if (messageMatch != null) {
-            val message = messageMatch.groupValues[1].trim()
-            conversationText.append("\n$currentNpcName: $message")
-            dialogWindow?.updateConversation(conversationText.toString())
-        } else {
-            Logger.debug("No message found in response: $response")
+        try {
+            val input = AgentInput.ReceiveMessage(
+                fromId = interaction.initiator.id,
+                message = message
+            )
+
+            val output = interaction.target.processInput(input)
+            processAgentOutput(output)
+        } catch (e: Exception) {
+            Logger.error("Error in conversation: ${e.message}")
+            handleError("Failed to get response")
         }
 
-        // Process the action, if present
-        if (actionMatch != null) {
-            val action = actionMatch.groupValues[1].trim()
-            processAction(action)
-        } else {
-            Logger.debug("No action found in response: $response")
-        }
+        dialogWindow?.hideLoading()
     }
 
-    private fun processAction(action: String) {
-        val moveToSectorPattern = """(?i)move to sector ([\w\s]+)""".toRegex()
-        val moveToCoordinatePattern = """(?i)move to coordinate \[(\d+(\.\d+)?),\s*(\d+(\.\d+)?)\]""".toRegex() // Accepts integers and doubles
-
-        Logger.debug("sector pattern: " + moveToSectorPattern.toString())
-        when {
-            moveToSectorPattern.matches(action) -> {
-                val match = moveToSectorPattern.find(action)!!
-                val sector = match.groupValues[1]
-
-                actionModel.executeAction("MOVE", currentNpcName, sector, null, null)
+    private fun processAgentOutput(output: AgentOutput) {
+        when (output.decision) {
+            is Decision.Accept -> {
+                output.actions.forEach { action ->
+                    when (action) {
+                        is AgentAction.Speak -> {
+                            conversationText.append("\n${currentInteraction?.target?.name}: ${action.message}")
+                            dialogWindow?.updateConversation(conversationText.toString())
+                        }
+                        is AgentAction.Move -> actionModel.executeAction(
+                            "MOVE",
+                            currentInteraction?.target?.id ?: return,
+                            "COORDINATE",
+                            null,
+                            "[${action.destination.x},${action.destination.y}]"
+                        )
+                        is AgentAction.GiveItem -> actionModel.executeAction(
+                            "GIVE",
+                            currentInteraction?.target?.id ?: return,
+                            action.targetId,
+                            action.itemId,
+                            null
+                        )
+                        is AgentAction.TakeItem -> actionModel.executeAction(
+                            "TAKE",
+                            currentInteraction?.target?.id ?: return,
+                            action.targetId,
+                            action.itemId,
+                            null
+                        )
+                        else -> Logger.debug("Skipping action: $action")
+                    }
+                }
             }
-            moveToCoordinatePattern.matches(action) -> {
-                val match = moveToCoordinatePattern.find(action)!!
-                val x = match.groupValues[1].toDouble()
-                val y = match.groupValues[3].toDouble()
-
-                actionModel.executeAction("MOVE", currentNpcName, "COORDINATE", null, "[$x,$y]")
-            }
-
-            action.equals("none", ignoreCase = true) -> {
-                Logger.debug("No action required, 'action: none' detected.")
-            }
-            else -> {
-                // Log unrecognized action formats
-                Logger.debug("Unrecognized action format: $action")
-            }
-        }
-    }
-
-    private fun handleMessage(message: String) {
-        coroutineScope.launch {
-            dialogWindow?.showLoading()
-
-            conversationMessages.add(UserMessage(message))
-            conversationText.append("\nPlayer: $message")
-
-            try {
-                val response = llmService.chat(conversationMessages)
-                conversationMessages.add(AssistantMessage(response))
-
-                processResponse(response)
-            } catch (e: Exception) {
-                Logger.error("Error in conversation: ${e.message}")
-                handleError("Failed to get response")
-            }
-
-            dialogWindow?.hideLoading()
+            else -> handleClose()
         }
     }
 
@@ -178,31 +147,39 @@ class DialogManager(
             dialogWindow?.showLoading()
 
             try {
-                // Process conversation before closing
-                val processor = ConversationPostProcessingServices(actionModel, llmService)
-                val (updatedBio, metadataInfo, actions) = processor.conversationPostProcessingLoop(
-                    conversationText.toString(),
-                    currentNpcBio,
-                    currentNpcName
-                )
+                currentInteraction?.let { interaction ->
+                    val processor = ConversationPostProcessingServices(actionModel, llmService)
+                    val (updatedBio, metadataInfo, actions) = processor.conversationPostProcessingLoop(
+                        conversationText.toString(),
+                        "Agent conversation summary",
+                        interaction.target.name
+                    )
 
-                Director.updateNPCContext(
-                    currentNpcName,
-                    updatedBio,
-                    metadataInfo.hasSecret,
-                    metadataInfo.conspirators
-                )
-         
+                    Director.updateNPCContext(
+                        interaction.target.name,
+                        updatedBio,
+                        metadataInfo.hasSecret,
+                        metadataInfo.conspirators
+                    )
 
-                actionModel.processNPCReflection(actions.joinToString("\n"), currentNpcName)
+                    actions.forEach { actionStr ->
+                        val parts = actionStr.split(",")
+                        if (parts.size >= 3) {
+                            actionModel.executeAction(
+                                parts[0],
+                                interaction.target.id,
+                                parts[2],
+                                parts.getOrNull(3),
+                                parts.getOrNull(4)
+                            )
+                        }
+                    }
+                }
             } catch (e: Exception) {
                 Logger.error("Error in conversation post-processing: ${e.message}")
             }
 
-            // Clean up
             cleanupDialog()
-
-            // Start cooldown
             cooldownActive = true
             delay(5000)
             cooldownActive = false
@@ -214,10 +191,11 @@ class DialogManager(
     }
 
     private fun cleanupDialog() {
-        _isInDialog  = false
+        _isInDialog = false
         GameState.isDialogOpen = false
         conversationMessages.clear()
         conversationText.clear()
+        currentInteraction = null
 
         dialogWindow?.also { window ->
             window.clear()

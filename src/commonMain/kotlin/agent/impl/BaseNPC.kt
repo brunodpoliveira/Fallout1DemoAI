@@ -9,7 +9,6 @@ import korlibs.korge.ldtk.view.*
 import korlibs.korge.view.*
 import korlibs.math.geom.*
 import kotlinx.coroutines.*
-import npc.*
 import utils.*
 
 class BaseNPC(
@@ -19,7 +18,7 @@ class BaseNPC(
     override var faction: String,
     private val bio: String,
     private val character: View,
-    private val pathfinding: Pathfinding,
+    private val pathfinding: AgentPathfinding,
     private val broadcastLocation: (String, Point) -> Unit,
     private val ldtk: LDTKWorld,
     private val grid: IntIArray2,
@@ -33,7 +32,7 @@ class BaseNPC(
     private var currentTask: NPCTask? = null
 
 
-    private val movement = Movement(
+    private val movement = AgentMovement(
         character = character,
         pathfinding = pathfinding,
         npcName = name,

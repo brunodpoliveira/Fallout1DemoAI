@@ -2,26 +2,100 @@ package agent.system
 
 import agent.core.*
 import agent.impl.*
-import korlibs.korge.ldtk.view.*
-import npc.*
+import ai.*
+import bvh.*
+import img.*
 import korlibs.datastructure.*
+import korlibs.image.atlas.*
+import korlibs.image.format.*
+import korlibs.io.file.std.*
+import korlibs.korge.ldtk.view.*
+import korlibs.korge.view.*
 import korlibs.math.geom.*
 import kotlinx.coroutines.*
+import maps.*
 import utils.*
 
 class AgentManager(
-    private val npcManager: NPCManager,
+    private val coroutineScope: CoroutineScope,
     private val ldtk: LDTKWorld,
     private val grid: IntIArray2,
-    private val coroutineScope: CoroutineScope
+    private val entities: List<LDTKEntityView>,
+    private val levelView: LDTKLevelView,
+    private val entitiesBvh: BvhWorld,
+    private val mapManager: MapManager
 ) {
     private val agents = mutableMapOf<String, Agent>()
+    private val entityViews = mutableMapOf<String, LDTKEntityView>()
     private val agentPositions = mutableMapOf<String, Point>()
+    private val agentInventories = mutableMapOf<String, Inventory>()
+    private val pathfinding = AgentPathfinding(mapManager.generateMap(levelView))
 
-    // Public interface methods
-    fun getAgentCount(): Int = agents.size
-    fun getAllAgents(): List<Agent> = agents.values.toList()
+    suspend fun initializeAgents() {
+        val atlas = MutableAtlasUnit()
+        val npcSprites = mapOf(
+            "Rayze" to resourcesVfs["gfx/minotaur.ase"].readImageDataContainer(ASE.toProps(), atlas),
+            "Baka" to resourcesVfs["gfx/wizard_f.ase"].readImageDataContainer(ASE.toProps(), atlas),
+            "Robot" to resourcesVfs["gfx/cleric_f.ase"].readImageDataContainer(ASE.toProps(), atlas)
+        )
+
+        entities.filter { entity ->
+            val nameField = entity.fieldsByName["Name"]
+            val npcName = nameField?.valueString
+            !npcName.isNullOrEmpty() && npcName != "Player"
+        }.forEach { entity ->
+            initializeAgent(entity, npcSprites[entity.fieldsByName["Name"]!!.valueString])
+        }
+
+        initializeMovements()
+        startUpdatingBVH()
+    }
+
+    private fun initializeAgent(entity: LDTKEntityView, sprite: ImageDataContainer?) {
+        val npcName = entity.fieldsByName["Name"]!!.valueString.toString()
+        val faction = entity.fieldsByName["Faction"]?.valueString ?: "Neutral"
+        val stats = readEntityStats(entity)
+
+        sprite?.let { it ->
+            entity.replaceView(
+                ImageDataView2(it.default).also {
+                    it.smoothing = false
+                    it.animation = "idle"
+                    it.anchor(Anchor.BOTTOM_CENTER)
+                    it.play()
+                }
+            )
+        }
+
+        val agent = BaseNPC(
+            coroutineScope = coroutineScope,
+            id = entity.entity.identifier,
+            name = npcName,
+            faction = faction,
+            bio = entity.fieldsByName["Bio"]?.valueString ?: "",
+            character = entity,
+            pathfinding = pathfinding,
+            broadcastLocation = { id, pos -> updateAgentPosition(id, pos) },
+            ldtk = ldtk,
+            grid = grid,
+            stats = stats
+        )
+
+        agents[npcName] = agent
+        entityViews[npcName] = entity
+        agentInventories[npcName] = Inventory(npcName)
+        Logger.debug("Initialized agent $npcName at ${entity.pos}")
+    }
+
+    fun registerPlayer(player: PlayerAgent) {
+        agents[player.id] = player
+        updateAgentPosition(player.id, player.position)
+    }
+
     fun getAgent(id: String): Agent? = agents[id]
+    fun getAllAgents(): List<Agent> = agents.values.toList()
+    fun getAgentCount(): Int = agents.size
+    fun getAgentInventory(agentId: String): Inventory? = agentInventories[agentId]
 
     fun getAgentsInFaction(faction: String): List<Agent> =
         agents.values.filter { it.faction == faction }
@@ -39,62 +113,40 @@ class AgentManager(
         }
     }
 
-    fun registerPlayer(player: PlayerAgent) {
-        agents[player.id] = player
-        updateAgentPosition(player.id, player.position)
+    private fun updateAgentPosition(agentId: String, position: Point) {
+        agentPositions[agentId] = position
+        Logger.debug("Agent $agentId moved to (${position.x}, ${position.y})")
     }
 
-    suspend fun initializeAgents() {
-        npcManager.initializeNPCs()
-        npcManager.npcs.forEach { (id, entityView) ->
-            try {
-                val agent = createAgentFromEntity(entityView)
-                agents[id] = agent
-                updateAgentPosition(id, agent.position)
-
-                Logger.debug("""
-                    Initialized agent:
-                    - ID: ${agent.id}
-                    - Name: ${agent.name}
-                    - Faction: ${agent.faction}
-                    - Position: ${agent.position}
-                """.trimIndent())
-            } catch (e: Exception) {
-                Logger.error("Failed to initialize agent for entity $id: ${e.message}")
+    private fun initializeMovements() {
+        agents.forEach { (id, agent) ->
+            if (agent is BaseNPC) {
+                MovementRegistry.addMovementForNPC(
+                    id,
+                    AgentMovement(
+                        character = entityViews[id]!!,
+                        pathfinding = pathfinding,
+                        npcName = id,
+                        broadcastLocation = { _, pos -> updateAgentPosition(id, pos) }
+                    )
+                )
             }
         }
     }
 
-    private fun createAgentFromEntity(entity: LDTKEntityView): Agent {
-        validateEntityFields(entity)
-
-        return BaseNPC(
-            id = entity.entity.identifier,
-            name = entity.fieldsByName["Name"]!!.valueString.toString(),
-            faction = entity.fieldsByName["Faction"]?.valueString ?: "Neutral",
-            bio = entity.fieldsByName["Bio"]?.valueString ?: "",
-            character = entity,
-            pathfinding = npcManager.pathfinding,
-            broadcastLocation = { id, pos -> updateAgentPosition(id, pos) },
-            ldtk = ldtk,
-            grid = grid,
-            stats = readEntityStats(entity),
-            coroutineScope = coroutineScope
-        )
-    }
-
-    private fun validateEntityFields(entity: LDTKEntityView) {
-        requireNotNull(entity.fieldsByName["Name"]) { "Entity missing required Name field" }
-        requireNotNull(entity.entity.identifier) { "Entity missing required identifier" }
-
-        val position = entity.pos
-        require(!position.x.isNaN() && !position.y.isNaN()) {
-            "Entity has invalid position: $position"
+    private fun startUpdatingBVH() {
+        coroutineScope.launch {
+            while (true) {
+                entityViews.values.forEach { view ->
+                    val bvhEntity = entitiesBvh.getBvhEntity(view)
+                    if (bvhEntity == null) {
+                        entitiesBvh += view
+                    } else {
+                        bvhEntity.update()
+                    }
+                }
+                delay(16)
+            }
         }
-    }
-
-    private fun updateAgentPosition(agentId: String, position: Point) {
-        agentPositions[agentId] = position
-        npcManager.broadcastLocation(agentId, position)
     }
 }
