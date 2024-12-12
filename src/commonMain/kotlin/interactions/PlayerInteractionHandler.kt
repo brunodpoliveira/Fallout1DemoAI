@@ -30,7 +30,7 @@ class PlayerInteractionHandler(
     private val openChestTile: TilesetRectangle,
     private val uiManager: UIManager,
     var playerMovementController: PlayerMovementController? = null,
-    private val agentId: String // Player's agent ID
+    private val agentId: String
 ) {
     private var lastInteractiveView: View? = null
 
@@ -43,16 +43,15 @@ class PlayerInteractionHandler(
 
     suspend fun handleWestButton() {
         val view = getInteractiveView() ?: return
-        if (view is LDTKEntityView && view.fieldsByName["Name"] != null) {
-            val targetNpcName = view.fieldsByName["Name"]!!.valueString
-            val targetAgentId = view.entity.identifier
+        if (view is LDTKEntityView) {
+            val targetNpcName = view.fieldsByName["Name"]?.valueString
+            if (targetNpcName != null) {
+                val success = agentInteractionManager.initiateInteraction(agentId, targetNpcName)
 
-            // Attempt to initiate interaction through agent system
-            val success = agentInteractionManager.initiateInteraction(agentId, targetAgentId)
-
-            if (!success) {
-                Logger.debug("Failed to initiate interaction with $targetNpcName")
-                gameWindow.alert("Cannot interact with $targetNpcName at this time")
+                if (!success) {
+                    Logger.debug("Failed to initiate interaction with $targetNpcName")
+                    gameWindow.alert("Cannot interact with $targetNpcName at this time")
+                }
             }
         }
     }
@@ -110,7 +109,12 @@ class PlayerInteractionHandler(
         val playerDirection = playerMovementController?.playerDirection ?: Vector2D(0.0, 0.0)
         val results = raycaster.doRay(player.pos, playerDirection, "Collides") ?: return null
         if (results.point.distanceTo(player.pos) >= 16f) return null
-        return results.view
+
+        val view = results.view
+        if (view is LDTKEntityView) {
+            Logger.debug("Found interactive entity: ${view.fieldsByName["Name"]?.valueString ?: "unnamed"} (${view.entity.identifier})")
+        }
+        return view
     }
 
     fun update() {

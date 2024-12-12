@@ -22,18 +22,21 @@ class DialogManager(
     val isInDialog: Boolean get() = _isInDialog
     private var _isInDialog = false
 
+    // Conversation state
     private val conversationMessages = mutableListOf<LLMMessage>()
     private val conversationText = StringBuilder()
 
     fun showDialog(interaction: AgentInteractionManager.Interaction) {
         if (isInDialog || cooldownActive) return
-        currentInteraction = interaction
 
-        dialogWindow = dialogWindow ?: DialogWindow().apply {
-            onMessageSend = { message -> coroutineScope.launch {
-                handleMessage(message) }
+        currentInteraction = interaction
+        val target = interaction.target
+
+        if (dialogWindow == null) {
+            dialogWindow = DialogWindow().apply {
+                onMessageSend = { message -> handleMessage(message) }
+                onClose = { runBlocking { handleClose() }  }
             }
-            onClose = { handleClose() }
         }
 
         _isInDialog = true
@@ -47,19 +50,20 @@ class DialogManager(
         container.addChild(dialogWindow!!)
 
         coroutineScope.launch {
-            startConversation()
+            startNewConversation()
         }
     }
 
-    private suspend fun startConversation() {
-        val interaction = currentInteraction ?: return
-        val target = interaction.target
-
+    private suspend fun startNewConversation() {
+        val target = currentInteraction?.target ?: return
         val systemContext = """
-        Bio: ${target.id}
-        General Context: ${Director.getContext()}
-        Faction Context: ${Director.getFactionContext(target.faction)}
-        NPC Context: ${Director.getNPCContext(target.name)}
+            Bio: ${NPCBio.getBioForNPC(target.name)}
+            General Context: ${Director.getContext()}
+            Faction Context: ${Director.getFactionContext(target.faction)}
+            NPC Context: ${Director.getNPCContext(target.name)}
+            
+            You are ${target.name}. Greet the player and introduce yourself naturally.
+            Stay in character and respond as your character would.
         """.trimIndent()
 
         conversationMessages.clear()
@@ -67,14 +71,12 @@ class DialogManager(
 
         conversationMessages.add(SystemMessage(systemContext))
 
-        val initialInput = AgentInput.StartConversation(
-            targetId = interaction.initiator.id,
-            message = "Hello"
-        )
-
         try {
-            val output = target.processInput(initialInput)
-            processAgentOutput(output)
+            val response = llmService.chat(conversationMessages)
+            conversationMessages.add(AssistantMessage(response))
+
+            conversationText.append("\n${target.name}: $response")
+            dialogWindow?.updateConversation(conversationText.toString())
             dialogWindow?.hideLoading()
         } catch (e: Exception) {
             Logger.error("Error starting conversation: ${e.message}")
@@ -82,29 +84,30 @@ class DialogManager(
         }
     }
 
-    private suspend fun handleMessage(message: String) {
-        val interaction = currentInteraction ?: return
+    private fun handleMessage(message: String) {
+        coroutineScope.launch {
+            dialogWindow?.showLoading()
+            val target = currentInteraction?.target ?: return@launch
 
-        dialogWindow?.showLoading()
-        conversationText.append("\nPlayer: $message")
+            conversationMessages.add(UserMessage(message))
+            conversationText.append("\nPlayer: $message")
 
-        try {
-            val input = AgentInput.ReceiveMessage(
-                fromId = interaction.initiator.id,
-                message = message
-            )
+            try {
+                val response = llmService.chat(conversationMessages)
+                conversationMessages.add(AssistantMessage(response))
 
-            val output = interaction.target.processInput(input)
-            processAgentOutput(output)
-        } catch (e: Exception) {
-            Logger.error("Error in conversation: ${e.message}")
-            handleError("Failed to get response")
+                conversationText.append("\n${target.name}: $response")
+                dialogWindow?.updateConversation(conversationText.toString())
+            } catch (e: Exception) {
+                Logger.error("Error in conversation: ${e.message}")
+                handleError("Failed to get response")
+            }
+
+            dialogWindow?.hideLoading()
         }
-
-        dialogWindow?.hideLoading()
     }
 
-    private fun processAgentOutput(output: AgentOutput) {
+    private suspend fun processAgentOutput(output: AgentOutput) {
         when (output.decision) {
             is Decision.Accept -> {
                 output.actions.forEach { action ->
@@ -113,6 +116,7 @@ class DialogManager(
                             conversationText.append("\n${currentInteraction?.target?.name}: ${action.message}")
                             dialogWindow?.updateConversation(conversationText.toString())
                         }
+
                         is AgentAction.Move -> actionModel.executeAction(
                             "MOVE",
                             currentInteraction?.target?.id ?: return,
@@ -120,6 +124,7 @@ class DialogManager(
                             null,
                             "[${action.destination.x},${action.destination.y}]"
                         )
+
                         is AgentAction.GiveItem -> actionModel.executeAction(
                             "GIVE",
                             currentInteraction?.target?.id ?: return,
@@ -127,6 +132,7 @@ class DialogManager(
                             action.itemId,
                             null
                         )
+
                         is AgentAction.TakeItem -> actionModel.executeAction(
                             "TAKE",
                             currentInteraction?.target?.id ?: return,
@@ -134,52 +140,42 @@ class DialogManager(
                             action.itemId,
                             null
                         )
+
                         else -> Logger.debug("Skipping action: $action")
                     }
                 }
             }
+
             else -> handleClose()
         }
     }
 
-    private fun handleClose() {
+    private suspend fun handleClose() {
         coroutineScope.launch {
             dialogWindow?.showLoading()
 
             try {
-                currentInteraction?.let { interaction ->
-                    val processor = ConversationPostProcessingServices(actionModel, llmService)
-                    val (updatedBio, metadataInfo, actions) = processor.conversationPostProcessingLoop(
-                        conversationText.toString(),
-                        "Agent conversation summary",
-                        interaction.target.name
-                    )
+                val processor = ConversationPostProcessingServices(actionModel, llmService)
+                val target = currentInteraction?.target ?: return@launch
 
-                    Director.updateNPCContext(
-                        interaction.target.name,
-                        updatedBio,
-                        metadataInfo.hasSecret,
-                        metadataInfo.conspirators
-                    )
+                val (updatedBio, metadataInfo, actions) = processor.conversationPostProcessingLoop(
+                    conversationText.toString(),
+                    NPCBio.getBioForNPC(target.name),
+                    target.name
+                )
 
-                    actions.forEach { actionStr ->
-                        val parts = actionStr.split(",")
-                        if (parts.size >= 3) {
-                            actionModel.executeAction(
-                                parts[0],
-                                interaction.target.id,
-                                parts[2],
-                                parts.getOrNull(3),
-                                parts.getOrNull(4)
-                            )
-                        }
-                    }
-                }
+                Director.updateNPCContext(
+                    target.name,
+                    updatedBio,
+                    metadataInfo.hasSecret,
+                    metadataInfo.conspirators
+                )
             } catch (e: Exception) {
                 Logger.error("Error in conversation post-processing: ${e.message}")
             }
 
             cleanupDialog()
+
             cooldownActive = true
             delay(5000)
             cooldownActive = false

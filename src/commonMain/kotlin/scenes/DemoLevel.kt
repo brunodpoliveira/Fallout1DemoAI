@@ -7,6 +7,7 @@ import utils.*
 class DemoLevel : BaseLevelScene("scrapheap") {
     override suspend fun initializeLevelSpecifics() {
         // Test suite controller - uncomment tests as needed
+        Logger.debug("Registered agents: ${sceneLoader.agentManager.getAllAgents().map { "${it.id} (${it.faction})" }}")
         debugTestBasicAgentFunctionality()
         //debugTestInteractions()
         //debugTestItemExchange()
@@ -25,15 +26,12 @@ class DemoLevel : BaseLevelScene("scrapheap") {
             Logger.debug("- Faction: ${agent.faction}")
             Logger.debug("- Position: ${agent.position}")
 
-            // Test factional grouping
             val factionMates = sceneLoader.agentManager.getAgentsInFaction(agent.faction)
             Logger.debug("- Faction members: ${factionMates.size}")
 
-            // Test proximity grouping
             val nearbyAgents = sceneLoader.agentManager.getAgentsInRange(agent.position, 100.0)
             Logger.debug("- Nearby agents: ${nearbyAgents.size}")
         }
-
         testBasicDecisionMaking()
         Logger.debug("Basic agent functionality tests completed.")
     }

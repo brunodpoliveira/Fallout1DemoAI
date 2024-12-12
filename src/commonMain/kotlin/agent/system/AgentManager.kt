@@ -32,6 +32,9 @@ class AgentManager(
     private val pathfinding = AgentPathfinding(mapManager.generateMap(levelView))
 
     suspend fun initializeAgents() {
+        val gameData = JsonLoader.loadGameData()
+        val levelData = gameData.levels["scrapheap"] ?: return
+
         val atlas = MutableAtlasUnit()
         val npcSprites = mapOf(
             "Rayze" to resourcesVfs["gfx/minotaur.ase"].readImageDataContainer(ASE.toProps(), atlas),
@@ -44,21 +47,32 @@ class AgentManager(
             val npcName = nameField?.valueString
             !npcName.isNullOrEmpty() && npcName != "Player"
         }.forEach { entity ->
-            initializeAgent(entity, npcSprites[entity.fieldsByName["Name"]!!.valueString])
+            val npcName = entity.fieldsByName["Name"]!!.valueString.toString()
+            val npcData = levelData.npcData[npcName]
+
+            // Use faction from game data, fallback to Neutral if not found
+            val faction = npcData?.faction ?: "Neutral"
+            val bio = npcData?.bio ?: ""
+
+            initializeAgent(entity, npcSprites[npcName], bio, faction)
         }
 
         initializeMovements()
         startUpdatingBVH()
     }
 
-    private fun initializeAgent(entity: LDTKEntityView, sprite: ImageDataContainer?) {
+    private fun initializeAgent(
+        entity: LDTKEntityView,
+        sprite: ImageDataContainer?,
+        bio: String,
+        faction: String
+    ) {
         val npcName = entity.fieldsByName["Name"]!!.valueString.toString()
-        val faction = entity.fieldsByName["Faction"]?.valueString ?: "Neutral"
         val stats = readEntityStats(entity)
 
-        sprite?.let { it ->
+        sprite?.let { spriteData ->
             entity.replaceView(
-                ImageDataView2(it.default).also {
+                ImageDataView2(spriteData.default).also {
                     it.smoothing = false
                     it.animation = "idle"
                     it.anchor(Anchor.BOTTOM_CENTER)
@@ -69,10 +83,10 @@ class AgentManager(
 
         val agent = BaseNPC(
             coroutineScope = coroutineScope,
-            id = entity.entity.identifier,
+            id = npcName,
             name = npcName,
             faction = faction,
-            bio = entity.fieldsByName["Bio"]?.valueString ?: "",
+            bio = bio,
             character = entity,
             pathfinding = pathfinding,
             broadcastLocation = { id, pos -> updateAgentPosition(id, pos) },
@@ -84,7 +98,7 @@ class AgentManager(
         agents[npcName] = agent
         entityViews[npcName] = entity
         agentInventories[npcName] = Inventory(npcName)
-        Logger.debug("Initialized agent $npcName at ${entity.pos}")
+        Logger.debug("Initialized agent $npcName at ${entity.pos} with faction: $faction")
     }
 
     fun registerPlayer(player: PlayerAgent) {
@@ -92,7 +106,14 @@ class AgentManager(
         updateAgentPosition(player.id, player.position)
     }
 
-    fun getAgent(id: String): Agent? = agents[id]
+    fun getAgent(id: String): Agent? {
+        val agent = agents[id]
+        if (agent == null) {
+            Logger.debug("No agent found with ID: $id (Available agents: ${agents.keys.joinToString()})")
+        }
+        return agent
+    }
+
     fun getAllAgents(): List<Agent> = agents.values.toList()
     fun getAgentCount(): Int = agents.size
     fun getAgentInventory(agentId: String): Inventory? = agentInventories[agentId]

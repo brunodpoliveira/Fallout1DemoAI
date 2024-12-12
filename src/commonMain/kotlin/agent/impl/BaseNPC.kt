@@ -24,13 +24,17 @@ class BaseNPC(
     private val grid: IntIArray2,
     val stats: EntityStats = EntityStats(100, 0, Point(0, 0))
 ) : Agent {
-    override var position: Point = Point(0, 0)
+    override var position: Point = character.pos
     private val inventory = Inventory(id)
     private var currentState: NPCState = NPCState.Idle
     private var interactionTarget: String? = null
     private var lastActionTime = 0L
     private var currentTask: NPCTask? = null
 
+    init {
+        broadcastLocation(id, position)
+        setIdle()
+    }
 
     private val movement = AgentMovement(
         character = character,
@@ -49,11 +53,20 @@ class BaseNPC(
     }
 
     override suspend fun decide(context: InteractionContext): Decision {
-        return when (currentState) {
+        Logger.debug("${name} deciding on interaction:")
+        Logger.debug("- Current state: $currentState")
+        Logger.debug("- Input type: ${context.input::class.simpleName}")
+        Logger.debug("- Initiator: ${context.initiator.name} (${context.initiator.faction})")
+        Logger.debug("- Target: ${context.target.name} (${context.target.faction})")
+
+        val decision = when (currentState) {
             NPCState.Idle -> decideFromIdle(context)
             NPCState.InConversation -> decideInConversation(context)
             NPCState.Busy -> Decision.Reject("Currently busy")
         }
+
+        Logger.debug("${name}'s decision: $decision")
+        return decision
     }
 
     override fun isAvailableForInteraction(): Boolean {
@@ -61,10 +74,20 @@ class BaseNPC(
     }
 
     override fun canInteractWith(other: Agent): Boolean {
+        Logger.debug("$name checking if can interact with ${other.name}")
+        Logger.debug("My faction: $faction, Other faction: ${other.faction}")
+
+        //TODO dynamic list; can be changed depending on story development
         return when {
+            // Allow interaction with same faction
             other.faction == faction -> true
-            faction == "Neutral" -> true
-            other.faction == "Neutral" -> true
+            // Civilians can interact with anyone
+            faction == "Civilian" -> true
+            other.faction == "Civilian" -> true
+            // Player can interact with anyone
+            other.faction == "Player" -> true
+            faction == "Player" -> true
+            // Otherwise no interaction between different factions
             else -> false
         }
     }
@@ -117,15 +140,10 @@ class BaseNPC(
     private fun handleConversationStart(input: AgentInput.StartConversation): AgentOutput {
         return if (isAvailableForInteraction()) {
             currentState = NPCState.InConversation
-            AgentOutput(
-                Decision.Accept("Sure, let's talk."),
-                listOf(AgentAction.Speak("Hello! What would you like to discuss?"))
-            )
+            AgentOutput(Decision.Accept("Ready to talk"),
+                listOf(AgentAction.Speak("Hello! What would you like to discuss?")))
         } else {
-            AgentOutput(
-                Decision.Reject("Not available"),
-                emptyList()
-            )
+            AgentOutput(Decision.Reject("Busy"), emptyList())
         }
     }
 
@@ -152,10 +170,23 @@ class BaseNPC(
     }
 
     private fun decideFromIdle(context: InteractionContext): Decision {
-        return if (canInteractWith(context.initiator)) {
-            Decision.Accept("Ready to interact")
-        } else {
-            Decision.Reject("Cannot interact with ${context.initiator.name}")
+        // Always check if we can interact first
+        if (!canInteractWith(context.initiator)) {
+            return Decision.Reject("Cannot interact with ${context.initiator.name}")
+        }
+
+        return when (context.input) {
+            is AgentInput.StartConversation -> {
+                // If we can interact (checked above), then accept the conversation
+                Decision.Accept("Ready to talk")
+            }
+            is AgentInput.Observe -> {
+                Decision.Accept("Ready to interact")
+            }
+            else -> {
+                // Default acceptance for other types of interactions
+                Decision.Accept("Ready to interact")
+            }
         }
     }
 
@@ -163,7 +194,7 @@ class BaseNPC(
         return if (context.initiator.id == interactionTarget) {
             Decision.Accept("Continuing conversation")
         } else {
-            Decision.Reject("Already in conversation")
+            Decision.Reject("Already in conversation with $interactionTarget")
         }
     }
 
