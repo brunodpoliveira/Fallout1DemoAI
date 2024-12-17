@@ -1,10 +1,10 @@
-package npc
+package agent.core
 
 import korlibs.datastructure.*
 import korlibs.math.geom.*
 import korlibs.math.algo.*
 
-class Pathfinding(private val map: BooleanArray2) {
+class AgentPathfinding(private val map: BooleanArray2) {
     //TODO calculate path only once/ make it more efficient
     private val astar: AStar = AStar(map)
 

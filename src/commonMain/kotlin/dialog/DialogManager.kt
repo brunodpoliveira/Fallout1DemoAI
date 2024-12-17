@@ -1,5 +1,7 @@
 package dialog
 
+import agent.core.*
+import agent.system.*
 import ai.*
 import korlibs.korge.view.*
 import kotlinx.coroutines.*
@@ -16,6 +18,7 @@ class DialogManager(
 ) {
     private var dialogWindow: DialogWindow? = null
     private var cooldownActive = false
+    private var currentInteraction: AgentInteractionManager.Interaction? = null
 
     val isInDialog: Boolean get() = _isInDialog
     private var _isInDialog = false
@@ -24,27 +27,20 @@ class DialogManager(
     private val conversationMessages = mutableListOf<LLMMessage>()
     private val conversationText = StringBuilder()
 
-    // Current conversation context
-    private lateinit var currentNpcName: String
-    private lateinit var currentNpcBio: String
-    private lateinit var currentFactionName: String
-
-    fun showDialog(npcName: String, npcBio: String, factionName: String) {
+    fun showDialog(interaction: AgentInteractionManager.Interaction) {
         if (isInDialog || cooldownActive) return
 
-        // Store conversation context
-        currentNpcName = npcName
-        currentNpcBio = npcBio
-        currentFactionName = factionName
+        currentInteraction = interaction
+        val target = interaction.target
 
         if (dialogWindow == null) {
             dialogWindow = DialogWindow().apply {
                 onMessageSend = { message -> handleMessage(message) }
-                onClose = { handleClose() }
+                onClose = { runBlocking { handleClose() }  }
             }
         }
 
-        _isInDialog  = true
+        _isInDialog = true
         GameState.isDialogOpen = true
 
         dialogWindow?.apply {
@@ -54,19 +50,21 @@ class DialogManager(
 
         container.addChild(dialogWindow!!)
 
-        // Start the conversation
         coroutineScope.launch {
-            startConversation()
+            startNewConversation()
         }
     }
 
-    private suspend fun startConversation() {
-        // Initialize conversation with system context
+    private suspend fun startNewConversation() {
+        val target = currentInteraction?.target ?: return
         val systemContext = """
-    Bio: $currentNpcBio
-    General Context: ${Director.getContext()}
-    Faction Context: ${Director.getFactionContext(currentFactionName)}
-    NPC Context: ${Director.getNPCContext(currentNpcName)}
+     Bio: ${NPCBio.getBioForNPC(target.name)}
+     General Context: ${Director.getContext()}
+     Faction Context: ${Director.getFactionContext(target.faction)}
+     NPC Context: ${Director.getNPCContext(target.name)}
+            
+    You are ${target.name}. Greet the player and introduce yourself naturally.
+    Stay in character and respond as your character would.
    
     Response Guidelines:
     - Always provide a valid JSON response.
@@ -97,14 +95,13 @@ class DialogManager(
         conversationText.clear()
 
         conversationMessages.add(SystemMessage(systemContext))
-        conversationMessages.add(UserMessage("Hi"))
 
         try {
             val response = llmService.chat(conversationMessages)
             conversationMessages.add(AssistantMessage(response))
 
-            processResponse(response)
-
+            conversationText.append("\n${target.name}: $response")
+            dialogWindow?.updateConversation(conversationText.toString())
             dialogWindow?.hideLoading()
         } catch (e: Exception) {
             Logger.error("Error starting conversation: ${e.message}")
@@ -184,6 +181,7 @@ class DialogManager(
     private fun handleMessage(message: String) {
         coroutineScope.launch {
             dialogWindow?.showLoading()
+            val target = currentInteraction?.target ?: return@launch
 
             conversationMessages.add(UserMessage(message))
             conversationText.append("\nPlayer: $message")
@@ -192,7 +190,8 @@ class DialogManager(
                 val response = llmService.chat(conversationMessages)
                 conversationMessages.add(AssistantMessage(response))
 
-                processResponse(response)
+                conversationText.append("\n${target.name}: $response")
+                dialogWindow?.updateConversation(conversationText.toString())
             } catch (e: Exception) {
                 Logger.error("Error in conversation: ${e.message}")
                 handleError("Failed to get response")
@@ -202,36 +201,77 @@ class DialogManager(
         }
     }
 
-    private fun handleClose() {
+    private suspend fun processAgentOutput(output: AgentOutput) {
+        when (output.decision) {
+            is Decision.Accept -> {
+                output.actions.forEach { action ->
+                    when (action) {
+                        is AgentAction.Speak -> {
+                            conversationText.append("\n${currentInteraction?.target?.name}: ${action.message}")
+                            dialogWindow?.updateConversation(conversationText.toString())
+                        }
+
+                        is AgentAction.Move -> actionModel.executeAction(
+                            "MOVE",
+                            currentInteraction?.target?.id ?: return,
+                            "COORDINATE",
+                            null,
+                            "[${action.destination.x},${action.destination.y}]"
+                        )
+
+                        is AgentAction.GiveItem -> actionModel.executeAction(
+                            "GIVE",
+                            currentInteraction?.target?.id ?: return,
+                            action.targetId,
+                            action.itemId,
+                            null
+                        )
+
+                        is AgentAction.TakeItem -> actionModel.executeAction(
+                            "TAKE",
+                            currentInteraction?.target?.id ?: return,
+                            action.targetId,
+                            action.itemId,
+                            null
+                        )
+
+                        else -> Logger.debug("Skipping action: $action")
+                    }
+                }
+            }
+
+            else -> handleClose()
+        }
+    }
+
+    private suspend fun handleClose() {
         coroutineScope.launch {
             dialogWindow?.showLoading()
 
             try {
-                // Process conversation before closing
                 val processor = ConversationPostProcessingServices(actionModel, llmService)
+                val target = currentInteraction?.target ?: return@launch
+
                 val (updatedBio, metadataInfo, actions) = processor.conversationPostProcessingLoop(
                     conversationText.toString(),
-                    currentNpcBio,
-                    currentNpcName
+                    NPCBio.getBioForNPC(target.name),
+                    target.name
                 )
 
                 Director.updateNPCContext(
-                    currentNpcName,
+                    target.name,
                     updatedBio,
                     metadataInfo.hasSecret,
                     metadataInfo.conspirators
                 )
-
 
                 actionModel.processNPCReflection(actions.joinToString("\n"), currentNpcName)
             } catch (e: Exception) {
                 Logger.error("Error in conversation post-processing: ${e.message}")
             }
 
-            // Clean up
             cleanupDialog()
 
-            // Start cooldown
             cooldownActive = true
             delay(5000)
             cooldownActive = false
@@ -243,10 +283,11 @@ class DialogManager(
     }
 
     private fun cleanupDialog() {
-        _isInDialog  = false
+        _isInDialog = false
         GameState.isDialogOpen = false
         conversationMessages.clear()
         conversationText.clear()
+        currentInteraction = null
 
         dialogWindow?.also { window ->
             window.clear()

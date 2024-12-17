@@ -1,6 +1,8 @@
 package scenes
 
 import KR
+import agent.impl.*
+import agent.system.*
 import ai.*
 import bvh.*
 import combat.*
@@ -20,14 +22,11 @@ import korlibs.korge.scene.*
 import korlibs.korge.view.*
 import korlibs.korge.view.filter.*
 import korlibs.korge.view.mask.*
-import korlibs.korge.virtualcontroller.*
 import korlibs.math.geom.*
-import korlibs.math.geom.PointInt
 import llm.*
 import llm.impl.*
 import maps.*
 import movement.*
-import npc.*
 import player.*
 import raycasting.*
 import ui.*
@@ -50,24 +49,21 @@ class SceneLoader(
     private lateinit var playerStats: EntityStats
     private lateinit var mapManager: MapManager
     private lateinit var raycaster: Raycaster
-    lateinit var npcManager: NPCManager
     private lateinit var uiManager: UIManager
     private lateinit var openChestTile: TilesetRectangle
     private lateinit var defaultFont: Font
     private lateinit var playerInventory: Inventory
     private lateinit var playerManager: PlayerManager
     private lateinit var inputManager: InputManager
-
     lateinit var actionModel: ActionModel
     private lateinit var combatManager: CombatManager
     private lateinit var dialogManager: DialogManager
-    lateinit var interactionManager: InteractionManager
     lateinit var playerMovementController: PlayerMovementController
     private lateinit var llmService: LLMService
     private lateinit var interrogationManager: InterrogationManager
-
-
-
+    lateinit var agentManager: AgentManager
+    lateinit var agentInteractionManager: AgentInteractionManager
+    private lateinit var playerInteractionHandler: PlayerInteractionHandler
 
     suspend fun loadScene(): SceneLoader {
         loadResources()
@@ -126,23 +122,19 @@ class SceneLoader(
     }
 
     private suspend fun initializeCommonComponents() {
-        // Initialize basic managers and systems first
         mapManager = MapManager(ldtk, gridSize)
 
-        val obstacleMap = mapManager.generateMap(levelView)
-
-        npcManager = NPCManager(
+        agentManager = AgentManager(
             coroutineScope = scene,
+            ldtk = ldtk,
+            grid = grid,
             entities = entities.filter {
                 it.fieldsByName["Name"] != null && it.fieldsByName["Name"]!!.valueString != "Player"
             },
-            ldtk = ldtk,
-            grid = grid,
-            mapManager = mapManager,
             levelView = levelView,
-            entitiesBvh = entitiesBvh
+            entitiesBvh = entitiesBvh,
+            mapManager = mapManager
         )
-        npcManager.initializeNPCs()
 
         playerManager = PlayerManager(
             scene = scene,
@@ -160,16 +152,14 @@ class SceneLoader(
             highlight = highlight
         )
 
-        // Initialize ActionModel before DialogManager
         actionModel = ActionModel(
             ldtk = ldtk,
             grid = grid,
-            npcManager = npcManager,
+            agentManager = agentManager,
             playerInventory = playerInventory,
-            coroutineScope = scene
+            coroutineScope = scene,
         )
 
-        // Initialize DialogManager before UIManager and InteractionManager
         dialogManager = DialogManager(
             coroutineScope = scene,
             container = container,
@@ -177,14 +167,12 @@ class SceneLoader(
             llmService = llmService
         )
 
-        // Initialize InterrogationManager
         interrogationManager = InterrogationManager(
             coroutineScope = scene,
             container = container,
             llmService = llmService
         )
 
-        // Initialize UIManager after DialogManager
         uiManager = UIManager(
             container = container,
             playerInventory = playerInventory,
@@ -196,10 +184,7 @@ class SceneLoader(
             interrogationManager = interrogationManager,
             dialogManager = dialogManager
         )
-        uiManager.initializeUI()
-        playerManager.playerStatsUI = uiManager.playerStatsUI
 
-        // Initialize combat system
         combatManager = CombatManager(
             enemies = entities.filter { it.entity.identifier == "Enemy" }.toMutableList(),
             playerInventory = playerInventory,
@@ -211,35 +196,50 @@ class SceneLoader(
             sceneView = levelView,
             raycaster = raycaster
         )
-        combatManager.initialize()
 
-        // Initialize interaction and movement systems last
-        interactionManager = InteractionManager(
+        agentInteractionManager = AgentInteractionManager(dialogManager)
+        agentInteractionManager.initializeAgentManager(agentManager)
+
+        agentManager.initializeAgents()
+
+        // Initialize player agent
+        val playerAgent = PlayerAgent(
+            id = player.entity.identifier,
+            inventory = playerInventory,
+            stats = playerStats
+        )
+        agentManager.registerPlayer(playerAgent)
+
+        playerMovementController = PlayerMovementController(
+            player = player,
+            inputManager = null,
+            raycaster = raycaster
+        )
+
+        playerInteractionHandler = PlayerInteractionHandler(
             player = player,
             raycaster = raycaster,
             dialogManager = dialogManager,
             playerInventory = playerInventory,
             playerStats = playerStats,
             combatManager = combatManager,
+            agentInteractionManager = agentInteractionManager,
             gameWindow = scene.views.gameWindow,
             openChestTile = openChestTile,
-            playerMovementController = null,
-            uiManager = uiManager
+            uiManager = uiManager,
+            playerMovementController = playerMovementController,
+            agentId = player.entity.identifier
         )
 
         inputManager = InputManager(
             controllerManager = VirtualControllerManager(combatManager),
-            interactionManager = interactionManager,
+            playerInteractionHandler = playerInteractionHandler,
             coroutineScope = scene
         )
+
+        playerMovementController.inputManager = inputManager
         inputManager.setupInput(container)
-
-        playerMovementController = PlayerMovementController(
-            player = player,
-            inputManager = inputManager,
-            raycaster = raycaster
-        )
-
-        interactionManager.playerMovementController = playerMovementController
+        uiManager.initializeUI()
+        playerManager.playerStatsUI = uiManager.playerStatsUI
     }
 }

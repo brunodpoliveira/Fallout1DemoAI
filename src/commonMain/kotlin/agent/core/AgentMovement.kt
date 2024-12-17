@@ -1,4 +1,4 @@
-package npc
+package agent.core
 
 import korlibs.datastructure.*
 import korlibs.korge.ldtk.view.*
@@ -9,8 +9,8 @@ import kotlinx.coroutines.*
 import utils.*
 import kotlin.random.*
 
-class Movement(private val character: View,
-               private val pathfinding: Pathfinding,
+class AgentMovement(private val character: View,
+               private val pathfinding: AgentPathfinding,
                private val npcName: String,
                private val broadcastLocation: (String, Point) -> Unit
 ) {

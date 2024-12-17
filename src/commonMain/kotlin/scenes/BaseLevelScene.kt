@@ -20,7 +20,7 @@ abstract class BaseLevelScene(val levelId: String) : Scene() {
 
         addUpdater {
             sceneLoader.playerMovementController.update()
-            sceneLoader.interactionManager.update()
+            sceneLoader.agentInteractionManager.update()
         }
     }
 
