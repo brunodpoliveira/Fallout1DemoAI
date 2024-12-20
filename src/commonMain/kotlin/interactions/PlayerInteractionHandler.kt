@@ -29,7 +29,7 @@ class PlayerInteractionHandler(
     private val gameWindow: GameWindow,
     private val openChestTile: TilesetRectangle,
     private val uiManager: UIManager,
-    var playerMovementController: PlayerMovementController? = null,
+    var playerMovementController: PlayerMovementController?,
     private val agentId: String
 ) {
     private var lastInteractiveView: View? = null

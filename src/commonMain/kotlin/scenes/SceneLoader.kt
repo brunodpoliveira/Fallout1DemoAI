@@ -120,126 +120,128 @@ class SceneLoader(
         val llmConfig = LLMSelector.selectProvider()
         llmService = LLMServiceFactory.create(llmConfig)
     }
+private suspend fun initializeCommonComponents() {
+    mapManager = MapManager(ldtk, gridSize)
 
-    private suspend fun initializeCommonComponents() {
-        mapManager = MapManager(ldtk, gridSize)
+    agentManager = AgentManager(
+        coroutineScope = scene,
+        ldtk = ldtk,
+        grid = grid,
+        entities = entities.filter {
+            it.fieldsByName["Name"] != null && it.fieldsByName["Name"]!!.valueString != "Player"
+        },
+        levelView = levelView,
+        entitiesBvh = entitiesBvh,
+        mapManager = mapManager
+    )
 
-        agentManager = AgentManager(
-            coroutineScope = scene,
-            ldtk = ldtk,
-            grid = grid,
-            entities = entities.filter {
-                it.fieldsByName["Name"] != null && it.fieldsByName["Name"]!!.valueString != "Player"
-            },
-            levelView = levelView,
-            entitiesBvh = entitiesBvh,
-            mapManager = mapManager
-        )
+    playerManager = PlayerManager(
+        scene = scene,
+        playerInventory = playerInventory,
+        playerStats = playerStats,
+        playerStatsUI = null
+    )
 
-        playerManager = PlayerManager(
-            scene = scene,
-            playerInventory = playerInventory,
-            playerStats = playerStats,
-            playerStatsUI = null
-        )
+    raycaster = Raycaster(
+        grid = grid,
+        gridSize = gridSize,
+        entitiesBvh = entitiesBvh,
+        entities = entities,
+        player = player,
+        highlight = highlight
+    )
 
-        raycaster = Raycaster(
-            grid = grid,
-            gridSize = gridSize,
-            entitiesBvh = entitiesBvh,
-            entities = entities,
-            player = player,
-            highlight = highlight
-        )
+    actionModel = ActionModel(
+        ldtk = ldtk,
+        grid = grid,
+        agentManager = agentManager,
+        playerInventory = playerInventory,
+        coroutineScope = scene,
+    )
 
-        actionModel = ActionModel(
-            ldtk = ldtk,
-            grid = grid,
-            agentManager = agentManager,
-            playerInventory = playerInventory,
-            coroutineScope = scene,
-        )
+    dialogManager = DialogManager(
+        coroutineScope = scene,
+        container = container,
+        actionModel = actionModel,
+        llmService = llmService
+    )
 
-        dialogManager = DialogManager(
-            coroutineScope = scene,
-            container = container,
-            actionModel = actionModel,
-            llmService = llmService
-        )
+    interrogationManager = InterrogationManager(
+        coroutineScope = scene,
+        container = container,
+        llmService = llmService
+    )
 
-        interrogationManager = InterrogationManager(
-            coroutineScope = scene,
-            container = container,
-            llmService = llmService
-        )
+    uiManager = UIManager(
+        container = container,
+        playerInventory = playerInventory,
+        mapManager = mapManager,
+        levelView = levelView,
+        playerManager = playerManager,
+        defaultFont = defaultFont,
+        getPlayerPosition = PointInt(player.x.toInt(), player.y.toInt()),
+        interrogationManager = interrogationManager,
+        dialogManager = dialogManager
+    )
 
-        uiManager = UIManager(
-            container = container,
-            playerInventory = playerInventory,
-            mapManager = mapManager,
-            levelView = levelView,
-            playerManager = playerManager,
-            defaultFont = defaultFont,
-            getPlayerPosition = PointInt(player.x.toInt(), player.y.toInt()),
-            interrogationManager = interrogationManager,
-            dialogManager = dialogManager
-        )
+    combatManager = CombatManager(
+        enemies = entities.filter { it.entity.identifier == "Enemy" }.toMutableList(),
+        playerInventory = playerInventory,
+        playerStats = playerStats,
+        player = player,
+        playerStatsUI = uiManager.playerStatsUI,
+        container = container,
+        scene = scene,
+        sceneView = levelView,
+        raycaster = raycaster
+    )
 
-        combatManager = CombatManager(
-            enemies = entities.filter { it.entity.identifier == "Enemy" }.toMutableList(),
-            playerInventory = playerInventory,
-            playerStats = playerStats,
-            player = player,
-            playerStatsUI = uiManager.playerStatsUI,
-            container = container,
-            scene = scene,
-            sceneView = levelView,
-            raycaster = raycaster
-        )
+    agentInteractionManager = AgentInteractionManager(dialogManager)
+    agentInteractionManager.initializeAgentManager(agentManager)
 
-        agentInteractionManager = AgentInteractionManager(dialogManager)
-        agentInteractionManager.initializeAgentManager(agentManager)
+    agentManager.initializeAgents()
 
-        agentManager.initializeAgents()
+    // Initialize player agent
+    val playerAgent = PlayerAgent(
+        id = player.entity.identifier,
+        inventory = playerInventory,
+        stats = playerStats
+    )
+    agentManager.registerPlayer(playerAgent)
 
-        // Initialize player agent
-        val playerAgent = PlayerAgent(
-            id = player.entity.identifier,
-            inventory = playerInventory,
-            stats = playerStats
-        )
-        agentManager.registerPlayer(playerAgent)
+    playerInteractionHandler = PlayerInteractionHandler(
+        player = player,
+        raycaster = raycaster,
+        dialogManager = dialogManager,
+        playerInventory = playerInventory,
+        playerStats = playerStats,
+        combatManager = combatManager,
+        agentInteractionManager = agentInteractionManager,
+        gameWindow = scene.views.gameWindow,
+        openChestTile = openChestTile,
+        uiManager = uiManager,
+        playerMovementController = null,
+        agentId = player.entity.identifier
+    )
 
-        playerMovementController = PlayerMovementController(
-            player = player,
-            inputManager = null,
-            raycaster = raycaster
-        )
+    playerMovementController = PlayerMovementController(
+        player = player,
+        inputManager = null,
+        raycaster = raycaster,
+        playerInteractionHandler = playerInteractionHandler
+    )
 
-        playerInteractionHandler = PlayerInteractionHandler(
-            player = player,
-            raycaster = raycaster,
-            dialogManager = dialogManager,
-            playerInventory = playerInventory,
-            playerStats = playerStats,
-            combatManager = combatManager,
-            agentInteractionManager = agentInteractionManager,
-            gameWindow = scene.views.gameWindow,
-            openChestTile = openChestTile,
-            uiManager = uiManager,
-            playerMovementController = playerMovementController,
-            agentId = player.entity.identifier
-        )
+    playerInteractionHandler.playerMovementController = playerMovementController
 
-        inputManager = InputManager(
-            controllerManager = VirtualControllerManager(combatManager),
-            playerInteractionHandler = playerInteractionHandler,
-            coroutineScope = scene
-        )
+    inputManager = InputManager(
+        controllerManager = VirtualControllerManager(combatManager),
+        playerInteractionHandler = playerInteractionHandler,
+        coroutineScope = scene
+    )
 
-        playerMovementController.inputManager = inputManager
-        inputManager.setupInput(container)
-        uiManager.initializeUI()
-        playerManager.playerStatsUI = uiManager.playerStatsUI
-    }
+    playerMovementController.inputManager = inputManager
+    inputManager.setupInput(container)
+    uiManager.initializeUI()
+    playerManager.playerStatsUI = uiManager.playerStatsUI
+}
 }
