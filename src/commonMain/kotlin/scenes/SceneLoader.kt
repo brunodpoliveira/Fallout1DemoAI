@@ -228,8 +228,10 @@ private suspend fun initializeCommonComponents() {
         player = player,
         inputManager = null,
         raycaster = raycaster,
-        playerInteractionHandler = playerInteractionHandler
+        playerInteractionHandler = playerInteractionHandler,
+        combatManager = combatManager
     )
+    combatManager.initialize()
 
     playerInteractionHandler.playerMovementController = playerMovementController
 

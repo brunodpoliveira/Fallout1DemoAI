@@ -1,5 +1,6 @@
 package movement
 
+import combat.*
 import controls.*
 import img.*
 import interactions.*
@@ -14,7 +15,8 @@ class PlayerMovementController(
     private val player: LDTKEntityView,
     var inputManager: InputManager?,
     private val raycaster: Raycaster,
-    private val playerInteractionHandler: PlayerInteractionHandler
+    private val playerInteractionHandler: PlayerInteractionHandler,
+    private val combatManager: CombatManager
 ) {
     var playerDirection: Vector2D = Vector2D(1.0, 0.0)
     private var playerState: String = ""
@@ -54,6 +56,7 @@ class PlayerMovementController(
                 raycaster.updateRay(oldPos)
             }
             playerInteractionHandler.update()
+            combatManager.startGame()
         }
     }
 }
