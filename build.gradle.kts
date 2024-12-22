@@ -49,4 +49,5 @@ dependencies {
     add("commonMainApi", "io.github.lambdua:client:0.22.3")
     add("commonMainApi", "io.github.lambdua:api:0.22.3")
     add("commonMainApi", "com.squareup.okhttp3:okhttp:4.9.3")
+    add("commonMainApi", "org.json:json:20240303")
 }

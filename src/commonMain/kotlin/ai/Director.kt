@@ -2,6 +2,8 @@ package ai
 
 import kotlinx.coroutines.*
 import utils.*
+import korlibs.korge.ldtk.view.*
+import korlibs.datastructure.*
 
 object Director {
     private lateinit var gameData: GameData
@@ -12,6 +14,7 @@ object Director {
     private var factionContexts: MutableMap<String, String> = mutableMapOf()
     private var gameDifficulty: String = "normal"
 
+
     fun initialize(levelId: String = "level_0") {
         runBlocking {
             gameData = JsonLoader.loadGameData()
@@ -20,6 +23,7 @@ object Director {
     }
 
     fun loadLevel(levelId: String) {
+
         currentLevelId = levelId
         currentLevelData = gameData.levels[levelId] ?: throw IllegalArgumentException("Level $levelId not found")
         storyContext = currentLevelData.context
@@ -102,4 +106,9 @@ object Director {
     fun getDifficulty(): String {
         return gameDifficulty
     }
+
+    fun getAvailableActionVerb(): List<String> {
+        return ActionVerb.entries.map { it.name }
+    }
+
 }
