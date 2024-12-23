@@ -16,7 +16,8 @@ class DialogManager(
     private val coroutineScope: CoroutineScope,
     private val container: Container,
     private val actionModel: ActionModel,
-    private val llmService: LLMService
+    private val llmService: LLMService,
+    private val ldtkWorld: LDTKWorld
 ) {
     private var agentMovement:AgentMovement? = null
     private var dialogWindow: DialogWindow? = null
@@ -30,6 +31,30 @@ class DialogManager(
     // Conversation state
     private val conversationMessages = mutableListOf<LLMMessage>()
     private val conversationText = StringBuilder()
+    private val responseGuidelines = "Response Guidelines:\n" +
+        "        - ALWAYS PROVIDE a valid JSON response, responding strictly using JSON format as described.\n" +
+        "        - If the have an action, only these fields should be filled \"sector\" or \"coordinate\" or \"target\"" +
+        "        - Target is a npc name, provide from available NPC name list.\n" +
+        "        - Use \"coordinate\" for actions requiring specific locations (e.g., [x, y]).\n" +
+        "         \n" +
+        "    {\n" +
+        "        \"message\": \"Provide a clear message to the player.\",\n" +
+        "        \"accept\" : \"Provide a boolean value to accept or reject the action.\",\n" +
+        "        \"verb\": \"Specify the action verb using a Available Actions Verb, if applicable, or leave null\",\n" +
+        "        \"sector\": \"Specify the sector name using a Available Sectors name, or leave null.\",\n" +
+        "        \"coordinate\": \"[x, y] format for coordinates, or leave null.\",\n" +
+        "        \"target\": \"Provide the target npc name if applicable, or leave null.\"\n" +
+        "    }\n" +
+        "    Example:\n" +
+        "    {\n" +
+        "        \"message\": \"Hello, how can I help you?\",\n" +
+        "        \"accept\" : true,\n" +
+        "        \"verb\": \"move\",\n" +
+        "        \"sector\": \"sector name\",\n" +
+        "        \"coordinate\": [1.0, 2.0],\n" +
+        "        \"target\": \"npc name\"\n" +
+        "    }\n" +
+        "    Avoid mentioning non-existent characters, items, or locations.\n"
 
     fun showDialog(interaction: AgentInteractionManager.Interaction) {
         if (isInDialog || cooldownActive) return
@@ -70,39 +95,11 @@ class DialogManager(
             NPC Context: ${Director.getNPCContext(target.name)}
             Available Actions Verb: ${Director.getAvailableActionVerb()}
             Available NPC's name : ${Director.getAllNPCNames()} 
+            Available Sectors name:  ${Director.getAvailableSectorNames(ldtkWorld)}
             You are ${target.name}. Greet the player and introduce yourself naturally.
             Stay in character and respond as your character would.
+            Follow Strictily response guidelines: $responseGuidelines
             
-            Response Guidelines:
-        - ALWAYS PROVIDE  a valid JSON response, responding strictly using JSON format as described.
-        - If the action involves moving or shooting, either "sector" or "coordinate" or "target" must be filled.
-        - Target is a npc name, provide from available NPC name list.
-        - Use "coordinate" for actions requiring specific locations (e.g., [x, y]).
-        - If have no a valid target name detected use "sector" to move to a specific sector.
-        - If have no valid coordinate detected use "sector" to move a specific sector.
-        - If have no valid coordinate detected use "target" to interact with a specific npc.
-        - If neither applies, set "sector", "coordinate" and "target" to null.
-       
-    {
-        "message": "Provide a clear message to the player.",
-        "accept" : "Provide a boolean value to accept or reject the action.",
-        "verb": "Specify the action verb using a Available Actions Verb.",
-        "sector": "Provide the sector name if applicable, or leave null.",
-        "coordinate": "[x, y] format for coordinates, or leave null.",
-        "target": "Provide the target npc name if applicable, or leave null."
-    }
-    Example:
-    {
-        "message": "Hello, how can I help you?",
-        "accept" : true,
-        "verb": "move",
-        "sector": "sector name",
-        "coordinate": [1.0, 2.0],
-        "target": "npc name"
-    }
-    
-    If there is no action, set "verb", "sector", "coordinate" and "target" to null, and provide a message only.
-    Avoid mentioning non-existent characters, items, or locations.
     """.trimIndent()
 
         conversationMessages.clear()
@@ -114,7 +111,7 @@ class DialogManager(
             val response = llmService.chat(conversationMessages)
             Logger.debug("Response : $response")
 
-            val json = JSONObject(response)
+            val json = extractJson(response)
             Logger.debug("Response JSON: $json")
 
             val message = json.optString("message", null)
@@ -138,20 +135,30 @@ class DialogManager(
             conversationMessages.add(UserMessage(message))
             conversationText.append("\nPlayer: $message")
 
-            try {
-                val response = llmService.chat(conversationMessages)
-                val json = JSONObject(response)
-                Logger.debug("Response JSON: $json")
+            val contextWithGuidelines = """
+            $message
+            
+            Follow Strictly Response Guidelines:
+            $responseGuidelines
+        """.trimIndent()
 
-                val message = json.optString("message", null)
+            try {
+                val response = llmService.chat(conversationMessages + SystemMessage(contextWithGuidelines))
+
+                Logger.debug("Raw Response: $response")
+
+                val json = extractJson(response)
+                Logger.debug("Parsed JSON: $json")
+
+                val messageResponse = json.optString("message", null)
                 val accept = json.optBoolean("accept", false)
 
-                conversationMessages.add(AssistantMessage(message))
-                conversationText.append("\n${target.name}: $message")
+                conversationMessages.add(AssistantMessage(messageResponse))
+                conversationText.append("\n${target.name}: $messageResponse")
                 dialogWindow?.updateConversation(conversationText.toString())
 
-             if(accept) {
-                 processAgentOutput(json)
+                if (accept) {
+                    processAgentOutput(json)
                 } else {
                     Decision.Reject("Action not accepted")
                 }
@@ -165,17 +172,26 @@ class DialogManager(
         }
     }
 
+    private fun extractJson(response: String): JSONObject {
+        val jsonStartIndex = response.indexOf('{')
+        if (jsonStartIndex == -1) throw IllegalArgumentException("No JSON found in response")
+        response.substring(jsonStartIndex)
+        return JSONObject(response.substring(jsonStartIndex))
+
+    }
+
     private fun processAgentOutput(json: JSONObject) {
 
         val verb = json.optString("verb", null)
         val sector = json.optString("sector", null)
+        val target = json.optString("target", null)
         val coordinate = json.optJSONArray("coordinate")
         Logger.debug("Coordinate : $coordinate")
 
         if (!verb.isNullOrEmpty()) {
             val actionVerb = ActionVerb.fromString(verb)
             if (actionVerb != null) {
-                processActionVerb(actionVerb, sector, coordinate)
+                processActionVerb(actionVerb, sector, coordinate, target)
             } else {
                 Logger.debug("Unrecognized verb: $verb")
             }
@@ -184,7 +200,7 @@ class DialogManager(
         }
     }
 
-    private fun processActionVerb(actionVerb: ActionVerb, sector: String?, coordinate: JSONArray?) {
+    private fun processActionVerb(actionVerb: ActionVerb, sector: String?, coordinate: JSONArray?, target: String?) {
         when (actionVerb) {
             ActionVerb.MOVE -> {
                 if (!sector.isNullOrEmpty()) {
@@ -195,7 +211,10 @@ class DialogManager(
                     val y = coordinate.getDouble(1)
                     Logger.debug("Detected movement to coordinates: [$x, $y]")
                     actionModel.executeAction(ActionVerb.MOVE, currentNpcName, "COORDINATE", null, "[$x,$y]")
-                } else {
+                } else if(!target.isNullOrEmpty()){
+                    Logger.debug("Detected movement to target: $target")
+                    actionModel.executeAction(ActionVerb.MOVE, currentNpcName, "NPC", null, target)
+                }else {
                     Logger.debug("Move action specified but no valid sector or coordinates found.")
                 }
             }

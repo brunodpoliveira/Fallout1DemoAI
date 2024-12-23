@@ -163,7 +163,8 @@ private suspend fun initializeCommonComponents() {
         coroutineScope = scene,
         container = container,
         actionModel = actionModel,
-        llmService = llmService
+        llmService = llmService,
+        ldtkWorld = ldtk
     )
 
     interrogationManager = InterrogationManager(

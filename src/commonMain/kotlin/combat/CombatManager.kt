@@ -238,7 +238,7 @@ class CombatManager(
         return closestEnemy
     }
 
-    private fun updateTargetingReticule() {
+    fun updateTargetingReticule() {
         val closestEnemy = findClosestEnemy()
         closestEnemy?.let {
             currentTargetIndex = enemies.indexOf(it)

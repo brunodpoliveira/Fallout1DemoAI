@@ -48,7 +48,7 @@ class ActionModel(
             ActionVerb.MOVE  -> {
                 if (subject == "NPC" ) {
                     Logger.warn("Moving NPC to another NPC")
-                    handleMoveAction(actor, null, item) // Use 'item' as the target NPC
+                    handleMoveAction(actor, null, target) // Use 'item' as the target NPC
                 } else if (subject == "COORDINATE") {
                     Logger.warn("Moving player to another coordinate")
                     handleMoveAction(actor, target, null)

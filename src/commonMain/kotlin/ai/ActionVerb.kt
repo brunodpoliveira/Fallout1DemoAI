@@ -9,7 +9,7 @@ enum class ActionVerb {
 
     companion object {
         fun fromString(value: String): ActionVerb? {
-            return values().find { it.name.equals(value, ignoreCase = true) }
+            return entries.find { it.name.equals(value, ignoreCase = true) }
         }
     }
 }
