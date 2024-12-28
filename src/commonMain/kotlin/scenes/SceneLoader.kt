@@ -11,15 +11,16 @@ import dialog.*
 import img.*
 import interactions.*
 import korlibs.datastructure.*
+import korlibs.datastructure.iterators.*
 import korlibs.image.atlas.*
 import korlibs.image.font.*
 import korlibs.image.format.*
 import korlibs.io.file.*
-import korlibs.korge.annotations.*
 import korlibs.korge.ldtk.*
 import korlibs.korge.ldtk.view.*
 import korlibs.korge.scene.*
 import korlibs.korge.view.*
+import korlibs.korge.view.camera.*
 import korlibs.korge.view.filter.*
 import korlibs.korge.view.mask.*
 import korlibs.math.geom.*
@@ -71,7 +72,6 @@ class SceneLoader(
         return this
     }
 
-    @OptIn(KorgeExperimental::class)
     private suspend fun loadResources() {
         val atlas = MutableAtlasUnit()
         defaultFont = KR.fonts.publicpixel.__file.readTtfFont().lazyBitmapSDF
@@ -81,27 +81,47 @@ class SceneLoader(
         val level = ldtk.levelsByName["Level_0"] ?:
         throw IllegalArgumentException("Level_0 not found in LDTK world for $levelId")
 
-        val camera = container.camera {
+        // Create camera container with clipping and fixed viewport size
+        val cameraContainer = container.cameraContainer(
+            Size(512, 512),
+            clip = true,
+            block = {
+                clampToBounds = true
+            }
+        ) {
             levelView = LDTKLevelView(level).addTo(this)
             highlight = graphics { }
                 .filters(BlurFilter(2.0).also { it.filtering = false })
-                .apply { setTo(RectangleD(0, 0, 1280, 720) * 0.5) }
+                .apply {(RectangleD(0, 0, 1280, 720) * 0.5) }
         }
+
+        // Set viewport bounds to match level size
+        //cameraContainer.cameraViewportBounds = levelView.getLocalBounds()
+
+        // Scale setup
+        cameraContainer.scale(2.2)
+
         levelView.mask(highlight, filtering = false)
         highlight.visible = false
 
-        entitiesBvh = BvhWorld(camera)
+        entitiesBvh = BvhWorld(cameraContainer)
         gridSize = Size(16, 16)
-        grid = levelView.layerViewsByName["Kind"]!!.intGrid
-        entities = levelView.layerViewsByName["Entities"]!!.entities
+        grid = levelView.layerViewsByName["Collision"]?.intGrid
+            ?: throw IllegalArgumentException("No Collision layer found in level")
+
+        entities = levelView.layerViewsByName["Entities"]?.entities
+            ?: throw IllegalArgumentException("No Entities layer found in level")
         entities.forEach { entitiesBvh += it }
 
-        val tileEntities = ldtk.levelsByName["TILES"]!!.layersByName["Entities"]
+        // Handle tile entities safely
+        val tileEntities = ldtk.levelsByName["TILES"]?.layersByName?.get("Entities")
         val tileEntitiesByName = tileEntities?.layer?.entityInstances?.associateBy {
-            it.fieldInstancesByName["Name"].valueDyn.str
+            it.fieldInstancesByName["Name"]?.valueDyn?.str
         } ?: emptyMap()
+
+        // Get openedChest tile definition, with fallback
         val openedChest = tileEntitiesByName["OpenedChest"]
-        openChestTile = openedChest!!.tile!!
+        openChestTile = openedChest?.tile ?: TilesetRectangle(0, 0, 16, 16, 16)
 
         player = entities.first { it.fieldsByName["Name"]?.valueString == "Player" }.apply {
             replaceView(
@@ -114,6 +134,13 @@ class SceneLoader(
             )
         }
 
+        cameraContainer.follow(player.view, setImmediately = true)
+
+        // Sort entities by Y position for correct depth rendering
+        cameraContainer.addUpdater {
+            children.fastForEach { it.zIndex = it.y }
+        }
+
         playerStats = readEntityStats(player)
         playerInventory = Inventory("Player")
         LLMSelector.setProvider(OptionsScene.getCurrentProvider())
@@ -124,10 +151,13 @@ class SceneLoader(
     private suspend fun initializeCommonComponents() {
         mapManager = MapManager(ldtk, gridSize)
 
+        val obstacleMap = mapManager.generateMap(levelView)
+
         agentManager = AgentManager(
             coroutineScope = scene,
             ldtk = ldtk,
             grid = grid,
+            levelId = levelId,
             entities = entities.filter {
                 it.fieldsByName["Name"] != null && it.fieldsByName["Name"]!!.valueString != "Player"
             },

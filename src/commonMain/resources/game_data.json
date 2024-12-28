@@ -1,6 +1,41 @@
 {
   "levels": {
     "scrapheap": {
+      "spriteConfig": {
+        "defaults": {
+          "male_crypt": "gfx/minotaur.ase",
+          "female_crypt": "gfx/wizard_f.ase",
+          "male_fool": "gfx/minotaur.ase",
+          "female_fool": "gfx/cleric_f.ase",
+          "male_civilian": "gfx/minotaur.ase",
+          "female_civilian": "gfx/wizard_f.ase",
+          "placeholder": "gfx/minotaur.ase"
+        },
+        "npcSprites": {
+          "Rayze": {
+            "sprite": "gfx/minotaur.ase",
+            "type": "custom"
+          },
+          "Baka": {
+            "sprite": "gfx/wizard_f.ase",
+            "type": "custom"
+          },
+          "Robot": {
+            "sprite": "gfx/cleric_f.ase",
+            "type": "custom"
+          },
+          "Dogmeat": {
+            "sprite": "gfx/minotaur.ase",
+            "type": "custom"
+          },
+          "Rock": {
+            "type": "male_crypt"
+          },
+          "Switchblade": {
+            "type": "female_fool"
+          }
+        }
+      },
       "context": "The town of Scrapheap is in turmoil. Two rival gangs, the Crypts and the Fools, are vying for control over the town's power generator. While the Crypts have the upper hand in numbers, the Fools are more determined. The non-gang residents fear for their safety and hope for a savior to liberate them.",
       "npcData": {
         "Robot": {

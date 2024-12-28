@@ -7,19 +7,28 @@ import bvh.*
 import img.*
 import korlibs.datastructure.*
 import korlibs.image.atlas.*
-import korlibs.image.format.*
-import korlibs.io.file.std.*
 import korlibs.korge.ldtk.view.*
 import korlibs.korge.view.*
 import korlibs.math.geom.*
 import kotlinx.coroutines.*
 import maps.*
 import utils.*
+import kotlin.collections.List
+import kotlin.collections.component1
+import kotlin.collections.component2
+import kotlin.collections.emptyList
+import kotlin.collections.filter
+import kotlin.collections.forEach
+import kotlin.collections.joinToString
+import kotlin.collections.mutableMapOf
+import kotlin.collections.set
+import kotlin.collections.toList
 
 class AgentManager(
     private val coroutineScope: CoroutineScope,
     private val ldtk: LDTKWorld,
     private val grid: IntIArray2,
+    private val levelId: String,
     private val entities: List<LDTKEntityView>,
     private val levelView: LDTKLevelView,
     private val entitiesBvh: BvhWorld,
@@ -30,63 +39,47 @@ class AgentManager(
     private val agentPositions = mutableMapOf<String, Point>()
     private val agentInventories = mutableMapOf<String, Inventory>()
     private val pathfinding = AgentPathfinding(mapManager.generateMap(levelView))
+    private val spriteManager = SpriteManager(MutableAtlasUnit())
 
     suspend fun initializeAgents() {
-        val gameData = JsonLoader.loadGameData()
-        val levelData = gameData.levels["scrapheap"] ?: return
-
-        val atlas = MutableAtlasUnit()
-        val npcSprites = mapOf(
-            "Rayze" to resourcesVfs["gfx/minotaur.ase"].readImageDataContainer(ASE.toProps(), atlas),
-            "Baka" to resourcesVfs["gfx/wizard_f.ase"].readImageDataContainer(ASE.toProps(), atlas),
-            "Robot" to resourcesVfs["gfx/cleric_f.ase"].readImageDataContainer(ASE.toProps(), atlas)
-        )
+        spriteManager.initialize(levelId)
 
         entities.filter { entity ->
             val nameField = entity.fieldsByName["Name"]
             val npcName = nameField?.valueString
             !npcName.isNullOrEmpty() && npcName != "Player"
         }.forEach { entity ->
-            val npcName = entity.fieldsByName["Name"]!!.valueString.toString()
-            val npcData = levelData.npcData[npcName]
-
-            // Use faction from game data, fallback to Neutral if not found
-            val faction = npcData?.faction ?: "Neutral"
-            val bio = npcData?.bio ?: ""
-
-            initializeAgent(entity, npcSprites[npcName], bio, faction)
+            initializeAgent(entity)
         }
 
         initializeMovements()
         startUpdatingBVH()
     }
 
-    private fun initializeAgent(
-        entity: LDTKEntityView,
-        sprite: ImageDataContainer?,
-        bio: String,
-        faction: String
-    ) {
+    private suspend fun initializeAgent(entity: LDTKEntityView) {
         val npcName = entity.fieldsByName["Name"]!!.valueString.toString()
+        val faction = entity.fieldsByName["Faction"]?.valueString ?: "Civilian"
+        val gender = entity.fieldsByName["Gender"]?.valueString ?: "Male"
         val stats = readEntityStats(entity)
 
-        sprite?.let { spriteData ->
-            entity.replaceView(
-                ImageDataView2(spriteData.default).also {
-                    it.smoothing = false
-                    it.animation = "idle"
-                    it.anchor(Anchor.BOTTOM_CENTER)
-                    it.play()
-                }
-            )
-        }
+        val sprite = spriteManager.getSpriteForNPC(npcName, faction, gender)
+
+        //TODO need logic for dog sprite
+        entity.replaceView(
+            ImageDataView2(sprite.default).also {
+                it.smoothing = false
+                it.animation = "idle"
+                it.anchor(Anchor.BOTTOM_CENTER)
+                it.play()
+            }
+        )
 
         val agent = BaseNPC(
             coroutineScope = coroutineScope,
             id = npcName,
             name = npcName,
             faction = faction,
-            bio = bio,
+            bio = entity.fieldsByName["Bio"]?.valueString ?: "",
             character = entity,
             pathfinding = pathfinding,
             broadcastLocation = { id, pos -> updateAgentPosition(id, pos) },
@@ -98,7 +91,7 @@ class AgentManager(
         agents[npcName] = agent
         entityViews[npcName] = entity
         agentInventories[npcName] = Inventory(npcName)
-        Logger.debug("Initialized agent $npcName at ${entity.pos} with faction: $faction")
+        Logger.debug("Initialized agent $npcName at ${entity.pos}")
     }
 
     fun registerPlayer(player: PlayerAgent) {
