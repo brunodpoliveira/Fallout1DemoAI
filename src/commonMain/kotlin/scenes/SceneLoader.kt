@@ -13,9 +13,12 @@ import interactions.*
 import korlibs.datastructure.*
 import korlibs.datastructure.iterators.*
 import korlibs.image.atlas.*
+import korlibs.image.color.*
 import korlibs.image.font.*
 import korlibs.image.format.*
+import korlibs.image.vector.*
 import korlibs.io.file.*
+import korlibs.korge.annotations.*
 import korlibs.korge.ldtk.*
 import korlibs.korge.ldtk.view.*
 import korlibs.korge.scene.*
@@ -72,6 +75,7 @@ class SceneLoader(
         return this
     }
 
+    @OptIn(KorgeExperimental::class)
     private suspend fun loadResources() {
         val atlas = MutableAtlasUnit()
         defaultFont = KR.fonts.publicpixel.__file.readTtfFont().lazyBitmapSDF
@@ -81,47 +85,16 @@ class SceneLoader(
         val level = ldtk.levelsByName["Level_0"] ?:
         throw IllegalArgumentException("Level_0 not found in LDTK world for $levelId")
 
-        // Create camera container with clipping and fixed viewport size
-        val cameraContainer = container.cameraContainer(
-            Size(512, 512),
-            clip = true,
-            block = {
-                clampToBounds = true
-            }
-        ) {
+        val camera = container.camera {
             levelView = LDTKLevelView(level).addTo(this)
-            highlight = graphics { }
-                .filters(BlurFilter(2.0).also { it.filtering = false })
-                .apply {(RectangleD(0, 0, 1280, 720) * 0.5) }
+            highlight = graphics { }.filters(BlurFilter(2.0).also { it.filtering = false })
+            //setTo(Rectangle(0, 0, 1280, 720) * 0.5)
         }
 
-        // Set viewport bounds to match level size
-        //cameraContainer.cameraViewportBounds = levelView.getLocalBounds()
-
-        // Scale setup
-        cameraContainer.scale(2.2)
-
-        levelView.mask(highlight, filtering = false)
-        highlight.visible = false
-
-        entitiesBvh = BvhWorld(cameraContainer)
-        gridSize = Size(16, 16)
-        grid = levelView.layerViewsByName["Collision"]?.intGrid
-            ?: throw IllegalArgumentException("No Collision layer found in level")
-
+        entitiesBvh = BvhWorld(camera)
         entities = levelView.layerViewsByName["Entities"]?.entities
             ?: throw IllegalArgumentException("No Entities layer found in level")
         entities.forEach { entitiesBvh += it }
-
-        // Handle tile entities safely
-        val tileEntities = ldtk.levelsByName["TILES"]?.layersByName?.get("Entities")
-        val tileEntitiesByName = tileEntities?.layer?.entityInstances?.associateBy {
-            it.fieldInstancesByName["Name"]?.valueDyn?.str
-        } ?: emptyMap()
-
-        // Get openedChest tile definition, with fallback
-        val openedChest = tileEntitiesByName["OpenedChest"]
-        openChestTile = openedChest?.tile ?: TilesetRectangle(0, 0, 16, 16, 16)
 
         player = entities.first { it.fieldsByName["Name"]?.valueString == "Player" }.apply {
             replaceView(
@@ -134,10 +107,30 @@ class SceneLoader(
             )
         }
 
-        cameraContainer.follow(player.view, setImmediately = true)
+        camera.addUpdater {
+            val playerPos = player.pos
+            x = -playerPos.x + width / 2
+            y = -playerPos.y + height / 2
+        }
 
-        // Sort entities by Y position for correct depth rendering
-        cameraContainer.addUpdater {
+        levelView.mask(highlight, filtering = false)
+        highlight.visible = false
+
+        gridSize = Size(16, 16)
+        grid = levelView.layerViewsByName["Collision"]?.intGrid
+            ?: throw IllegalArgumentException("No Collision layer found in level")
+
+        // Handle tile entities safely
+        val tileEntities = ldtk.levelsByName["TILES"]?.layersByName?.get("Entities")
+        val tileEntitiesByName = tileEntities?.layer?.entityInstances?.associateBy {
+            it.fieldInstancesByName["Name"]?.valueDyn?.str
+        } ?: emptyMap()
+
+        // Get openedChest tile definition, with fallback
+        val openedChest = tileEntitiesByName["OpenedChest"]
+        openChestTile = openedChest?.tile ?: TilesetRectangle(0, 0, 16, 16, 16)
+
+        camera.addUpdater {
             children.fastForEach { it.zIndex = it.y }
         }
 
