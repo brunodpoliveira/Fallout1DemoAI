@@ -145,6 +145,7 @@ class PauseMenu(private val mapManager: MapManager,
     }
 
     //TODO update NPC possition on automap
+    //TODO automap freezes on scrapheap.ldtk map
 
     private suspend fun displayAutoMap(view: Container,
                                        obstacleMap: BooleanArray2,

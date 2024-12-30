@@ -154,6 +154,7 @@ NPCs should demonstrate:
 - State synchronization
 - Concurrent action handling
 - Spatial query optimization
+- Break the level into smaller chunks/tiles and only apply fog effects to the chunks near the player
 
 ## Documentation Requirements
 - Architecture documentation

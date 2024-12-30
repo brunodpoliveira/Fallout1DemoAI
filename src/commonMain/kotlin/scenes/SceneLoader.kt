@@ -13,19 +13,14 @@ import interactions.*
 import korlibs.datastructure.*
 import korlibs.datastructure.iterators.*
 import korlibs.image.atlas.*
-import korlibs.image.color.*
 import korlibs.image.font.*
 import korlibs.image.format.*
-import korlibs.image.vector.*
 import korlibs.io.file.*
 import korlibs.korge.annotations.*
 import korlibs.korge.ldtk.*
 import korlibs.korge.ldtk.view.*
 import korlibs.korge.scene.*
 import korlibs.korge.view.*
-import korlibs.korge.view.camera.*
-import korlibs.korge.view.filter.*
-import korlibs.korge.view.mask.*
 import korlibs.math.geom.*
 import llm.*
 import llm.impl.*
@@ -87,7 +82,8 @@ class SceneLoader(
 
         val camera = container.camera {
             levelView = LDTKLevelView(level).addTo(this)
-            highlight = graphics { }.filters(BlurFilter(2.0).also { it.filtering = false })
+            //activate the fog by uncommenting below; very slow and buggy, proceed w caution
+            highlight = graphics { }//.filters(BlurFilter(2.0).also { it.filtering = false })
             //setTo(Rectangle(0, 0, 1280, 720) * 0.5)
         }
 
@@ -113,7 +109,8 @@ class SceneLoader(
             y = -playerPos.y + height / 2
         }
 
-        levelView.mask(highlight, filtering = false)
+        //activate the fog by uncommenting below; very slow and buggy, proceed w caution
+        //levelView.mask(highlight, filtering = false)
         highlight.visible = false
 
         gridSize = Size(16, 16)

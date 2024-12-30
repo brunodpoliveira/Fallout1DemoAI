@@ -140,7 +140,6 @@ class Raycaster(
                 }
             }
         }
-
         return results.minOfOrNull { it.point.distanceTo(pos) } ?: 0.0
     }
 
