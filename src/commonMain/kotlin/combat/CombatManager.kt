@@ -47,14 +47,14 @@ class CombatManager(
     private var playerMoved = false
     private var gameMode: GameModeEnum = GameModeEnum.EXPLORATION
 
-    suspend fun initialize() {
+     suspend fun initialize() {
         targetingReticule = container.image(texture = resourcesVfs["cross.png"].readBitmapSlice()) {
             visible = true
         }
         startGame()
     }
 
-    private fun startGame(){
+    fun startGame(){
         updateTargetingReticule()
         container.keys {
             down(Key.LEFT) { handlePlayerMove() }
@@ -238,7 +238,7 @@ class CombatManager(
         return closestEnemy
     }
 
-    private fun updateTargetingReticule() {
+    fun updateTargetingReticule() {
         val closestEnemy = findClosestEnemy()
         closestEnemy?.let {
             currentTargetIndex = enemies.indexOf(it)

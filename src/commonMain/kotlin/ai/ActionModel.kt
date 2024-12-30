@@ -21,18 +21,22 @@ class ActionModel(
             val parts = action.split(",")
             Logger.debug("Action parts: ${parts.joinToString(", ")}")
             if (parts.size >= 3) {
-                val actionType = parts[0]
+                val actionVerb = ActionVerb.fromString(parts[0])
                 val actor = parts[1]
                 val subject = parts[2]
                 val item = if (parts.size > 3 && parts[3].isNotEmpty()) parts[3] else null
                 val target = if (parts.size > 4 && parts[4].isNotEmpty()) parts[4] else null
-                executeAction(actionType, actor, subject, item, target)
+                if (actionVerb != null) {
+                    executeAction(actionVerb, actor, subject, item, target)
+                } else {
+                    Logger.debug("Unknown action verb: ${parts[0]}")
+                }
             }
         }
     }
 
     fun executeAction(
-        actionType: String,
+        actionType: ActionVerb,
         actor: String,
         subject: String,
         item: String?,
@@ -41,22 +45,20 @@ class ActionModel(
         Logger.debug("Executing action: type=$actionType, actor=$actor, subject=$subject, item=$item, target=$target")
         when (actionType) {
 
-            "MOVE" -> {
-                when (subject) {
-                    "NPC" -> {
-                        handleMoveAction(actor, null, item) // Use 'item' as the target NPC
-                    }
-                    "COORDINATE" -> {
-                        handleMoveAction(actor, target, null)
-                    }
-                    else -> {
-                        handleMoveAction(actor, subject, null)
-                    }
+            ActionVerb.MOVE  -> {
+                if (subject == "NPC" ) {
+                    Logger.warn("Moving NPC to another NPC")
+                    handleMoveAction(actor, null, target) // Use 'item' as the target NPC
+                } else if (subject == "COORDINATE") {
+                    Logger.warn("Moving player to another coordinate")
+                    handleMoveAction(actor, target, null)
+                }else {
+                    handleMoveAction(actor, subject, null)
                 }
             }
-            "GIVE" -> handleGiveAction(actor, subject, item)
-            "TAKE" -> handleTakeAction(actor, subject, item)
-            "INTERACT" -> handleInteractAction(actor, subject)
+            ActionVerb.GIVE  -> handleGiveAction(actor, subject, item)
+            ActionVerb.TAKE  -> handleTakeAction(actor, subject, item)
+            ActionVerb.INTERACT -> handleInteractAction(actor, subject)
             else -> {
                 Logger.debug("Unknown action type: $actionType")
             }
@@ -65,7 +67,7 @@ class ActionModel(
 
     private fun handleMoveAction(actor: String, location: String?, targetNPC: String?) {
         Logger.debug("Handling MOVE action: actor=$actor, location=$location, targetNPC=$targetNPC")
-        val entityToMove = targetNPC?.let { agentManager.getAgent(it) }
+        val entityToMove = agentManager.entityViews[actor]
         if (entityToMove == null) {
             Logger.debug("Unable to move $actor: NPC not found")
             return
@@ -77,12 +79,33 @@ class ActionModel(
                 Logger.debug("Unable to move $actor: Movement not registered")
                 return@launch
             }
-            val targetAgent = agentManager.getAgent(targetNPC)
-            if (targetAgent != null) {
-                Logger.debug("$actor is moving towards $targetNPC")
-                movement.moveToPoint(targetAgent.position.x, targetAgent.position.y)
-            } else {
-                Logger.debug("Unable to move $actor towards $targetNPC: Target agent not found")
+
+            when {
+                targetNPC != null -> {
+                    val targetEntity = agentManager.entityViews[targetNPC]
+                    if (targetEntity != null) {
+                        Logger.debug("$actor is moving towards $targetNPC")
+                        movement.moveToPoint(targetEntity.x, targetEntity.y)
+                    } else {
+                        Logger.debug("Unable to move $actor towards $targetNPC: Target NPC not found")
+                    }
+                }
+                location != null -> {
+                    val coordinatePattern = """\[(\d+\.\d+),(\d+\.\d+)\]""".toRegex()
+                    val matchResult = coordinatePattern.find(location)
+                    if (matchResult != null) {
+                        val targetX = matchResult.groupValues[1].toDouble()
+                        val targetY = matchResult.groupValues[2].toDouble()
+
+                        movement.moveToPoint(targetX, targetY)
+                    } else {
+                        movement.moveToSector(ldtk, location, grid)
+
+                    }
+                }
+                else -> {
+                    Logger.debug("Unable to move $actor: No valid destination provided")
+                }
             }
         }
     }

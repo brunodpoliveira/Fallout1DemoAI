@@ -1,7 +1,18 @@
 package ai
 
+import korlibs.korge.ldtk.view.*
 import kotlinx.coroutines.*
 import utils.*
+import kotlin.collections.List
+import kotlin.collections.MutableMap
+import kotlin.collections.component1
+import kotlin.collections.component2
+import kotlin.collections.emptyList
+import kotlin.collections.forEach
+import kotlin.collections.map
+import kotlin.collections.mutableMapOf
+import kotlin.collections.set
+import kotlin.collections.toList
 
 object Director {
     private lateinit var gameData: GameData
@@ -11,6 +22,8 @@ object Director {
     private var npcContexts: MutableMap<String, String> = mutableMapOf()
     private var factionContexts: MutableMap<String, String> = mutableMapOf()
     private var gameDifficulty: String = "normal"
+    private var ldtk: LDTKWorld? = null
+
 
     fun initialize(levelId: String = "level_0") {
         runBlocking {
@@ -20,6 +33,7 @@ object Director {
     }
 
     fun loadLevel(levelId: String) {
+
         currentLevelId = levelId
         currentLevelData = gameData.levels[levelId] ?: throw IllegalArgumentException("Level $levelId not found")
         storyContext = currentLevelData.context
@@ -40,7 +54,12 @@ object Director {
         storyContext += "\n$newContext"
     }
 
-    fun updateNPCContext(npcName: String, newContext: String, isSecretPlan: Boolean = false, conspirators: List<String> = emptyList()) {
+    fun updateNPCContext(
+        npcName: String,
+        newContext: String,
+        isSecretPlan: Boolean = false,
+        conspirators: List<String> = emptyList()
+    ) {
         Logger.debug("Updating context for $npcName with new information: $newContext")
         npcContexts[npcName] = npcContexts.getOrDefault(npcName, "") + "\n" + newContext
 
@@ -102,4 +121,46 @@ object Director {
     fun getDifficulty(): String {
         return gameDifficulty
     }
+
+    fun getAvailableActionVerb(): List<String> {
+        return ActionVerb.entries.map { it.name }
+    }
+
+    fun getAvailableSectorNames(ldtk: LDTKWorld): List<String> {
+        val level = ldtk.levelsByName["Level_0"]
+            ?: throw IllegalArgumentException("Level 'Level_0' not found")
+
+        val sectorLayer = level.layersByName["Sector"]
+            ?: throw IllegalArgumentException("Layer 'Sector' not found in level 'Level_0'.")
+
+
+        val sectorDefinitions = ldtk.ldtk.defs.layers.find { it.identifier == "Sector" }
+            ?.intGridValues
+            ?: throw IllegalArgumentException("IntGridValues not found for layer 'Sector'.")
+
+        val sectorMap = sectorDefinitions.associate { it.value to it.identifier }
+
+        val sectors = mutableSetOf<String>() // Evita duplicatas
+
+        Logger.debug("Starting iteration through intGridCSV values in layer 'sector'.")
+
+        sectorLayer.layer.intGridCSV.forEachIndexed { index, value ->
+            Logger.debug("processing index $index with value $value.")
+
+
+            val sectorName = sectorMap[value]?.replace("_", " ")
+
+            if (sectorName != null) {
+                Logger.debug("Sector found: $sectorName")
+                sectors.add(sectorName)
+            } else {
+                Logger.debug("No valid sector found for value $value at index $index.")
+            }
+        }
+
+        val sectorList = sectors.toList()
+        Logger.debug("Lista final de setores disponíveis: $sectorList")
+        return sectorList
+    }
+
 }

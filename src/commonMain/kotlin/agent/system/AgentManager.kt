@@ -35,7 +35,7 @@ class AgentManager(
     private val mapManager: MapManager
 ) {
     private val agents = mutableMapOf<String, Agent>()
-    private val entityViews = mutableMapOf<String, LDTKEntityView>()
+    val entityViews = mutableMapOf<String, LDTKEntityView>()
     private val agentPositions = mutableMapOf<String, Point>()
     private val agentInventories = mutableMapOf<String, Inventory>()
     private val pathfinding = AgentPathfinding(mapManager.generateMap(levelView))
@@ -102,7 +102,9 @@ class AgentManager(
     fun getAgent(id: String): Agent? {
         val agent = agents[id]
         if (agent == null) {
-            Logger.debug("No agent found with ID: $id (Available agents: ${agents.keys.joinToString()})")
+            Logger.debug("No agent found with id $id")
+            Logger.debug("Available agents: ${agents.keys.joinToString()}")
+
         }
         return agent
     }
