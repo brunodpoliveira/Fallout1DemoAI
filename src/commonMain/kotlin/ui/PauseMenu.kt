@@ -266,7 +266,7 @@ class PauseMenu(private val mapManager: MapManager,
                 // Fetching positions as scaled using the map generation logic
                 val chestPositions = getEntityPositions(ldtk, "Chest")
                 val objectPositions = getEntityPositions(ldtk, "Object")
-                val npcPositions = getEntityPositions(ldtk, "Enemy")
+                val npcPositions = getEntityPositions(ldtk, "Agent")
 
                 // Scaled positions based on the map grid
                 val scaledChestPositions = scaleEntityPositions(chestPositions)

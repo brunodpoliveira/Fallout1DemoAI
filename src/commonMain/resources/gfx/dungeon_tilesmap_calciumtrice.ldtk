@@ -2243,7 +2243,7 @@
 			]
 		},
 		{
-			"identifier": "Enemy",
+			"identifier": "Agent",
 			"uid": 154,
 			"tags": ["hide_on_fog"],
 			"exportToToc": false,
@@ -3458,7 +3458,7 @@
 							]
 						},
 						{
-							"__identifier": "Enemy",
+							"__identifier": "Agent",
 							"__grid": [22,14],
 							"__pivot": [0,1],
 							"__tags": ["hide_on_fog"],
@@ -3653,7 +3653,7 @@
 							]
 						},
 						{
-							"__identifier": "Enemy",
+							"__identifier": "Agent",
 							"__grid": [18,13],
 							"__pivot": [0,1],
 							"__tags": ["hide_on_fog"],
@@ -3692,7 +3692,7 @@
 							]
 						},
 						{
-							"__identifier": "Enemy",
+							"__identifier": "Agent",
 							"__grid": [9,14],
 							"__pivot": [0,1],
 							"__tags": ["hide_on_fog"],
@@ -4647,7 +4647,7 @@
 							]
 						},
 						{
-							"__identifier": "Enemy",
+							"__identifier": "Agent",
 							"__grid": [8,7],
 							"__pivot": [0,1],
 							"__tags": ["hide_on_fog"],

@@ -1,4 +1,4 @@
-# Fallout1DemoAI Development Roadmap
+# Development Roadmap
 
 ## Current Implementation Status
 
@@ -92,6 +92,9 @@
     - Activity scheduling
     - Resource management
     - Inter-NPC interactions
+- Director can interfere with the story, order chars to betray,murder,plot,etc (westworld bicameral mind)
+- Director human interface, so humans can play role of Director
+- Director can build new maps (needs to see roguelike logic, see rule-based automap)
 
 2. Behavior Components
     - Relationship system
@@ -163,4 +166,15 @@ NPCs should demonstrate:
 - Performance guidelines
 - Testing procedures
 
+As of now, we have a manually created town. That includes all the logic, agent/NPC placement, etc This is for the sake of simplicity, since the main priority from my pov is to create and test all A.I systems
 
+As the project matures, we can add rules-based map generation (research how roguelikes do so).Since that'll require another distinct A.I system for it
+So the fully decked-out project will have four A.I systems:
+- combat logic/decision system
+- agent dialog + self-reflection system
+- One for the Director and the Action model system
+- finally, the map-builder, which will need to interface with the Director to create maps coherent with the story's progress
+
+the director is the main interface, since it knows the world state, and will pass info to maintain story beats, coherence, etc
+
+lassie-v frontend and settings helper, to help build experiments, etc

@@ -184,7 +184,8 @@ class SceneLoader(
             coroutineScope = scene,
             container = container,
             actionModel = actionModel,
-            llmService = llmService
+            llmService = llmService,
+            ldtkWorld = ldtk
         )
 
         interrogationManager = InterrogationManager(
@@ -206,7 +207,7 @@ class SceneLoader(
         )
 
         combatManager = CombatManager(
-            enemies = entities.filter { it.entity.identifier == "Enemy" }.toMutableList(),
+            enemies = entities.filter { it.entity.identifier == "Agent" }.toMutableList(),
             playerInventory = playerInventory,
             playerStats = playerStats,
             player = player,
@@ -233,7 +234,9 @@ class SceneLoader(
         playerMovementController = PlayerMovementController(
             player = player,
             inputManager = null,
-            raycaster = raycaster
+            raycaster = raycaster,
+            playerInteractionHandler = null,
+            combatManager = combatManager
         )
 
         playerInteractionHandler = PlayerInteractionHandler(
@@ -257,6 +260,7 @@ class SceneLoader(
             coroutineScope = scene
         )
 
+        playerMovementController.playerInteractionHandler = playerInteractionHandler
         playerMovementController.inputManager = inputManager
         inputManager.setupInput(container)
         uiManager.initializeUI()
