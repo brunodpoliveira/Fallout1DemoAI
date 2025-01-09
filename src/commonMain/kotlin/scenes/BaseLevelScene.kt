@@ -20,14 +20,16 @@ abstract class BaseLevelScene(val levelId: String) : Scene() {
 
         addUpdater {
             sceneLoader.playerMovementController.update()
-            sceneLoader.interactionManager.update()
+            sceneLoader.agentInteractionManager.update()
         }
     }
 
     private fun getLdtkFile(): VfsFile {
         return when (levelId) {
-            "scrapheap" -> resourcesVfs["gfx/dungeon_tilesmap_calciumtrice.ldtk"]
-            "scrapheap_ext" -> resourcesVfs["gfx/dungeon_tilesmap_calciumtrice.ldtk"]
+            "scrapheap" -> resourcesVfs["gfx/scrapheap_demo_lvl.ldtk"]
+            //Replace with test map below for testing
+            //"scrapheap" -> resourcesVfs["gfx/test_map.ldtk"]
+            //"scrapheap_ext" -> resourcesVfs["gfx/scrapheap_demo_lvl.ldtk"]
             // Add more levels as needed
             else -> throw IllegalArgumentException("Unknown levelId: $levelId")
         }

@@ -11,7 +11,7 @@ class EntityStats(
 
 fun readEntityStats(entityView: LDTKEntityView): EntityStats {
     val identifier = entityView.entity.identifier
-    if (identifier !in listOf("Player", "Enemy")) {
+    if (identifier !in listOf("Player", "Agent")) {
         return EntityStats(0, 0, Point.ZERO)
     }
 

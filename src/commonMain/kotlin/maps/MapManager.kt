@@ -37,7 +37,7 @@ class MapManager(
         gridWidth = level.level.pxWid / gridSize.width.toInt()
         gridHeight = level.level.pxHei / gridSize.height.toInt()
 
-        grid = levelView.layerViewsByName["Kind"]!!.intGrid
+        grid = levelView.layerViewsByName["Collision"]!!.intGrid
 
         val lWidth = level.level.pxWid
         val lHeight = level.level.pxHei
@@ -48,17 +48,14 @@ class MapManager(
         val gridArray = BooleanArray(gWidth * gHeight) { false }
         val array = BooleanArray2(gWidth, gHeight, gridArray)
 
-        // First Pass: Mark cells in the "Kind" layer as walkable (false) or obstacles (true)
+        // First Pass: Mark cells in the "Collision" layer as walkable (false) or obstacles (true)
         level.layersByName.values.forEach { layer ->
             when (layer.layer.identifier) {
-                "Kind" -> {
+                "Collision" -> {
                     layer.layer.intGridCSV.forEachIndexed { index, value ->
                         val x = index % gWidth
                         val y = index / gWidth
-                        array[x, y] = when (value) {
-                            1, 3 -> false
-                            else -> true  // Any other value means blocked
-                        }
+                        array[x, y] = value != 0  // true means collision/blocked
                     }
                 }
             }

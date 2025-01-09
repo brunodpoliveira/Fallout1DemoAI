@@ -7,12 +7,9 @@ import utils.Logger
 import java.net.HttpURLConnection
 import java.net.URL
 
-/**
- * Helper class for LLM provider selection in game setup
- * TODO OLLAMA downloader and installer in-game
- */
+
 object LLMSelector {
-    private var selectedProvider = LLMProvider.OPENAI
+private lateinit var selectedProvider:LLMProvider
 
     fun setProvider(provider: LLMProvider) {
         Logger.debug("Setting LLM provider to: $provider")

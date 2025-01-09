@@ -1,6 +1,5 @@
 # Fallout1DemoAI
-This project is a proof-of-concept demonstration of the Fallout 1 demo town, Scrapheap,
-built using Korge and Kotlin. The main highlight of the project is the use of GPT to
+This project is a new take on Role-Playing Games,built using Korge and Kotlin. The main highlight of the project is the use of LLMs to
 power the NPC interactions, making them dynamic and conversational.
 
 ## Collaborating
@@ -13,7 +12,7 @@ GitHub link: [Link](https://github.com/brunodpoliveira/Fallout1DemoAI)
 ## Game Overview
 
 ### Objective
-The player interacts with the inhabitants of Scrapheap, a town dominated by two competing gangs: the Crypts
+The player interacts with the inhabitants of Scrapheap, a town dominated by two competing gangs: the Crypts 
 and the Fools. The objective is to solve the gang problem plaguing the town.
 The game can be completed in multiple ways:
 1. **Side with the Crypts**: Help them wipe out the Fools and maintain control of the generator.
@@ -54,9 +53,9 @@ restarting the application.
 
 ### Build and Run
 1. Clone the repository.
-2. Ensure the API key for GPT-3.5 turbo is set in gradle.properties and config.properties.
+2. Ensure the API key for OpenAI services is set in gradle.properties and config.properties.
 3. Run the game using: ./gradlew runJvmAutoreload
-4. Deploy using ./gradlew packageJvmFatJar. Run it using java -jar build/libs/Fallout1DemoAI-all.jar
+4. Deploy using ./gradlew packageJvmFatJar. Run it using java -jar build/libs/BadBloodAIRPG-all.jar
 
 ### Folder Structure
 #TODO update folder structure
@@ -139,8 +138,8 @@ Contributions are welcome! Please ensure any pull requests include proper docume
 adhere to the project's coding standards.
 
 ## Acknowledgements
-- The Fallout franchise by Bethesda Softworks/Interplay
-- OpenAI, theokanning, and Lambdua for providing the GPT-3.5 Turbo Tech and API
+- The Hard EA Fund members, plus Malcolm and Simone Collins, for support and feedback
+- OpenAI, theokanning, and Lambdua for providing the GPT Tech and API
 - Korge developers for the game engine, support in their Discord server, and the Dungeon Starter Kit
 - GNUGRAF for providing critical feedback and support
 - mikiz from itch.io for their crosshair pack
@@ -236,58 +235,183 @@ java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005 -jar Fal
 Or:
 go to config.properties and set korge.env to development. You can also activate or deactivate the creation of a log file as well by setting logging.file.enabled to true
 
-## TODO 
-------------
-1. Project Overview
-    - Augment action model for NPC-to-NPC interactions
-    - Enable autonomous NPC behavior (conversations, routines, interactions)
-    - Allow for zero-player game scenarios
+# Development Roadmap
 
-2. Key Components to Modify/Extend
-    - NPCManager: Handle NPC-NPC interactions and awareness
-    - ActionModel: Incorporate NPC-NPC actions and planning
-    - DialogManager: Handle NPC-NPC conversations
-    - Director: Orchestrate overall NPC behaviors and events
+## Current Implementation Status
 
-3. Required Systems/Features
-   3.1 NPC Awareness
-   3.2 Decision-Making
-   3.3 Pathfinding
-   3.4 Interaction System
-   3.5 AI Planning
-   3.6 Event Broadcasting
-   3.7 Item Exchange
-   3.8 Scheduling
-   3.9 State Management
-   3.10 Conflict Resolution
+### ✅ Completed Features
+- Core Agent interface & types (Agent, AgentInput, AgentOutput, Decision)
+- Basic BaseNPC implementation with state management
+- AgentManager for managing agent instances
+- Player integration through PlayerAgent class
+- Basic agent decision framework
+- Dialog system integration with agent decisions
+- Basic faction-based interaction rules
+- Basic task system groundwork
+- Initial NPCManager integration with AgentManager
 
-4. Performance Considerations
-    - Optimize for multiple autonomous NPCs
+### 🚧 Partially Implemented Features
+1. Interaction System
+    - Basic agent interaction flow
+    - Dialog system with agent decisions
+    - Basic state tracking (Idle, Busy, InConversation)
 
-5. Next Steps for Development
-    - Implement complex NPC-to-NPC interactions
-    - Develop NPC-to-NPC dialogue system
-    - Create scheduling system for NPC actions
-    - Implement item exchange mechanics (doing) --> Implement TAKE command testing
-    - Develop goal-driven NPC behavior
+2. Game Loop Integration
+    - Basic decision-making
+    - Initial state management
 
-6. Key Files to Focus On
-    - ActionModel.kt
-    - NPCManager.kt
-    - Movement.kt
-    - NPC behavior and AI decision-making files
+## Implementation Order
 
-7. Challenges to Address
-    - Dynamic event response and action interruption
-    - Managing multiple simultaneous NPC actions
-    - Balancing autonomy and performance
+### Phase 1: Memory System Foundation (2-3 weeks)
+1. Memory Data Structures
+   ```kotlin
+   data class Memory(
+       val id: String,
+       val description: String,
+       val importance: Float,
+       val lastAccess: Long,
+       val embedding: List<Float>,
+       val type: MemoryType,
+       val data: MemoryData
+   )
+   ```
 
-8. Integration Points
-    - NPC interactions affecting game state and player experience
-    - Integrating with existing dialogue system
+2. Core Components
+    - Memory Manager implementation
+    - Vector embeddings integration
+    - Importance calculation system
+    - Basic reflection system
+    - Memory storage/retrieval
+    - Memory ranking system
 
-9. Future Goals
-    - Implement advanced AI behavior (e.g., behavior trees, utility AI)
-    - Create NPC relationship and alliance system
+3. Memory Types
+    - Conversation memories
+    - Observation memories
+    - Interaction memories
+    - Reflection memories
 
------------
+### Phase 2: Enhanced Action Model (2 weeks)
+1. Action System
+   ```kotlin
+   sealed class NPCAction {
+       data class InitiateConversation(val targetNPC: String) : NPCAction()
+       data class JoinActivity(val activityId: String) : NPCAction()
+       data class ShareInformation(val targetNPC: String, val memoryId: String) : NPCAction()
+       data class FormRelationship(val targetNPC: String, val type: RelationType) : NPCAction()
+       data class ExploreArea(val location: Point) : NPCAction()
+   }
+   ```
+
+2. Implementation Steps
+    - NPC-to-NPC action framework
+    - Basic planning system
+    - Activity scheduling
+    - Conversation initiation logic
+    - Action consequences system
+
+### Phase 3: Environmental Awareness (2 weeks)
+1. Core Systems
+    - Area detection
+    - Event awareness
+    - Location memory/familiarity
+    - Activity zones
+    - Environmental state tracking
+
+2. Integration Components
+    - Spatial awareness system
+    - Event broadcasting
+    - Zone management
+    - State persistence
+
+### Phase 4: Advanced NPC Behaviors (2-3 weeks)
+1. Autonomous Systems
+    - Decision-making cycle
+    - Activity scheduling
+    - Resource management
+    - Inter-NPC interactions
+- Director can interfere with the story, order chars to betray,murder,plot,etc (westworld bicameral mind)
+- Director human interface, so humans can play role of Director
+- Director can build new maps (needs to see roguelike logic, see rule-based automap)
+
+2. Behavior Components
+    - Relationship system
+    - Dynamic scheduling
+    - Need-based decisions
+    - Group behavior logic
+
+### Phase 5: Integration & Polish (2 weeks)
+1. System Integration
+    - Memory-Action integration
+    - Environmental awareness hooks
+    - Complete state management
+    - Full event system
+
+2. Performance Optimization
+    - Memory batch updates
+    - Pathfinding optimization
+    - State caching
+    - Spatial partitioning
+
+## Testing Strategy
+
+### Unit Tests
+- Memory system components
+- Action execution logic
+- State transitions
+- Decision-making paths
+
+### Integration Tests
+- NPC autonomous movement
+- Inter-NPC interactions
+- Memory-action feedback loops
+- Environmental response system
+
+### System Tests
+- Full agent system validation
+- Memory persistence
+- Performance benchmarks
+- Stress testing
+
+## Success Metrics
+NPCs should demonstrate:
+- Memory persistence and recall
+- Dynamic relationship formation
+- Contextual conversation ability
+- Activity participation
+- Environmental adaptation
+- Context-aware decision making
+- Resource management
+- Social interaction capabilities
+
+## Additional Resources
+
+### Tools
+- 3D Model Generation: https://huggingface.co/spaces/JeffreyXiang/TRELLIS
+- Auto-Rigging: https://actorcore.reallusion.com/auto-rig
+
+### Performance Considerations
+- Memory optimization
+- State synchronization
+- Concurrent action handling
+- Spatial query optimization
+- Break the level into smaller chunks/tiles and only apply fog effects to the chunks near the player
+
+## Documentation Requirements
+- Architecture documentation
+- API documentation
+- Integration guides
+- Performance guidelines
+- Testing procedures
+
+As of now, we have a manually created town. That includes all the logic, agent/NPC placement, etc This is for the sake of simplicity, since the main priority from my pov is to create and test all A.I systems
+
+As the project matures, we can add rules-based map generation (research how roguelikes do so).Since that'll require another distinct A.I system for it
+So the fully decked-out project will have four A.I systems:
+- combat logic/decision system
+- agent dialog + self-reflection system
+- One for the Director and the Action model system
+- finally, the map-builder, which will need to interface with the Director to create maps coherent with the story's progress
+
+the director is the main interface, since it knows the world state, and will pass info to maintain story beats, coherence, etc
+
+lassie-v frontend and settings helper, to help build experiments, etc

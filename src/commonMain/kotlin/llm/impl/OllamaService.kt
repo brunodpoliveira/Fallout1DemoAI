@@ -20,31 +20,53 @@ class OllamaService(private val config: LLMConfig) : LLMService {
     }
 
     override suspend fun chat(messages: List<LLMMessage>, maxTokens: Int): String = withContext(Dispatchers.IO) {
-        val requestBody = jsonMapper.writeValueAsString(mapOf(
-            "model" to config.chatModel,
-            "messages" to messages.map {
-                mapOf("role" to it.role, "content" to it.content)
+        val requestBody = jsonMapper.writeValueAsString(
+            mapOf(
+                "model" to config.chatModel,
+                "messages" to messages.map {
+                    mapOf("role" to it.role, "content" to it.content)
+                },
+                "stream" to false
+            )
+        )
+
+        val client = OkHttpClient.Builder()
+            .connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+            .writeTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+            .addInterceptor { chain ->
+                val request = chain.request()
+                chain.proceed(request)
             }
-        ))
+            .build()
 
         val request = Request.Builder()
             .url("$baseUrl/api/chat")
             .post(requestBody.toRequestBody("application/json".toMediaType()))
+            .header("Connection", "Keep-Alive")
             .build()
 
-        client.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) {
-                val error = response.body?.string() ?: "Unknown error"
-                if (response.code == 404 && error.contains("try pulling")) {
-                    throw ModelNotAvailableException("Model needs to be pulled: $error")
-                }
-                throw Exception("Ollama request failed: $error")
-            }
+        try {
+            client.newCall(request).execute().use { response ->
 
-            val responseBody = response.body?.string() ?: throw Exception("Empty response")
-            jsonMapper.readTree(responseBody)
-                .path("response")
-                .asText()
+                if (!response.isSuccessful) {
+                    val error = response.body?.string() ?: "Unknown error"
+                    throw Exception("Llama3 chat request failed: $error")
+                }
+
+                val responseBody = response.body?.string() ?: throw Exception("Empty response")
+
+                return@use jsonMapper.readTree(responseBody)
+                    .path("message")
+                    .path("content")
+                    .asText()
+            }
+        } catch (e: java.net.SocketTimeoutException) {
+            Logger.error("Timeout error during chat request: ${e.message}")
+            throw Exception("Request timed out. Please check your server or increase the timeout settings.")
+        } catch (e: Exception) {
+            Logger.error("Error during chat request: ${e.message}. Stack trace: ${e.stackTraceToString()}")
+            throw e
         }
     }
 
@@ -60,7 +82,10 @@ class OllamaService(private val config: LLMConfig) : LLMService {
             .build()
 
         client.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) throw Exception("Ollama request failed: ${response.code}")
+            if (!response.isSuccessful) {
+                val error = response.body?.string() ?: "Unknown error"
+                throw Exception("Llama3 embedding request failed: $error")
+            }
 
             val responseBody = response.body?.string() ?: throw Exception("Empty response")
             jsonMapper.readTree(responseBody)
@@ -69,8 +94,7 @@ class OllamaService(private val config: LLMConfig) : LLMService {
         }
     }
 
-    override suspend fun moderation(text: String): Boolean = true // Ollama doesn't have moderation
-
+    override suspend fun moderation(text: String): Boolean = true
     fun pullModel(modelName: String) {
         val requestBody = jsonMapper.writeValueAsString(mapOf(
             "name" to modelName
@@ -82,7 +106,10 @@ class OllamaService(private val config: LLMConfig) : LLMService {
             .build()
 
         client.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) throw Exception("Failed to pull model: ${response.code}")
+            if (!response.isSuccessful) {
+                val error = response.body?.string() ?: "Unknown error"
+                throw Exception("Failed to pull model: $error")
+            }
             Logger.debug("Successfully pulled model: $modelName")
         }
     }

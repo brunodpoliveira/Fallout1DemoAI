@@ -1,4 +1,4 @@
-package npc
+package agent.core
 
 import korlibs.datastructure.*
 import korlibs.korge.ldtk.view.*
@@ -9,8 +9,8 @@ import kotlinx.coroutines.*
 import utils.*
 import kotlin.random.*
 
-class Movement(private val character: View,
-               private val pathfinding: Pathfinding,
+class AgentMovement(private val character: View,
+               private val pathfinding: AgentPathfinding,
                private val npcName: String,
                private val broadcastLocation: (String, Point) -> Unit
 ) {
@@ -81,21 +81,22 @@ class Movement(private val character: View,
     }
 
     private val sectorMap = mapOf(
-        "CHEST_ROOM" to 1,
-        "MAIN_ROOM" to 2,
+        "CHEST ROOM" to 1,
+        "MAIN ROOM" to 2,
         "STATUE" to 3,
         "CORRIDOR" to 4,
-        "TOWN_SQUARE" to 5
+        "TOWN SQUARE" to 5
     )
     suspend fun moveToSector(ldtk: LDTKWorld, sectorName: String, grid: IntIArray2) {
         val level = ldtk.levelsByName["Level_0"] ?: throw IllegalArgumentException("Level Level_0 not found")
         val gWidth = grid.width
         val gHeight = grid.height
 
-        Logger.debug("Attempting to move to sector: $sectorName")
+        val normalizedSectorName = sectorName.uppercase()
+        Logger.debug("Attempting to move to sector: $normalizedSectorName")
 
-        val targetIntGridValue = sectorMap[sectorName]
-            ?: throw IllegalArgumentException("Sector $sectorName is not defined in sectorMap")
+        val targetIntGridValue = sectorMap[normalizedSectorName]
+            ?: throw IllegalArgumentException("Sector $normalizedSectorName is not defined in sectorMap")
 
         if (!GameState.isPaused) {
             // Initialize the BooleanArray2 with all cells set to false (walkable)
@@ -152,7 +153,7 @@ class Movement(private val character: View,
             }
 
             if (walkableCells.isEmpty()) {
-                throw IllegalArgumentException("No walkable cells found in sector $sectorName")
+                throw IllegalArgumentException("No walkable cells found in sector $normalizedSectorName")
             }
 
             // Pick a random walkable cell
@@ -160,7 +161,7 @@ class Movement(private val character: View,
 
             // Scale the coordinates by the tile size
             val scaledCoords = Point(targetCoords.x * tileWidth, targetCoords.y * tileHeight)
-            Logger.debug("Found sector $sectorName and picked random position $scaledCoords")
+            Logger.debug("Found sector $normalizedSectorName and picked random position $scaledCoords")
 
             moveAlongPath(scaledCoords)
         }

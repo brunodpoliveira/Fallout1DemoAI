@@ -145,6 +145,7 @@ class PauseMenu(private val mapManager: MapManager,
     }
 
     //TODO update NPC possition on automap
+    //TODO automap freezes on scrapheap.ldtk map
 
     private suspend fun displayAutoMap(view: Container,
                                        obstacleMap: BooleanArray2,
@@ -258,14 +259,15 @@ class PauseMenu(private val mapManager: MapManager,
             position(240.0, 60.0)
 
             val autoMapContainer = container {
-                val ldtk = KR.gfx.dungeonTilesmapCalciumtrice.__file.readLDTKWorld().apply { }
+                //TODO use actual ldtk map, no harcoding
+                val ldtk = KR.gfx.testMap.__file.readLDTKWorld().apply { }
                 val obstacleMap = mapManager.generateMap(levelView)
                 val playerPosition = getPlayerPosition
 
                 // Fetching positions as scaled using the map generation logic
                 val chestPositions = getEntityPositions(ldtk, "Chest")
                 val objectPositions = getEntityPositions(ldtk, "Object")
-                val npcPositions = getEntityPositions(ldtk, "Enemy")
+                val npcPositions = getEntityPositions(ldtk, "Agent")
 
                 // Scaled positions based on the map grid
                 val scaledChestPositions = scaleEntityPositions(chestPositions)

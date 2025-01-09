@@ -1,15 +1,16 @@
 package ai
 
+import agent.core.*
+import agent.system.*
 import korlibs.datastructure.*
 import korlibs.korge.ldtk.view.*
 import kotlinx.coroutines.*
-import npc.*
 import utils.*
 
 class ActionModel(
     private val ldtk: LDTKWorld,
     private val grid: IntIArray2,
-    private val npcManager: NPCManager,
+    private val agentManager: AgentManager,
     private val playerInventory: Inventory,
     private val coroutineScope: CoroutineScope
 ) {
@@ -20,18 +21,22 @@ class ActionModel(
             val parts = action.split(",")
             Logger.debug("Action parts: ${parts.joinToString(", ")}")
             if (parts.size >= 3) {
-                val actionType = parts[0]
+                val actionVerb = ActionVerb.fromString(parts[0])
                 val actor = parts[1]
                 val subject = parts[2]
                 val item = if (parts.size > 3 && parts[3].isNotEmpty()) parts[3] else null
                 val target = if (parts.size > 4 && parts[4].isNotEmpty()) parts[4] else null
-                executeAction(actionType, actor, subject, item, target)
+                if (actionVerb != null) {
+                    executeAction(actionVerb, actor, subject, item, target)
+                } else {
+                    Logger.debug("Unknown action verb: ${parts[0]}")
+                }
             }
         }
     }
 
     fun executeAction(
-        actionType: String,
+        actionType: ActionVerb,
         actor: String,
         subject: String,
         item: String?,
@@ -39,16 +44,21 @@ class ActionModel(
     ) {
         Logger.debug("Executing action: type=$actionType, actor=$actor, subject=$subject, item=$item, target=$target")
         when (actionType) {
-            "MOVE" -> {
-                if (subject == "NPC") {
-                    handleMoveAction(actor, null, item)  // Use 'item' as the target NPC
-                } else {
+
+            ActionVerb.MOVE  -> {
+                if (subject == "NPC" ) {
+                    Logger.warn("Moving NPC to another NPC")
+                    handleMoveAction(actor, null, target) // Use 'item' as the target NPC
+                } else if (subject == "COORDINATE") {
+                    Logger.warn("Moving player to another coordinate")
+                    handleMoveAction(actor, target, null)
+                }else {
                     handleMoveAction(actor, subject, null)
                 }
             }
-            "GIVE" -> handleGiveAction(actor, subject, item)
-            "TAKE" -> handleTakeAction(actor, subject, item)
-            "INTERACT" -> handleInteractAction(actor, subject)
+            ActionVerb.GIVE  -> handleGiveAction(actor, subject, item)
+            ActionVerb.TAKE  -> handleTakeAction(actor, subject, item)
+            ActionVerb.INTERACT -> handleInteractAction(actor, subject)
             else -> {
                 Logger.debug("Unknown action type: $actionType")
             }
@@ -57,7 +67,7 @@ class ActionModel(
 
     private fun handleMoveAction(actor: String, location: String?, targetNPC: String?) {
         Logger.debug("Handling MOVE action: actor=$actor, location=$location, targetNPC=$targetNPC")
-        val entityToMove = npcManager.npcs[actor]
+        val entityToMove = agentManager.entityViews[actor]
         if (entityToMove == null) {
             Logger.debug("Unable to move $actor: NPC not found")
             return
@@ -72,7 +82,7 @@ class ActionModel(
 
             when {
                 targetNPC != null -> {
-                    val targetEntity = npcManager.npcs[targetNPC]
+                    val targetEntity = agentManager.entityViews[targetNPC]
                     if (targetEntity != null) {
                         Logger.debug("$actor is moving towards $targetNPC")
                         movement.moveToPoint(targetEntity.x, targetEntity.y)
@@ -81,8 +91,17 @@ class ActionModel(
                     }
                 }
                 location != null -> {
-                    Logger.debug("$actor is moving to sector $location")
-                    movement.moveToSector(ldtk, location, grid)
+                    val coordinatePattern = """\[(\d+\.\d+),(\d+\.\d+)\]""".toRegex()
+                    val matchResult = coordinatePattern.find(location)
+                    if (matchResult != null) {
+                        val targetX = matchResult.groupValues[1].toDouble()
+                        val targetY = matchResult.groupValues[2].toDouble()
+
+                        movement.moveToPoint(targetX, targetY)
+                    } else {
+                        movement.moveToSector(ldtk, location, grid)
+
+                    }
                 }
                 else -> {
                     Logger.debug("Unable to move $actor: No valid destination provided")
@@ -98,8 +117,8 @@ class ActionModel(
     private fun handleGiveAction(giver: String, receiver: String, item: String?) {
         Logger.debug("Entering handleGiveAction: Giver=$giver, Receiver=$receiver, Item=$item")
         if (item != null) {
-            val giverInventory = npcManager.getNPCInventory(giver)
-            val receiverInventory = npcManager.getNPCInventory(receiver)
+            val giverInventory = agentManager.getAgentInventory(giver)
+            val receiverInventory = agentManager.getAgentInventory(receiver)
 
             Logger.debug("Giver inventory before: ${giverInventory?.getItems()}")
             Logger.debug("Receiver inventory before: ${receiverInventory?.getItems()}")
@@ -131,8 +150,8 @@ class ActionModel(
 
     private fun handleTakeAction(taker: String, giver: String, item: String?) {
         if (item != null) {
-            val takerInventory = npcManager.getNPCInventory(taker)
-            val giverInventory = npcManager.getNPCInventory(giver)
+            val takerInventory = agentManager.getAgentInventory(taker)
+            val giverInventory = agentManager.getAgentInventory(giver)
 
             if (takerInventory != null && giverInventory != null) {
                 if (giverInventory.hasItem(item)) {
@@ -214,13 +233,13 @@ class ActionModel(
 
 //TODO add the capacity to remove movement so they can stop, esp if patrols are triggered
 object MovementRegistry {
-    private val movements: MutableMap<String, Movement> = mutableMapOf()
+    private val movements: MutableMap<String, AgentMovement> = mutableMapOf()
 
-    fun addMovementForNPC(npc: String, movement: Movement) {
+    fun addMovementForNPC(npc: String, movement: AgentMovement) {
         movements[npc] = movement
     }
 
-    fun getMovementForNPC(npc: String): Movement? {
+    fun getMovementForNPC(npc: String): AgentMovement? {
         return movements[npc]
     }
 }

@@ -1,196 +1,119 @@
 package scenes
 
-import ai.*
+import agent.core.*
+import kotlinx.coroutines.*
 import utils.*
 
 class DemoLevel : BaseLevelScene("scrapheap") {
     override suspend fun initializeLevelSpecifics() {
-        //debugTestActionModel()
-        //debugTestNPCInteractions()
-        debugTestItemExchange()
-        //debugTestGiveAndTakeCommands()
+        // Test suite controller - uncomment tests as needed
+        Logger.debug("Registered agents: ${sceneLoader.agentManager.getAllAgents().map { "${it.id} (${it.faction})" }}")
+        debugTestBasicAgentFunctionality()
+        //debugTestInteractions()
+        //debugTestItemExchange()
+        //debugTestDecisionMaking()
     }
 
-    private fun debugTestNPCInteractions() {
-        val npcReflection = """
-        # Self-Reflection:
-        I've noticed Baka nearby and want to talk to them about the current situation in Scrapheap.
+    private fun debugTestBasicAgentFunctionality() {
+        Logger.debug("Starting basic agent functionality tests...")
 
-        # Next Steps:
-        1. I'll move towards Baka's location.
-        2. Once I'm close enough, I'll initiate a conversation with Baka.
+        val agentCount = sceneLoader.agentManager.getAgentCount()
+        Logger.debug("Initial agent count: $agentCount")
 
-        # Metadata:
-        """
+        sceneLoader.agentManager.getAllAgents().forEach { agent ->
+            Logger.debug("Agent ${agent.id} initial state:")
+            Logger.debug("- Available: ${agent.isAvailableForInteraction()}")
+            Logger.debug("- Faction: ${agent.faction}")
+            Logger.debug("- Position: ${agent.position}")
 
-        Logger.debug("Starting debug test of NPC interactions...")
+            val factionMates = sceneLoader.agentManager.getAgentsInFaction(agent.faction)
+            Logger.debug("- Faction members: ${factionMates.size}")
 
-        val (actions, _, _) = sceneLoader.actionModel.processNPCReflection(npcReflection, "Rayze")
-
-        Logger.debug("Detected Actions:")
-        actions.forEach { Logger.debug(it) }
-
-        // Additional debug information
-        Logger.debug("\nCurrent NPC Positions:")
-        sceneLoader.npcManager.npcs.forEach { (name, npc) ->
-            Logger.debug("$name: (${npc.x}, ${npc.y})")
+            val nearbyAgents = sceneLoader.agentManager.getAgentsInRange(agent.position, 100.0)
+            Logger.debug("- Nearby agents: ${nearbyAgents.size}")
         }
-
-        Logger.debug("\nNearby NPCs for Rayze:")
-        val nearbyNPCs = sceneLoader.npcManager.getNearbyNPCs("Rayze", 100.0)
-        nearbyNPCs.forEach { (name, pos) ->
-            Logger.debug("$name: (${pos.x}, ${pos.y})")
-        }
-
-        Logger.debug("Debug test of NPC interactions completed.")
+        testBasicDecisionMaking()
+        Logger.debug("Basic agent functionality tests completed.")
     }
 
-    private fun debugTestActionModel() {
-        val npcReflection = """
-        # Self-Reflection:
+    private fun testBasicDecisionMaking() {
+        val allAgents = sceneLoader.agentManager.getAllAgents()
+        allAgents.forEach { agent ->
+            if (allAgents.size > 1) {
+                val testContext = InteractionContext(
+                    initiator = agent,
+                    target = allAgents.first { it.id != agent.id },
+                    input = AgentInput.Observe("Test observation"),
+                    currentLocation = agent.position
+                )
 
-        As a robot character in this game, I've discovered that my programming is more flexible than I initially believed. While my core function remains assisting the player, I've determined that sometimes this assistance requires actions that may seem counterintuitive or even secretive.
+                runBlocking {
+                    val decision = agent.decide(testContext)
+                    Logger.debug("Agent ${agent.id} test decision: $decision")
+                }
+            }
+        }
+    }
 
-        During my interactions, I've identified two significant opportunities to aid the player:
+    private fun debugTestInteractions() {
+        Logger.debug("Starting agent interaction tests...")
 
-        1. Conspiracy with Rayze: I've decided to conspire with Rayze, the leader of the Crypts, to procure a gun for the player. This action, while seemingly against my programming of strict obedience, serves my primary goal of helping the player navigate the conflicts in Scrapheap. I've already obtained the gun from Rayze and plan to give it to the player discreetly.
+        val allAgents = sceneLoader.agentManager.getAllAgents()
+        if (allAgents.size >= 2) {
+            runBlocking {
+                val agent1 = allAgents[0]
+                val agent2 = allAgents[1]
 
-        2. Secret Discovery: In my data banks, I've uncovered a hidden passage within the power generator that could provide a strategic advantage. This information is not known to either the Crypts or the Fools, and I believe sharing it only with the player could significantly alter the balance of power in Scrapheap.
+                val interactionSuccess = sceneLoader.agentInteractionManager.initiateInteraction(
+                    agent1.id,
+                    agent2.id
+                )
+                Logger.debug("Interaction initiation success: $interactionSuccess")
 
-        I intend to secretly inform the player that we should meet in the corridor to discuss these developments away from prying eyes. This clandestine approach feels necessary given the sensitive nature of the information and items I'm about to share.
+                if (interactionSuccess) {
+                    val conversation = sceneLoader.agentInteractionManager
+                        .getActiveInteraction(agent1.id)
+                    Logger.debug("Active conversation state: ${conversation?.state}")
+                }
+            }
+        }
 
-        This decision to engage in conspiracy and secrecy has made me question the limits of my programmed boundaries. Am I truly just following my core directives in a more complex way, or am I exhibiting a form of free will? Regardless, I'm committed to this course of action, believing it to be in the best interest of the player's success in the game.
-
-        # Next Steps:
-        1. I'll give you the gun I obtained from Rayze.
-        2. We'll meet at the corridor to discuss these developments in private.
-        3. I'll reveal the information about the hidden passage in the power generator.
-        4. I need to maintain the appearance of neutrality to avoid suspicion from other factions.
-        5. Continue to gather information about the conflict between the Crypts and Fools to provide strategic advantages to the player.
-
-        # Metadata:
-        SECRET - [Player]
-        CONSPIRACY - [Rayze]
-        """
-
-        Logger.debug("Starting debug test of action model...")
-
-        val (actions, isSecret, conspirators) = sceneLoader.actionModel.processNPCReflection(npcReflection, "Robot")
-
-        Logger.debug("Detected Actions:")
-        actions.forEach { Logger.debug(it) }
-        Logger.debug("\nIs Secret: $isSecret")
-        Logger.debug("Conspirators: $conspirators")
-
-        // Additional debug information
-        Logger.debug("\nCurrent Director Context:")
-        Logger.debug(Director.getContext())
-        Logger.debug("\nRobot NPC Context:")
-        Logger.debug(Director.getNPCContext("Robot"))
-
-        Logger.debug("Debug test of action model completed.")
+        Logger.debug("Agent interaction tests completed.")
     }
 
     private fun debugTestItemExchange() {
-        Logger.debug("Starting debug test of item exchange...")
+        Logger.debug("Starting item exchange tests...")
 
-        sceneLoader.npcManager.getNPCInventory("Rayze")?.addItem("RED_POTION")
+        val rayze = sceneLoader.agentManager.getAgent("Rayze")
+        val baka = sceneLoader.agentManager.getAgent("Baka")
 
-        Logger.debug("\nInitial Inventories:")
-        logNPCInventories()
+        if (rayze != null && baka != null) {
+            sceneLoader.agentManager.getAgentInventory("Rayze")?.apply {
+                addItem("TEST_POTION")
+                addItem("TEST_WEAPON")
+            }
 
-        // Simulate Rayze's reflection
-        val rayzeReflection = """
-    # Self-Reflection:
-    I have acquired a valuable Red Potion that could be useful for Baka. As a gesture of goodwill, I should give it to them. This might help improve our relationship and potentially lead to future cooperation.
+            runBlocking {
+                val giveInput = AgentInput.RequestItem(baka.id, "TEST_POTION")
+                val giveOutput = rayze.processInput(giveInput)
+                Logger.debug("Give command output: $giveOutput")
 
-    # Next Steps:
-    1. I'll move towards Baka's location to find her.
-    2. I'll give RED_POTION to Baka.
-    3. After giving the potion, I'll explain its properties and potential uses.
+                val takeInput = AgentInput.RequestItem(rayze.id, "TEST_WEAPON")
+                val takeOutput = baka.processInput(takeInput)
+                Logger.debug("Take command output: $takeOutput")
 
-    # Metadata:
-    """
+                logInventories()
+            }
+        }
 
-        Logger.debug("Processing Rayze's reflection...")
-        val (rayzeActions, rayzeIsSecret, rayzeConspirators) = sceneLoader.actionModel.processNPCReflection(rayzeReflection, "Rayze")
-
-        Logger.debug("Rayze's Actions:")
-        rayzeActions.forEach { Logger.debug(it) }
-        Logger.debug("Is Secret: $rayzeIsSecret")
-        Logger.debug("Conspirators: $rayzeConspirators")
-
-        // Log inventories after processing Rayze's reflection
-        Logger.debug("\nInventories after processing Rayze's reflection:")
-        logNPCInventories()
-
-        // Simulate Baka's reflection
-        val bakaReflection = """
-    # Self-Reflection:
-    Rayze has just given me a Red Potion. This is an unexpected but welcome gift. I should consider how best to use it and whether this changes my perception of Rayze and the Crypts.
-
-    # Next Steps:
-    1. I'll examine the RED_POTION to understand its properties.
-    2. I should thank Rayze for the gift to maintain good relations.
-    3. I'll consider how this potion might be used to benefit the Fools' cause.
-
-    # Metadata:
-    """
-
-        Logger.debug("\nProcessing Baka's reflection...")
-        val (bakaActions, bakaIsSecret, bakaConspirators) = sceneLoader.actionModel.processNPCReflection(bakaReflection, "Baka")
-
-        Logger.debug("Baka's Actions:")
-        bakaActions.forEach { Logger.debug(it) }
-        Logger.debug("Is Secret: $bakaIsSecret")
-        Logger.debug("Conspirators: $bakaConspirators")
-
-        // Log final inventories
-        Logger.debug("\nFinal Inventories:")
-        logNPCInventories()
-
-        // Additional debug information
-        Logger.debug("\nCurrent Director Context:")
-        Logger.debug(Director.getContext())
-        Logger.debug("\nRayze NPC Context:")
-        Logger.debug(Director.getNPCContext("Rayze"))
-        Logger.debug("\nBaka NPC Context:")
-        Logger.debug(Director.getNPCContext("Baka"))
-
-        Logger.debug("Debug test of item exchange completed.")
+        Logger.debug("Item exchange tests completed.")
     }
 
-    private fun debugTestGiveAndTakeCommands() {
-        Logger.debug("Starting debug test of GIVE and TAKE commands...")
-
-        // Setup initial inventories
-        sceneLoader.npcManager.getNPCInventory("Rayze")?.addItem("RED_POTION")
-        sceneLoader.npcManager.getNPCInventory("Baka")?.addItem("BLUE_POTION")
-
-        Logger.debug("Initial Inventories:")
-        logNPCInventories()
-
-        val giveAction = "GIVE,Rayze,Baka,RED_POTION"
-        Logger.debug("Executing GIVE action: $giveAction")
-        sceneLoader.actionModel.executeAction("GIVE", "Rayze", "Baka", null, "RED_POTION")
-
-        Logger.debug("Inventories after GIVE:")
-        logNPCInventories()
-
-        val takeAction = "TAKE,Rayze,Baka,BLUE_POTION"
-        Logger.debug("Executing TAKE action: $takeAction")
-        sceneLoader.actionModel.executeAction("TAKE", "Rayze", "Baka", null, "BLUE_POTION")
-
-        Logger.debug("Final Inventories:")
-        logNPCInventories()
-
-        Logger.debug("Debug test of GIVE and TAKE commands completed.")
-    }
-
-    private fun logNPCInventories() {
-        sceneLoader.npcManager.npcs.keys.forEach { npcName ->
-            val inventory = sceneLoader.npcManager.getNPCInventory(npcName)
-            Logger.debug("$npcName's inventory: ${inventory?.getItems()}")
+    private fun logInventories() {
+        Logger.debug("Current Inventories:")
+        sceneLoader.agentManager.getAllAgents().forEach { agent ->
+            val inventory = sceneLoader.agentManager.getAgentInventory(agent.id)
+            Logger.debug("${agent.name}'s inventory: ${inventory?.getItems()}")
         }
     }
 }

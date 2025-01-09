@@ -18,6 +18,30 @@ import java.net.*
 class OptionsScene : Scene() {
     private var isLoggingEnabled = false
 
+    companion object {
+        /**
+         * Retrieves the current LLM provider based on the configuration.
+         */
+        fun getCurrentProvider(): LLMProvider {
+            val properties = java.util.Properties()
+            return try {
+                val configFile = File("config.properties")
+                if (configFile.exists()) {
+                    properties.load(FileInputStream(configFile))
+                    val providerName = properties.getProperty("llm.provider", LLMProvider.OPENAI.name)
+                    Logger.debug("Read LLM provider from config: $providerName")
+                    LLMProvider.valueOf(providerName)
+                } else {
+                    Logger.debug("No config file found, defaulting to OpenAI")
+                    LLMProvider.OPENAI
+                }
+            } catch (e: Exception) {
+                Logger.error("Failed to read LLM provider selection: ${e.message}")
+                LLMProvider.OPENAI
+            }
+        }
+    }
+
     override suspend fun SContainer.sceneMain() {
         uiVerticalStack(padding = 4.0) {
             centerOnStage()
@@ -25,53 +49,39 @@ class OptionsScene : Scene() {
             uiText("Options Menu") {
                 centerXOnStage()
             }
-
-            uiComboBox(
-                size = Size(160f, 32f),
-                items = listOf("Easy", "Normal"),
-                selectedIndex = if (Director.getDifficulty() == "easy") 0 else 1
-            ).apply {
-                onSelectionUpdate {
-                    val selectedDifficulty = it.selectedItem?.lowercase() ?: "easy"
-                    Director.setDifficulty(selectedDifficulty)
-                }
-            }
-
-            val currentProvider = getCurrentProvider()
-            Logger.debug("Current LLM provider from config: $currentProvider")
-
             uiComboBox(
                 size = Size(160f, 32f),
                 items = listOf("OpenAI (Online)", "LLaMA (Local)"),
-                selectedIndex = when (currentProvider) {
-                    LLMProvider.OLLAMA -> 1
+                selectedIndex = when (getCurrentProvider()) {
                     LLMProvider.OPENAI -> 0
+                    LLMProvider.OLLAMA -> 1
                 }
             ).apply {
                 onSelectionUpdate { selection ->
+                    Logger.debug("Dropdown selection updated: ${selection.selectedItem}")
+
                     val selectedProvider = when (selection.selectedIndex) {
-                        1 -> LLMProvider.OLLAMA
-                        else -> LLMProvider.OPENAI
+                        0 -> LLMProvider.OPENAI
+                        else -> LLMProvider.OLLAMA
                     }
-                    Logger.debug("User selected LLM provider: $selectedProvider")
+
+                    Logger.debug("User selected provider: $selectedProvider")
 
                     if (selectedProvider == LLMProvider.OLLAMA) {
                         if (!isOllamaInstalled()) {
-                            sceneContainer.launch {
-                                showOllamaInstallPrompt()
-                            }
+                            Logger.debug("OLLAMA not installed. Showing installation prompt.")
+                            sceneContainer.launch { showOllamaInstallPrompt() }
+                            return@onSelectionUpdate
                         }
 
-                        if (getCurrentProvider() != LLMProvider.OLLAMA) {
-                            sceneContainer.launch {
-                                showLocalModeWarning()
-                            }
-                        }
-                    } else {
-                        LLMSelector.setProvider(selectedProvider)
-                        saveProviderSelection(selectedProvider)
-                        Logger.debug("Switched to OpenAI")
+                        Logger.debug("OLLAMA installed. Proceeding with local mode warning.")
+                        sceneContainer.launch { showLocalModeWarning() }
                     }
+
+                   // LLMSelector.setProvider(selectedProvider)
+                    LLMSelector.setProvider(LLMProvider.OLLAMA)
+                    saveProviderSelection(selectedProvider)
+                    Logger.debug("Provider successfully switched to $selectedProvider")
                 }
             }
 
@@ -469,22 +479,5 @@ class OptionsScene : Scene() {
         }
     }
 
-    private fun getCurrentProvider(): LLMProvider {
-        val properties = java.util.Properties()
-        return try {
-            val configFile = File("config.properties")
-            if (configFile.exists()) {
-                properties.load(FileInputStream(configFile))
-                val providerName = properties.getProperty("llm.provider", LLMProvider.OPENAI.name)
-                Logger.debug("Read LLM provider from config: $providerName")
-                LLMProvider.valueOf(providerName)
-            } else {
-                Logger.debug("No config file found, defaulting to OpenAI")
-                LLMProvider.OPENAI
-            }
-        } catch (e: Exception) {
-            Logger.error("Failed to read LLM provider selection: ${e.message}")
-            LLMProvider.OPENAI
-        }
-    }
+
 }

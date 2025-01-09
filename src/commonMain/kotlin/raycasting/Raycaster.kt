@@ -140,26 +140,25 @@ class Raycaster(
                 }
             }
         }
-
         return results.minOfOrNull { it.point.distanceTo(pos) } ?: 0.0
     }
 
-    fun isInShadow(playerPos: Point, enemyPos: Point): Boolean {
-        val direction = (enemyPos - playerPos).normalized
+    fun isInShadow(playerPos: Point, agentPos: Point): Boolean {
+        val direction = (agentPos - playerPos).normalized
         val rayResult = doRay(playerPos, direction, "Occludes")
 
         if (rayResult != null) {
             val hitPoint = rayResult.point
             val playerToHit = playerPos.distanceTo(hitPoint)
-            val playerToEnemy = playerPos.distanceTo(enemyPos)
+            val playerToAgent = playerPos.distanceTo(agentPos)
 
-            if (playerToHit < playerToEnemy) {
-                println("Enemy at $enemyPos is in shadow. Blocked at $hitPoint")
+            if (playerToHit < playerToAgent) {
+                //println("Agent at $agentPos is in shadow. Blocked at $hitPoint")
                 return true
             }
         }
 
-        println("Enemy at $enemyPos is NOT in shadow")
+        //println("Agent at $agentPos is NOT in shadow")
         return false
     }
 }

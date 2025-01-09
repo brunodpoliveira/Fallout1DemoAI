@@ -11,20 +11,15 @@ import korlibs.korge.ldtk.view.*
 import korlibs.korge.scene.*
 import korlibs.korge.tween.*
 import korlibs.korge.view.*
-import korlibs.korge.view.Container
-import korlibs.korge.view.Image
 import korlibs.korge.view.align.*
-import korlibs.math.geom.Point
+import korlibs.math.geom.*
+import korlibs.math.interpolation.*
+import korlibs.time.*
+import kotlinx.coroutines.*
+import raycasting.*
 import scenes.*
 import ui.*
 import utils.*
-import korlibs.time.seconds
-import kotlinx.coroutines.*
-import raycasting.*
-import kotlin.math.*
-import korlibs.math.geom.Vector2D
-import korlibs.math.interpolation.*
-
 
 class CombatManager(
     private val enemies: MutableList<LDTKEntityView>,
@@ -47,14 +42,14 @@ class CombatManager(
     private var playerMoved = false
     private var gameMode: GameModeEnum = GameModeEnum.EXPLORATION
 
-    suspend fun initialize() {
+     suspend fun initialize() {
         targetingReticule = container.image(texture = resourcesVfs["cross.png"].readBitmapSlice()) {
             visible = true
         }
         startGame()
     }
 
-    private fun startGame(){
+    fun startGame(){
         updateTargetingReticule()
         container.keys {
             down(Key.LEFT) { handlePlayerMove() }
@@ -74,7 +69,7 @@ class CombatManager(
                 delay(3.seconds)
                 endTurn()
             } else {
-                handleEnemyTurn()
+                handleAgentTurn()
             }
         }
     }
@@ -112,11 +107,11 @@ class CombatManager(
         }
     }
 
-    //@TODO: Implement enemy AI
-    private suspend fun handleEnemyTurn() {
+    //@TODO: Implement agent AI
+    private suspend fun handleAgentTurn() {
         if (gameMode == GameModeEnum.COMBAT) {
-            val enemy = enemies[currentTurnIndex - 1]
-            showTurnMessage(getPlayerName(enemy)+"'s turn!")
+            val agent = enemies[currentTurnIndex - 1]
+            showTurnMessage(getPlayerName(agent)+"'s turn!")
             if (Math.random() < 0.5) {
                 playerStats.hp -= 1
 
@@ -138,8 +133,8 @@ class CombatManager(
         playerTurnJob?.cancel()
 
         val target = enemies[currentTargetIndex]
-        val enemyId = target.entity.identifier + target.pos.toString()
-        val targetStats = entityStatsMap[enemyId] ?: readEntityStats(target)
+        val agentId = target.entity.identifier + target.pos.toString()
+        val targetStats = entityStatsMap[agentId] ?: readEntityStats(target)
 
         if (gameMode == GameModeEnum.EXPLORATION) {
             startCombatMode()
@@ -151,25 +146,25 @@ class CombatManager(
         showDamageText("-$damage", Point(target.x, target.y))
 
         if (targetStats.hp <= 0) {
-            removePlayerFromGame(target, enemyId);
+            removePlayerFromGame(target, agentId)
             updateTargetingReticule()
             if (enemies.isEmpty()) exitCombatMode()
         } else {
-            entityStatsMap[enemyId] = targetStats
+            entityStatsMap[agentId] = targetStats
         }
 
         playerStatsUI?.update(playerStats.hp, playerStats.ammo)
         endTurn()
     }
 
-    private fun getPlayerName(enemy: LDTKEntityView):String{
-        return enemy.fieldsByName["Name"]?.valueString ?: "Unknown"
+    private fun getPlayerName(agent: LDTKEntityView):String{
+        return agent.fieldsByName["Name"]?.valueString ?: "Unknown"
     }
 
-    private fun removePlayerFromGame(target: LDTKEntityView, enemyId: String) {
+    private fun removePlayerFromGame(target: LDTKEntityView, agentId: String) {
         target.removeFromParent()
         enemies.remove(target)
-        entityStatsMap.remove(enemyId)
+        entityStatsMap.remove(agentId)
     }
 
     private fun handlePlayerMove() {
@@ -218,29 +213,29 @@ class CombatManager(
         }
     }
 
-    private fun findClosestEnemy(): LDTKEntityView? {
-        var closestEnemy: LDTKEntityView? = null
+    private fun findClosestAgent(): LDTKEntityView? {
+        var closestAgent: LDTKEntityView? = null
         var minDistance = Double.MAX_VALUE
 
-        for (enemy in enemies) {
-            val enemyPosition = Point(enemy.x, enemy.y)
+        for (agent in enemies) {
+            val agentPosition = Point(agent.x, agent.y)
             val playerPosition = Point(playerStats.position.x, playerStats.position.y)
 
-            if (raycaster.isInShadow(playerPosition, enemyPosition)) continue
+            if (raycaster.isInShadow(playerPosition, agentPosition)) continue
 
-            val distance = playerPosition.distanceTo(enemyPosition)
+            val distance = playerPosition.distanceTo(agentPosition)
             if (distance < minDistance) {
                 minDistance = distance
-                closestEnemy = enemy
+                closestAgent = agent
             }
         }
 
-        return closestEnemy
+        return closestAgent
     }
 
-    private fun updateTargetingReticule() {
-        val closestEnemy = findClosestEnemy()
-        closestEnemy?.let {
+    fun updateTargetingReticule() {
+        val closestAgent = findClosestAgent()
+        closestAgent?.let {
             currentTargetIndex = enemies.indexOf(it)
             val scaledPosition = scaleEntityPosition(Point(it.x, it.y))
             targetingReticule?.apply {
