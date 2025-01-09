@@ -1,5 +1,5 @@
 # Fallout1DemoAI
-This project is an new take on Role-Playing Games,built using Korge and Kotlin. The main highlight of the project is the use of LLMs to
+This project is a new take on Role-Playing Games,built using Korge and Kotlin. The main highlight of the project is the use of LLMs to
 power the NPC interactions, making them dynamic and conversational.
 
 ## Collaborating
@@ -12,7 +12,7 @@ GitHub link: [Link](https://github.com/brunodpoliveira/Fallout1DemoAI)
 ## Game Overview
 
 ### Objective
-The player interacts with the inhabitants of Scrapheap, a town dominated by two competing gangs: the Crypts
+The player interacts with the inhabitants of Scrapheap, a town dominated by two competing gangs: the Crypts 
 and the Fools. The objective is to solve the gang problem plaguing the town.
 The game can be completed in multiple ways:
 1. **Side with the Crypts**: Help them wipe out the Fools and maintain control of the generator.

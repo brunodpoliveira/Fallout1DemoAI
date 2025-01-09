@@ -27,6 +27,8 @@ abstract class BaseLevelScene(val levelId: String) : Scene() {
     private fun getLdtkFile(): VfsFile {
         return when (levelId) {
             "scrapheap" -> resourcesVfs["gfx/scrapheap_demo_lvl.ldtk"]
+            //Replace with test map below for testing
+            //"scrapheap" -> resourcesVfs["gfx/test_map.ldtk"]
             //"scrapheap_ext" -> resourcesVfs["gfx/scrapheap_demo_lvl.ldtk"]
             // Add more levels as needed
             else -> throw IllegalArgumentException("Unknown levelId: $levelId")

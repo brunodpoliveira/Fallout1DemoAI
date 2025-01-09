@@ -3,13 +3,13 @@
     "scrapheap": {
       "spriteConfig": {
         "defaults": {
-          "male_crypt": "gfx/minotaur.ase",
+          "male_crypt": "gfx/wizard_m.ase",
           "female_crypt": "gfx/wizard_f.ase",
-          "male_fool": "gfx/minotaur.ase",
+          "male_fool": "gfx/cleric_m.ase",
           "female_fool": "gfx/cleric_f.ase",
-          "male_civilian": "gfx/minotaur.ase",
-          "female_civilian": "gfx/wizard_f.ase",
-          "placeholder": "gfx/minotaur.ase"
+          "male_civilian": "gfx/rogue_f.ase",
+          "female_civilian": "gfx/rogue_m.ase",
+          "placeholder": "gfx/wizard_m.ase"
         },
         "npcSprites": {
           "Rayze": {
@@ -17,11 +17,11 @@
             "type": "custom"
           },
           "Baka": {
-            "sprite": "gfx/wizard_f.ase",
+            "sprite": "gfx/ranger_f.ase",
             "type": "custom"
           },
           "Robot": {
-            "sprite": "gfx/cleric_f.ase",
+            "sprite": "gfx/ranger_m.ase",
             "type": "custom"
           },
           "Dogmeat": {

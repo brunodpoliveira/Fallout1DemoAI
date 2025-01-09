@@ -259,7 +259,8 @@ class PauseMenu(private val mapManager: MapManager,
             position(240.0, 60.0)
 
             val autoMapContainer = container {
-                val ldtk = KR.gfx.dungeonTilesmapCalciumtrice.__file.readLDTKWorld().apply { }
+                //TODO use actual ldtk map, no harcoding
+                val ldtk = KR.gfx.testMap.__file.readLDTKWorld().apply { }
                 val obstacleMap = mapManager.generateMap(levelView)
                 val playerPosition = getPlayerPosition
 

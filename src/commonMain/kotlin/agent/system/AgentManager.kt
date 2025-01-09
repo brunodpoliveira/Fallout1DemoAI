@@ -64,7 +64,7 @@ class AgentManager(
 
         val sprite = spriteManager.getSpriteForNPC(npcName, faction, gender)
 
-        //TODO need logic for dog sprite
+        //TODO need logic for dog sprite (dog animations:Sitting, Running/idle,Barking)
         entity.replaceView(
             ImageDataView2(sprite.default).also {
                 it.smoothing = false

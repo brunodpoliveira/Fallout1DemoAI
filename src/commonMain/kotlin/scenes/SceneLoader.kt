@@ -54,7 +54,7 @@ class SceneLoader(
     private lateinit var playerInventory: Inventory
     private lateinit var playerManager: PlayerManager
     private lateinit var inputManager: InputManager
-    lateinit var actionModel: ActionModel
+    private lateinit var actionModel: ActionModel
     private lateinit var combatManager: CombatManager
     private lateinit var dialogManager: DialogManager
     lateinit var playerMovementController: PlayerMovementController
